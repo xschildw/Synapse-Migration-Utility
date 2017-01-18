@@ -1,4 +1,4 @@
-package org.sagebionetworks.migration;
+package org.sagebionetworks.migration.delta;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
@@ -17,6 +17,9 @@ import org.mockito.Mockito;
 import org.sagebionetworks.client.SynapseAdminClient;
 import org.sagebionetworks.client.exceptions.SynapseException;
 import org.sagebionetworks.client.exceptions.SynapseServerException;
+import org.sagebionetworks.migration.SynapseAdminClientMockState;
+import org.sagebionetworks.migration.SynapseAdminClientMocker;
+import org.sagebionetworks.migration.delta.RangeMetadataIterator;
 import org.sagebionetworks.repo.model.asynch.AsynchJobState;
 import org.sagebionetworks.repo.model.asynch.AsynchronousJobStatus;
 import org.sagebionetworks.repo.model.migration.AsyncMigrationRequest;

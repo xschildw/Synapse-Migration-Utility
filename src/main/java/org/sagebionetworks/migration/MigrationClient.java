@@ -19,6 +19,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.sagebionetworks.client.SynapseAdminClient;
 import org.sagebionetworks.client.exceptions.SynapseException;
+import org.sagebionetworks.migration.delta.*;
 import org.sagebionetworks.repo.model.migration.AdminResponse;
 import org.sagebionetworks.repo.model.migration.AsyncMigrationTypeChecksumRequest;
 import org.sagebionetworks.repo.model.migration.AsyncMigrationTypeCountRequest;
@@ -28,18 +29,12 @@ import org.sagebionetworks.repo.model.migration.MigrationTypeCount;
 import org.sagebionetworks.repo.model.status.StackStatus;
 import org.sagebionetworks.repo.model.status.StatusEnum;
 import org.sagebionetworks.schema.adapter.JSONObjectAdapterException;
-import org.sagebionetworks.migration.DeleteWorker;
-import org.sagebionetworks.migration.SynapseClientFactory;
+import org.sagebionetworks.migration.factory.SynapseClientFactory;
 import org.sagebionetworks.migration.stream.BufferedRowMetadataReader;
 import org.sagebionetworks.migration.stream.BufferedRowMetadataWriter;
-import org.sagebionetworks.migration.CreateUpdateWorker;
-import org.sagebionetworks.migration.DeltaCounts;
-import org.sagebionetworks.migration.DeltaData;
-import org.sagebionetworks.migration.delta.DeltaRanges;
 import org.sagebionetworks.migration.utils.MigrationTypeCountDiff;
 import org.sagebionetworks.migration.utils.ToolMigrationUtils;
 import org.sagebionetworks.migration.utils.TypeToMigrateMetadata;
-import org.sagebionetworks.migration.delta.DeltaFinder;
 import org.sagebionetworks.tool.progress.BasicProgress;
 
 /**

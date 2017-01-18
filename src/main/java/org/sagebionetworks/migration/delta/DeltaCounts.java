@@ -1,4 +1,4 @@
-package org.sagebionetworks.migration;
+package org.sagebionetworks.migration.delta;
 
 /**
  * Used to return the number of creates, updates, and deletes that need to be executed.
