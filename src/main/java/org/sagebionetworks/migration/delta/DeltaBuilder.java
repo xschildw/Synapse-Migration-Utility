@@ -1,15 +1,11 @@
-package org.sagebionetworks.migration;
+package org.sagebionetworks.migration.delta;
 
 import java.util.List;
 import org.sagebionetworks.client.SynapseAdminClient;
 import org.sagebionetworks.client.exceptions.SynapseException;
 import org.sagebionetworks.repo.model.migration.RowMetadata;
-import org.sagebionetworks.migration.SynapseClientFactory;
+import org.sagebionetworks.migration.factory.SynapseClientFactory;
 import org.sagebionetworks.migration.stream.RowWriter;
-import org.sagebionetworks.migration.DeltaCounts;
-import org.sagebionetworks.migration.RangeDeltaBuilder;
-import org.sagebionetworks.migration.delta.DeltaRanges;
-import org.sagebionetworks.migration.delta.IdRange;
 import org.sagebionetworks.migration.utils.TypeToMigrateMetadata;
 import org.sagebionetworks.tool.progress.BasicProgress;
 

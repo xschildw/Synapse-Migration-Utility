@@ -1,7 +1,8 @@
-package org.sagebionetworks.migration;
+package org.sagebionetworks.migration.factory;
 
 import org.sagebionetworks.client.SynapseAdminClientImpl;
 import org.sagebionetworks.client.exceptions.SynapseException;
+import org.sagebionetworks.migration.factory.SynapseClientFactory;
 import org.sagebionetworks.simpleHttpClient.SimpleHttpClientConfig;
 import org.sagebionetworks.migration.config.Configuration;
 import org.sagebionetworks.migration.config.SynapseConnectionInfo;

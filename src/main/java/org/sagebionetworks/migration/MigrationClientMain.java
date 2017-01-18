@@ -3,10 +3,10 @@ package org.sagebionetworks.migration;
 import java.io.IOException;
 
 import org.sagebionetworks.client.exceptions.SynapseException;
+import org.sagebionetworks.migration.factory.SynapseClientFactoryImpl;
 import org.sagebionetworks.schema.adapter.JSONObjectAdapterException;
 import org.sagebionetworks.migration.config.MigrationConfigurationImpl;
-import org.sagebionetworks.migration.SynapseClientFactory;
-import org.sagebionetworks.migration.SynapseClientFactoryImpl;
+import org.sagebionetworks.migration.factory.SynapseClientFactory;
 
 /**
  * The main entry point for the V3 data migration process.

@@ -11,6 +11,8 @@ import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
 
+import org.sagebionetworks.migration.delta.DeltaCounts;
+import org.sagebionetworks.migration.delta.RangeDeltaBuilder;
 import org.sagebionetworks.repo.model.migration.RowMetadata;
 import org.sagebionetworks.migration.stream.ListRowMetadataWriter;
 
