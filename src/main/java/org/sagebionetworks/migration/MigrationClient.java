@@ -11,6 +11,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -52,7 +53,7 @@ public class MigrationClient {
 	public MigrationClient(SynapseClientFactory factory) {
 		if(factory == null) throw new IllegalArgumentException("Factory cannot be null");
 		this.factory = factory;
-		threadPool = Executors.newFixedThreadPool(1);
+		threadPool = Executors.newFixedThreadPool(2);
 		deferredExceptions = new ArrayList<Exception>();
 	}
 
@@ -176,7 +177,7 @@ public class MigrationClient {
 					// If final sync (source is in read-only mode) then do a table checksum
 					// Note: Destination is always in read-only during migration
 					if (factory.getSourceClient().getCurrentStackStatus().getStatus() == StatusEnum.READ_ONLY) {
-						doChecksumForMigratedTypes(factory.getSourceClient(), factory.getDestinationClient(), typesToMigrateMetadata);
+						doChecksumForMigratedTypes(primaryTypesToMigrate);
 					}
 
 					// Exit on 1st success
@@ -196,25 +197,24 @@ public class MigrationClient {
 		return failed;
 	}
 
-	private void doChecksumForMigratedTypes(SynapseAdminClient source,
-			SynapseAdminClient destination,
-			List<TypeToMigrateMetadata> typesToMigrateMetadata)
+	private void doChecksumForMigratedTypes(List<MigrationType> migratedTypes)
 			throws SynapseException, JSONObjectAdapterException,
-			RuntimeException, InterruptedException {
+			RuntimeException, InterruptedException, ExecutionException {
 		log.info("Final migration, checking table checksums");
 		boolean isChecksumDiff = false;
-		for (TypeToMigrateMetadata t: typesToMigrateMetadata) {
-			String srcTableChecksum = doAsyncChecksumForType(source, t.getType());
-			String destTableChecksum = doAsyncChecksumForType(destination, t.getType());
+		for (MigrationType t: migratedTypes) {
+			List<String> checksums = this.doConcurrentChecksumForType(t);
+			String srcTableChecksum = checksums.get(0);
+			String destTableChecksum = checksums.get(1);
 			StringBuilder sb = new StringBuilder();
 			sb.append("Migration type: ");
-			sb.append(t.getType());
+			sb.append(t);
 			sb.append(": ");
 			if (! srcTableChecksum.equals(destTableChecksum)) {
 				isChecksumDiff = true;
-				sb.append("\n*** Found table checksum difference. ***\n");
+				sb.append("\t*** Found table checksum difference. ***\n");
 			} else {
-				sb.append("Table checksums identical.");
+				sb.append("\tTable checksums identical.");
 			}
 			log.info(sb.toString());
 		}
@@ -223,30 +223,32 @@ public class MigrationClient {
 		}
 	}
 	
-	private String doChecksumForTypeWithOneRetry(SynapseAdminClient client, MigrationType t) throws SynapseException, JSONObjectAdapterException {
-		String checksum = null;
-		try {
-			checksum = client.getChecksumForType(t).getChecksum();
-		} catch (SynapseException e) {
-			if (e.getCause() instanceof SocketTimeoutException) {
-				checksum = client.getChecksumForType(t).getChecksum();
-			} else {
-				throw e;
-			}
-		}
-		return checksum;
-	}
-	
-	public String doAsyncChecksumForType(SynapseAdminClient client, MigrationType t) throws SynapseException, InterruptedException, JSONObjectAdapterException {
-		String checksum = null;
+	public List<String> doConcurrentChecksumForType(MigrationType t) throws InterruptedException, ExecutionException {
 		AsyncMigrationTypeChecksumRequest req = new AsyncMigrationTypeChecksumRequest();
 		req.setType(t.name());
 		BasicProgress progress = new BasicProgress();
-		AsyncMigrationWorker worker = new AsyncMigrationWorker(client, req, 900000, progress);
-		AdminResponse resp = worker.call();
+		AsyncMigrationWorker srcWorker = new AsyncMigrationWorker(factory.getSourceClient(), req, 900000, progress);
+		AsyncMigrationWorker destWorker = new AsyncMigrationWorker(factory.getDestinationClient(), req, 900000, progress);
+
+		Future<AdminResponse> srcResp = threadPool.submit(srcWorker);
+		Future<AdminResponse> destResp = threadPool.submit(destWorker);
+
+		String srcChecksum = waitForFuture(srcResp);
+		String destChecksum = waitForFuture(destResp);
+
+		List<String> l = new LinkedList<String>();
+		l.add(srcChecksum);
+		l.add(destChecksum);
+		return l;
+	}
+
+	private String waitForFuture(Future<AdminResponse> f) throws InterruptedException, ExecutionException {
+		while (! f.isDone()) {
+			Thread.sleep(1000);
+		}
+		AdminResponse resp = f.get();
 		MigrationTypeChecksum res = (MigrationTypeChecksum)resp;
-		checksum = res.getChecksum();
-		return checksum;
+		return res.getChecksum();
 	}
 
 	/**
@@ -297,13 +299,15 @@ public class MigrationClient {
 			}
 		}
 	}
-	
+
 	/**
-	 * Create or update
+	 *
 	 * @param type
 	 * @param createUpdateTemp
-	 * @param create
+	 * @param count
 	 * @param batchSize
+	 * @param timeout
+	 * @param retryDenominator
 	 * @throws Exception
 	 */
 	private void createUpdateInDestination(MigrationType type, File createUpdateTemp, long count, long batchSize, long timeout, int retryDenominator) throws Exception {
@@ -340,12 +344,6 @@ public class MigrationClient {
 		}
 	}
 	
-	/**
-	 * Migrate one type.
-	 * @param type
-	 * @param progress
-	 * @throws Exception 
-	 */
 	public DeltaData calculateDeltaForType(TypeToMigrateMetadata tm, String salt, long batchSize) throws Exception{
 
 		// First, we find the delta ranges
@@ -366,7 +364,7 @@ public class MigrationClient {
 
 	/**
 	 * Calculate the deltas
-	 * @param type
+	 * @param typeMeta
 	 * @param batchSize
 	 * @param createTemp
 	 * @param updateTemp
