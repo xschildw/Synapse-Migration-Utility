@@ -234,9 +234,7 @@ public class MigrationClient {
 		Future<AdminResponse> destResp = threadPool.submit(destWorker);
 
 		String srcChecksum = waitForFuture(srcResp);
-		log.debug("SrcChecksum received...");
 		String destChecksum = waitForFuture(destResp);
-		log.debug("DestChecksumReceived...");
 
 		List<String> l = new LinkedList<String>();
 		l.add(srcChecksum);
@@ -245,12 +243,8 @@ public class MigrationClient {
 	}
 
 	private String waitForFuture(Future<AdminResponse> f) throws InterruptedException, ExecutionException {
-		int l = 0;
 		while (! f.isDone()) {
 			Thread.sleep(1000);
-			if (l++ % 10 == 0) {
-				log.debug("Waiting for result...");
-			}
 		}
 		AdminResponse resp = f.get();
 		MigrationTypeChecksum res = (MigrationTypeChecksum)resp;
