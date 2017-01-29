@@ -7,6 +7,7 @@ import org.sagebionetworks.repo.model.migration.MigrationType;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 public class MigrationClientTestConcMain {
 	public static void main(String[] args) throws Exception {
@@ -15,8 +16,12 @@ public class MigrationClientTestConcMain {
 		loadConfigUsingArgs(configuration, args);
 		SynapseClientFactory factory = new SynapseClientFactoryImpl(configuration);
 		MigrationClient client = new MigrationClient(factory);
-		List<String> l = client.doConcurrentChecksumForType(MigrationType.V2_WIKI_PAGE);
-		System.out.println(l.get(0) + " / " + l.get(1));
+		try {
+			List<String> l = client.doConcurrentChecksumForType(MigrationType.V2_WIKI_PAGE);
+			System.out.println(l.get(0) + " / " + l.get(1));
+		} catch (ExecutionException e) {
+			System.out.println("Error!\n\n" + e.getMessage());
+		}
 
 	}
 
