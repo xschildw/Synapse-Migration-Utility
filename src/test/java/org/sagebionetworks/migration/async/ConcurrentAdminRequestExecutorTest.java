@@ -1,12 +1,12 @@
-package org.sagebionetworks.migration.utils;
+package org.sagebionetworks.migration.async;
 
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.sagebionetworks.migration.AsyncMigrationWorker;
+import org.sagebionetworks.migration.async.AsyncMigrationWorker;
 import org.sagebionetworks.migration.WorkerFailedException;
+import org.sagebionetworks.migration.async.ConcurrentAdminRequestExecutor;
 import org.sagebionetworks.repo.model.migration.AdminResponse;
 import org.sagebionetworks.repo.model.migration.MigrationType;
 import org.sagebionetworks.repo.model.migration.MigrationTypeChecksum;
@@ -17,7 +17,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.when;

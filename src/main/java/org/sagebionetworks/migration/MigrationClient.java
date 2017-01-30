@@ -5,11 +5,9 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -20,6 +18,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.sagebionetworks.client.SynapseAdminClient;
 import org.sagebionetworks.client.exceptions.SynapseException;
+import org.sagebionetworks.migration.async.AsyncMigrationWorker;
+import org.sagebionetworks.migration.async.ConcurrentAdminRequestExecutor;
 import org.sagebionetworks.migration.delta.*;
 import org.sagebionetworks.repo.model.migration.*;
 import org.sagebionetworks.repo.model.status.StackStatus;
@@ -43,9 +43,8 @@ public class MigrationClient {
 
 	SynapseClientFactory factory;
 	ExecutorService threadPool;
-	List<Exception> deferredExceptions;
-	final int MAX_DEFERRED_EXCEPTIONS = 10;
-	
+	ConcurrentAdminRequestExecutor executor;
+
 	/**
 	 * New migration client.
 	 * @param factory
@@ -54,7 +53,7 @@ public class MigrationClient {
 		if(factory == null) throw new IllegalArgumentException("Factory cannot be null");
 		this.factory = factory;
 		threadPool = Executors.newFixedThreadPool(2);
-		deferredExceptions = new ArrayList<Exception>();
+		executor = new ConcurrentAdminRequestExecutor(threadPool);
 	}
 
 	public List<MigrationType> getCommonMigrationTypes() throws SynapseException {
@@ -108,7 +107,7 @@ public class MigrationClient {
 	 * @throws JSONObjectAdapterException
 	 */
 	public void setDestinationStatus(StatusEnum status, String message) throws SynapseException, JSONObjectAdapterException {
-		setStatus(this.factory.createNewDestinationClient(), status, message);
+		setStatus(this.factory.getDestinationClient(), status, message);
 	}
 
 	/**
@@ -119,7 +118,7 @@ public class MigrationClient {
 	 * @throws JSONObjectAdapterException
 	 */
 	public void setSourceStatus(StatusEnum status, String message) throws SynapseException, JSONObjectAdapterException {
-		setStatus(this.factory.createNewSourceClient(), status, message);
+		setStatus(this.factory.getSourceClient(), status, message);
 	}
 
 	/**
@@ -144,7 +143,7 @@ public class MigrationClient {
 	 * 
 	 * @throws Exception 
 	 */
-	public boolean migrate(int maxRetries, long batchSize, long timeoutMS, int retryDenominator) throws SynapseException, JSONObjectAdapterException {
+	public boolean migrate(int maxRetries, long batchSize, long timeoutMS) throws SynapseException, JSONObjectAdapterException {
 		boolean failed = false;
 		try {
 			// First set the destination stack status to down
@@ -166,7 +165,7 @@ public class MigrationClient {
 					printDiffsInCounts(startSourceCounts, startDestCounts);
 
 					// Actual migration
-					this.migrateTypes(typesToMigrateMetadata, batchSize, timeoutMS, retryDenominator);
+					this.migrateTypes(typesToMigrateMetadata, batchSize, timeoutMS);
 
 					// Print the final counts
 					List<MigrationTypeCount> endSourceCounts = getTypeCounts(factory.getSourceClient(), typesToMigrate);
@@ -229,26 +228,19 @@ public class MigrationClient {
 		BasicProgress progress = new BasicProgress();
 		AsyncMigrationWorker srcWorker = new AsyncMigrationWorker(factory.getSourceClient(), req, 900000, progress);
 		AsyncMigrationWorker destWorker = new AsyncMigrationWorker(factory.getDestinationClient(), req, 900000, progress);
+		List<AsyncMigrationWorker> workers = new LinkedList<AsyncMigrationWorker>();
+		workers.add(srcWorker);
+		workers.add(destWorker);
 
-		Future<AdminResponse> srcResp = threadPool.submit(srcWorker);
-		Future<AdminResponse> destResp = threadPool.submit(destWorker);
+		List<AdminResponse> responses = executor.executeRequests(workers);
 
-		String srcChecksum = waitForFuture(srcResp);
-		String destChecksum = waitForFuture(destResp);
+		MigrationTypeChecksum srcChecksum = (MigrationTypeChecksum)responses.get(0);
+		MigrationTypeChecksum destChecksum = (MigrationTypeChecksum)responses.get(1);
 
 		List<String> l = new LinkedList<String>();
-		l.add(srcChecksum);
-		l.add(destChecksum);
+		l.add(srcChecksum.getChecksum());
+		l.add(destChecksum.getChecksum());
 		return l;
-	}
-
-	private String waitForFuture(Future<AdminResponse> f) throws InterruptedException, ExecutionException {
-		while (! f.isDone()) {
-			Thread.sleep(1000);
-		}
-		AdminResponse resp = f.get();
-		MigrationTypeChecksum res = (MigrationTypeChecksum)resp;
-		return res.getChecksum();
 	}
 
 	/**
@@ -256,11 +248,10 @@ public class MigrationClient {
 	 *
 	 * @param batchSize
 	 * @param timeoutMS
-	 * @param retryDenominator
 	 * @param primaryTypes
 	 * @throws Exception
 	 */
-	public void migrateTypes(List<TypeToMigrateMetadata> primaryTypes, long batchSize, long timeoutMS,	int retryDenominator)
+	public void migrateTypes(List<TypeToMigrateMetadata> primaryTypes, long batchSize, long timeoutMS)
 			throws Exception {
 
 		// Each migration uses a different salt (same for each type)
@@ -286,7 +277,7 @@ public class MigrationClient {
 			DeltaData dd = deltaList.get(i);
 			long count = dd.getCounts().getCreate();
 			if(count > 0){
-				createUpdateInDestination(dd.getType(), dd.getCreateTemp(), count, batchSize, timeoutMS, retryDenominator);
+				createUpdateInDestination(dd.getType(), dd.getCreateTemp(), count, batchSize, timeoutMS);
 			}
 		}
 
@@ -295,7 +286,7 @@ public class MigrationClient {
 			DeltaData dd = deltaList.get(i);
 			long count = dd.getCounts().getUpdate();
 			if(count > 0){
-				createUpdateInDestination(dd.getType(), dd.getUpdateTemp(), count, batchSize, timeoutMS, retryDenominator);
+				createUpdateInDestination(dd.getType(), dd.getUpdateTemp(), count, batchSize, timeoutMS);
 			}
 		}
 	}
@@ -307,14 +298,13 @@ public class MigrationClient {
 	 * @param count
 	 * @param batchSize
 	 * @param timeout
-	 * @param retryDenominator
 	 * @throws Exception
 	 */
-	private void createUpdateInDestination(MigrationType type, File createUpdateTemp, long count, long batchSize, long timeout, int retryDenominator) throws Exception {
+	private void createUpdateInDestination(MigrationType type, File createUpdateTemp, long count, long batchSize, long timeout) throws Exception {
 		BufferedRowMetadataReader reader = new BufferedRowMetadataReader(new FileReader(createUpdateTemp));
 		try{
 			BasicProgress progress = new BasicProgress();
-			CreateUpdateWorker worker = new CreateUpdateWorker(type, count, reader,progress,factory.createNewDestinationClient(), factory.createNewSourceClient(), batchSize, timeout, retryDenominator);
+			CreateUpdateWorker worker = new CreateUpdateWorker(type, count, reader,progress,factory.getDestinationClient(), factory.getSourceClient(), batchSize, timeout);
 			Future<Long> future = this.threadPool.submit(worker);
 			while(!future.isDone()){
 				// Log the progress
@@ -347,7 +337,7 @@ public class MigrationClient {
 	public DeltaData calculateDeltaForType(TypeToMigrateMetadata tm, String salt, long batchSize) throws Exception{
 
 		// First, we find the delta ranges
-		DeltaFinder finder = new DeltaFinder(tm, factory.createNewSourceClient(), factory.createNewDestinationClient(), salt, batchSize);
+		DeltaFinder finder = new DeltaFinder(tm, factory.getSourceClient(), factory.getDestinationClient(), salt, batchSize);
 		DeltaRanges ranges = finder.findDeltaRanges();
 		
 		// the first thing we need to do is calculate the what needs to be created, updated, or deleted.
@@ -431,7 +421,7 @@ public class MigrationClient {
 		BufferedRowMetadataReader reader = new BufferedRowMetadataReader(new FileReader(deleteTemp));
 		try{
 			BasicProgress progress = new BasicProgress();
-			DeleteWorker worker = new DeleteWorker(type, count, reader, progress, factory.createNewDestinationClient(), batchSize);
+			DeleteWorker worker = new DeleteWorker(type, count, reader, progress, factory.getDestinationClient(), batchSize);
 			Future<Long> future = this.threadPool.submit(worker);
 			while(!future.isDone()){
 				// Log the progress

@@ -1,4 +1,4 @@
-package org.sagebionetworks.migration;
+package org.sagebionetworks.migration.async;
 
 import static org.junit.Assert.*;
 
@@ -17,6 +17,8 @@ import static org.mockito.Matchers.anyString;
 
 import org.mockito.internal.util.reflection.Whitebox;
 import org.sagebionetworks.client.SynapseAdminClient;
+import org.sagebionetworks.migration.WorkerFailedException;
+import org.sagebionetworks.migration.async.AsyncMigrationWorker;
 import org.sagebionetworks.repo.model.asynch.AsynchJobState;
 import org.sagebionetworks.repo.model.asynch.AsynchronousJobStatus;
 import org.sagebionetworks.repo.model.migration.AdminRequest;

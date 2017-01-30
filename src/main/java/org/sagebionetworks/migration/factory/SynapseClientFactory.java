@@ -11,20 +11,6 @@ import org.sagebionetworks.client.exceptions.SynapseException;
  */
 public interface SynapseClientFactory {
 
-	/**
-	 * Create a new client connected to the source stack.
-	 * @return
-	 * @throws SynapseException
-	 */
-	public SynapseAdminClient createNewSourceClient();
-	
-	/**
-	 * Create a new client connected to the destination stack
-	 * @return
-	 * @throws SynapseException
-	 */
-	public SynapseAdminClient createNewDestinationClient();
-
 	public SynapseAdminClient getSourceClient();
 	public SynapseAdminClient getDestinationClient();
 }

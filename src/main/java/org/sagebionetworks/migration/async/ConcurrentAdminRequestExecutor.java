@@ -1,10 +1,9 @@
-package org.sagebionetworks.migration.utils;
+package org.sagebionetworks.migration.async;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.sagebionetworks.migration.AsyncMigrationWorker;
-import org.sagebionetworks.repo.model.migration.AdminRequest;
 import org.sagebionetworks.repo.model.migration.AdminResponse;
+import org.sagebionetworks.repo.model.migration.MigrationTypeChecksum;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -20,11 +19,14 @@ public class ConcurrentAdminRequestExecutor {
 		this.threadPool = threadPool;
 	}
 
-	List<AdminResponse> executeRequests(List<AsyncMigrationWorker> workers) throws InterruptedException, ExecutionException {
+	public List<AdminResponse> executeRequests(List<AsyncMigrationWorker> workers) throws InterruptedException, ExecutionException {
 		List<Future<AdminResponse>> futureResponses = new LinkedList<Future<AdminResponse>>();
 		for (AsyncMigrationWorker w: workers) {
 			futureResponses.add(this.threadPool.submit(w));
 		}
+
+		waitForFutures(futureResponses);
+
 		List<AdminResponse> responses = new LinkedList<AdminResponse>();
 		for (Future<AdminResponse> fr: futureResponses) {
 			try {
@@ -39,4 +41,19 @@ public class ConcurrentAdminRequestExecutor {
 		}
 		return responses;
 	}
+
+	private void waitForFutures(List<Future<AdminResponse>> futures) throws InterruptedException, ExecutionException {
+		while (true) {
+			boolean wait = false;
+			for (Future<AdminResponse> f: futures) {
+				if (! f.isDone()) {
+					wait = true;
+					Thread.sleep(1000);
+				}
+			}
+			if (!wait) break;
+		}
+	}
+
+
 }
