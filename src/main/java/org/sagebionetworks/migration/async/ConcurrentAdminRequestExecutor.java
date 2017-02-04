@@ -19,7 +19,7 @@ public class ConcurrentAdminRequestExecutor {
 		this.threadPool = threadPool;
 	}
 
-	public List<AdminResponse> executeRequests(List<AsyncMigrationWorker> workers) throws InterruptedException, ExecutionException {
+	public List<AdminResponse> executeRequests(List<AsyncMigrationWorker> workers) {
 		List<Future<AdminResponse>> futureResponses = new LinkedList<Future<AdminResponse>>();
 		for (AsyncMigrationWorker w: workers) {
 			futureResponses.add(this.threadPool.submit(w));
@@ -27,28 +27,39 @@ public class ConcurrentAdminRequestExecutor {
 
 		waitForFutures(futureResponses);
 
+		int numExceptionCaught = 0;
 		List<AdminResponse> responses = new LinkedList<AdminResponse>();
 		for (Future<AdminResponse> fr: futureResponses) {
 			try {
 				responses.add(fr.get());
 			} catch (ExecutionException e) {
+				numExceptionCaught++;
 				responses.add(null);
 				logger.debug(e.getCause());
 			} catch (InterruptedException e) {
+				numExceptionCaught++;
 				responses.add(null);
 				logger.debug("Timeout excuting the asynchronous request.");
 			}
 		}
+//		if (numExceptionCaught > 0) {
+//			throw new RuntimeException("Error computing type checksums.");
+//		}
 		return responses;
 	}
 
-	private void waitForFutures(List<Future<AdminResponse>> futures) throws InterruptedException, ExecutionException {
+	private void waitForFutures(List<Future<AdminResponse>> futures)  {
 		while (true) {
 			boolean wait = false;
 			for (Future<AdminResponse> f: futures) {
 				if (! f.isDone()) {
 					wait = true;
-					Thread.sleep(1000);
+					try {
+						Thread.sleep(1000);
+					} catch (InterruptedException e) {
+						// Should never happen!
+						assert false;
+					}
 				}
 			}
 			if (!wait) break;

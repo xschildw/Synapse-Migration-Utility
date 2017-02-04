@@ -150,6 +150,7 @@ public class MigrationClient {
 			setDestinationStatus(StatusEnum.READ_ONLY, "Staging is down for data migration");
 			for (int i = 0; i < maxRetries; i++) {
 				try {
+					log.info("Determining types to migrate...");
 					// Determine which types to migrate
 					List<MigrationType> typesToMigrate = this.getCommonMigrationTypes();
 					List<MigrationType> primaryTypesToMigrate = this.getCommonPrimaryMigrationTypes();
@@ -222,7 +223,7 @@ public class MigrationClient {
 		}
 	}
 	
-	public List<String> doConcurrentChecksumForType(MigrationType t) throws InterruptedException, ExecutionException {
+	public List<String> doConcurrentChecksumForType(MigrationType t) throws RuntimeException {
 		AsyncMigrationTypeChecksumRequest req = new AsyncMigrationTypeChecksumRequest();
 		req.setType(t.name());
 		BasicProgress progress = new BasicProgress();
@@ -236,6 +237,9 @@ public class MigrationClient {
 
 		MigrationTypeChecksum srcChecksum = (MigrationTypeChecksum)responses.get(0);
 		MigrationTypeChecksum destChecksum = (MigrationTypeChecksum)responses.get(1);
+		if (srcChecksum == null | destChecksum == null) {
+			throw new RuntimeException("Error computing the type checksum.");
+		}
 
 		List<String> l = new LinkedList<String>();
 		l.add(srcChecksum.getChecksum());
