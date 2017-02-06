@@ -107,7 +107,7 @@ public class MigrationClient {
 	 * @throws JSONObjectAdapterException
 	 */
 	public void setDestinationStatus(StatusEnum status, String message) throws SynapseException, JSONObjectAdapterException {
-		setStatus(this.factory.createNewDestinationClient(), status, message);
+		setStatus(this.factory.getDestinationClient(), status, message);
 	}
 
 	/**
@@ -118,7 +118,7 @@ public class MigrationClient {
 	 * @throws JSONObjectAdapterException
 	 */
 	public void setSourceStatus(StatusEnum status, String message) throws SynapseException, JSONObjectAdapterException {
-		setStatus(this.factory.createNewSourceClient(), status, message);
+		setStatus(this.factory.getSourceClient(), status, message);
 	}
 
 	/**
@@ -310,7 +310,7 @@ public class MigrationClient {
 		BufferedRowMetadataReader reader = new BufferedRowMetadataReader(new FileReader(createUpdateTemp));
 		try{
 			BasicProgress progress = new BasicProgress();
-			CreateUpdateWorker worker = new CreateUpdateWorker(type, count, reader,progress,factory.createNewDestinationClient(), factory.createNewSourceClient(), batchSize, timeout, retryDenominator);
+			CreateUpdateWorker worker = new CreateUpdateWorker(type, count, reader,progress,factory.getDestinationClient(), factory.getSourceClient(), batchSize, timeout, retryDenominator);
 			Future<Long> future = this.threadPool.submit(worker);
 			while(!future.isDone()){
 				// Log the progress
@@ -339,17 +339,20 @@ public class MigrationClient {
 			}
 		}
 	}
-	
+
 	/**
-	 * Migrate one type.
-	 * @param type
-	 * @param progress
-	 * @throws Exception 
+	 * Calculate deltas for one type
+	 *
+	 * @param tm
+	 * @param salt
+	 * @param batchSize
+	 * @return
+	 * @throws Exception
 	 */
 	public DeltaData calculateDeltaForType(TypeToMigrateMetadata tm, String salt, long batchSize) throws Exception{
 
 		// First, we find the delta ranges
-		DeltaFinder finder = new DeltaFinder(tm, factory.createNewSourceClient(), factory.createNewDestinationClient(), salt, batchSize);
+		DeltaFinder finder = new DeltaFinder(tm, factory.getSourceClient(), factory.getDestinationClient(), salt, batchSize);
 		DeltaRanges ranges = finder.findDeltaRanges();
 		
 		// the first thing we need to do is calculate the what needs to be created, updated, or deleted.
@@ -366,7 +369,7 @@ public class MigrationClient {
 
 	/**
 	 * Calculate the deltas
-	 * @param type
+	 * @param typeMeta
 	 * @param batchSize
 	 * @param createTemp
 	 * @param updateTemp
@@ -433,7 +436,7 @@ public class MigrationClient {
 		BufferedRowMetadataReader reader = new BufferedRowMetadataReader(new FileReader(deleteTemp));
 		try{
 			BasicProgress progress = new BasicProgress();
-			DeleteWorker worker = new DeleteWorker(type, count, reader, progress, factory.createNewDestinationClient(), batchSize);
+			DeleteWorker worker = new DeleteWorker(type, count, reader, progress, factory.getDestinationClient(), batchSize);
 			Future<Long> future = this.threadPool.submit(worker);
 			while(!future.isDone()){
 				// Log the progress

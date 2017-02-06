@@ -33,16 +33,6 @@ public class SynapseClientFactoryImpl implements SynapseClientFactory {
 	}
 
 	@Override
-	public SynapseAdminClientImpl createNewSourceClient() {
-		return createNewConnection(this.config.getSourceConnectionInfo());
-	}
-
-	@Override
-	public SynapseAdminClientImpl createNewDestinationClient() {
-		return createNewConnection(this.config.getDestinationConnectionInfo());
-	}
-
-	@Override
 	public SynapseAdminClientImpl getSourceClient() {
 		return this.sourceClient;
 	}

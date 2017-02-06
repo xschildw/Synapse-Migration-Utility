@@ -61,8 +61,8 @@ public class MigrationClientTest {
 		sourceSynapse = SynapseAdminClientMocker.createMock(mockSource);
 		
 		mockFactory = Mockito.mock(SynapseClientFactory.class);
-		when(mockFactory.createNewDestinationClient()).thenReturn(destSynapse);
-		when(mockFactory.createNewSourceClient()).thenReturn(sourceSynapse);
+		when(mockFactory.getDestinationClient()).thenReturn(destSynapse);
+		when(mockFactory.getSourceClient()).thenReturn(sourceSynapse);
 		migrationClient = new MigrationClient(mockFactory);
 	}
 	
