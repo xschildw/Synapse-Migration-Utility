@@ -24,18 +24,18 @@ public class DeltaFinder {
 	private SynapseAdminClient destinationClient;
 	TypeToMigrateMetadata typeToMigrateMeta;
 	String salt;
-	Long batchSize;
+	Long minRangeSize;
 	
 	public DeltaFinder(TypeToMigrateMetadata tm,
 			SynapseAdminClient srcClient,
 			SynapseAdminClient destClient,
 			String salt,
-			Long bSize) {
+			Long rSize) {
 		typeToMigrateMeta = tm;
 		sourceClient = srcClient;
 		destinationClient = destClient;
 		this.salt = salt;
-		batchSize = bSize;
+		minRangeSize = rSize;
 	}
 
 	public DeltaRanges findDeltaRanges() throws SynapseException, JSONObjectAdapterException, InterruptedException {
@@ -96,7 +96,7 @@ public class DeltaFinder {
 					}
 					
 					// Update ranges
-					updRanges.addAll(findUpdDeltaRanges(sourceClient, destinationClient, typeToMigrateMeta.getType(), salt, updatesMinId, updatesMaxId, batchSize));
+					updRanges.addAll(findUpdDeltaRanges(sourceClient, destinationClient, typeToMigrateMeta.getType(), salt, updatesMinId, updatesMaxId, minRangeSize));
 				}
 
 			}
@@ -110,7 +110,7 @@ public class DeltaFinder {
 		return deltas;
 	}
 	
-	private List<IdRange> findUpdDeltaRanges(SynapseAdminClient srcClient, SynapseAdminClient destClient, MigrationType type, String salt, long minId, long maxId, long batchSize) throws SynapseException, JSONObjectAdapterException, InterruptedException {
+	private List<IdRange> findUpdDeltaRanges(SynapseAdminClient srcClient, SynapseAdminClient destClient, MigrationType type, String salt, long minId, long maxId, long minRangeSize) throws SynapseException, JSONObjectAdapterException, InterruptedException {
 		List<IdRange> l = new LinkedList<IdRange>();
 		MigrationRangeChecksum srcCrc32 = getChecksumForIdRange(srcClient, type, salt, minId, maxId);
 		MigrationRangeChecksum destCrc32 = getChecksumForIdRange(destClient, type, salt, minId, maxId);
@@ -118,7 +118,7 @@ public class DeltaFinder {
 		if (srcCrc32.equals(destCrc32)) {
 			return l;
 		} else {
-			if (maxId - minId < batchSize) {
+			if (maxId - minId < minRangeSize) {
 				IdRange r = new IdRange(minId, maxId);
 				l.add(r);
 				return l;
@@ -127,8 +127,8 @@ public class DeltaFinder {
 				long maxId1 = (minId+maxId)/2;
 				long minId2 = maxId1+1;
 				long maxId2 = maxId;
-				l.addAll(findUpdDeltaRanges(srcClient, destClient, type, salt, minId1, maxId1, batchSize));
-				l.addAll(findUpdDeltaRanges(srcClient, destClient, type, salt, minId2, maxId2, batchSize));
+				l.addAll(findUpdDeltaRanges(srcClient, destClient, type, salt, minId1, maxId1, minRangeSize));
+				l.addAll(findUpdDeltaRanges(srcClient, destClient, type, salt, minId2, maxId2, minRangeSize));
 				return l;
 			}
 		}

@@ -52,7 +52,7 @@ public class ConfigurationTest {
 	
 	@Test
 	public void testMaxBatchSize(){
-		assertEquals(100, configuration.getMaximumBatchSize());
+		assertEquals(100, configuration.getMaximumBackupBatchSize());
 	}
 	
 	@Test

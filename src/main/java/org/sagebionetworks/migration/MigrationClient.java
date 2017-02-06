@@ -91,6 +91,10 @@ public class MigrationClient {
 	private List<String> getCommonTypeNames(MigrationTypeNames srcTypeNames, MigrationTypeNames destTypeNames) {
 		List<String> commonNames = new LinkedList<String>();
 		for (String typeName: destTypeNames.getList()) {
+			// TODO: remove when PLFM-4246 fixed
+			if (MigrationType.STORAGE_QUOTA.name().equals(typeName)) {
+				continue;
+			}
 			// Only keep the destination names that are in the source
 			if (srcTypeNames.getList().contains(typeName)) {
 				commonNames.add(typeName);
@@ -143,7 +147,7 @@ public class MigrationClient {
 	 * 
 	 * @throws Exception 
 	 */
-	public boolean migrate(int maxRetries, long batchSize, long timeoutMS) throws SynapseException, JSONObjectAdapterException {
+	public boolean migrate(int maxRetries, long backupBatchSize, long minRangeSize, long timeoutMS) throws SynapseException, JSONObjectAdapterException {
 		boolean failed = false;
 		try {
 			// First set the destination stack status to down
@@ -166,7 +170,7 @@ public class MigrationClient {
 					printDiffsInCounts(startSourceCounts, startDestCounts);
 
 					// Actual migration
-					this.migrateTypes(typesToMigrateMetadata, batchSize, timeoutMS);
+					this.migrateTypes(typesToMigrateMetadata, backupBatchSize, minRangeSize, timeoutMS);
 
 					// Print the final counts
 					List<MigrationTypeCount> endSourceCounts = getTypeCounts(factory.getSourceClient(), typesToMigrate);
@@ -255,7 +259,7 @@ public class MigrationClient {
 	 * @param primaryTypes
 	 * @throws Exception
 	 */
-	public void migrateTypes(List<TypeToMigrateMetadata> primaryTypes, long batchSize, long timeoutMS)
+	public void migrateTypes(List<TypeToMigrateMetadata> primaryTypes, long batchSize, long rangeSize, long timeoutMS)
 			throws Exception {
 
 		// Each migration uses a different salt (same for each type)
@@ -263,7 +267,7 @@ public class MigrationClient {
 		
 		List<DeltaData> deltaList = new LinkedList<DeltaData>();
 		for (TypeToMigrateMetadata tm: primaryTypes) {
-			DeltaData dd = calculateDeltaForType(tm, salt, batchSize);
+			DeltaData dd = calculateDeltaForType(tm, salt, rangeSize);
 			deltaList.add(dd);
 		}
 		
@@ -308,7 +312,7 @@ public class MigrationClient {
 		BufferedRowMetadataReader reader = new BufferedRowMetadataReader(new FileReader(createUpdateTemp));
 		try{
 			BasicProgress progress = new BasicProgress();
-			CreateUpdateWorker worker = new CreateUpdateWorker(type, count, reader,progress,factory.getDestinationClient(), factory.getSourceClient(), batchSize, timeout);
+			CreateUpdateWorker worker = new CreateUpdateWorker(type, count, reader, progress, factory.getDestinationClient(), factory.getSourceClient(), batchSize, timeout);
 			Future<Long> future = this.threadPool.submit(worker);
 			while(!future.isDone()){
 				// Log the progress
@@ -316,7 +320,7 @@ public class MigrationClient {
 				if(message == null){
 					message = "";
 				}
-				log.info("Creating/updating data for type: "+type.name()+" Progress: "+progress.getCurrentStatus()+" "+message);
+				log.info("Creating/updating data for type: "+type.name()+" Progress: "+ progress.getCurrentStatus()+" "+message);
 				Thread.sleep(2000);
 			}
 				Long counts = future.get();

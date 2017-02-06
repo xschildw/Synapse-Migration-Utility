@@ -1,36 +1,30 @@
 package org.sagebionetworks.migration;
 
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.when;
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.Mockito;
+import org.sagebionetworks.client.SynapseAdminClient;
+import org.sagebionetworks.client.SynapseAdminClientImpl;
+import org.sagebionetworks.client.exceptions.SynapseException;
+import org.sagebionetworks.client.exceptions.SynapseServerException;
+import org.sagebionetworks.migration.factory.SynapseClientFactory;
+import org.sagebionetworks.migration.utils.TypeToMigrateMetadata;
+import org.sagebionetworks.repo.model.asynch.AsynchJobState;
+import org.sagebionetworks.repo.model.asynch.AsynchronousJobStatus;
+import org.sagebionetworks.repo.model.migration.*;
+import org.sagebionetworks.repo.model.status.StackStatus;
+import org.sagebionetworks.repo.model.status.StatusEnum;
+import org.sagebionetworks.simpleHttpClient.SimpleHttpClientConfig;
 
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.Mockito;
-
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.verify;
-
-import org.sagebionetworks.client.SynapseAdminClient;
-import org.sagebionetworks.client.SynapseAdminClientImpl;
-import org.sagebionetworks.client.exceptions.SynapseException;
-import org.sagebionetworks.client.exceptions.SynapseServerException;
-import org.sagebionetworks.migration.utils.TypeToMigrateMetadata;
-import org.sagebionetworks.repo.model.asynch.AsynchJobState;
-import org.sagebionetworks.repo.model.asynch.AsynchronousJobStatus;
-import org.sagebionetworks.repo.model.migration.AsyncMigrationRequest;
-import org.sagebionetworks.repo.model.migration.AsyncMigrationResponse;
-import org.sagebionetworks.repo.model.migration.MigrationType;
-import org.sagebionetworks.repo.model.migration.MigrationTypeNames;
-import org.sagebionetworks.repo.model.migration.RowMetadata;
-import org.sagebionetworks.repo.model.status.StackStatus;
-import org.sagebionetworks.repo.model.status.StatusEnum;
-import org.sagebionetworks.simpleHttpClient.SimpleHttpClientConfig;
-import org.sagebionetworks.migration.factory.SynapseClientFactory;
+import static org.mockito.Mockito.when;
 
 /**
  * Migration client test.
@@ -149,7 +143,7 @@ public class MigrationClientTest {
 				new Long[]{1L, 0L}, new Long[]{2L, 0L}, new Long[]{1L, 0L});
 		
 		// Migrate the data
-		migrationClient.migrateTypes(typesToMigrateMetadata, 10L, 1000*60);
+		migrationClient.migrateTypes(typesToMigrateMetadata, 10L, 10L, 1000*60);
 		
 		// Now validate the results
 		List<RowMetadata> expected0 = createRowMetadataList(new Long[]{2L, 3L}, new String[]{"e2changed","e3"}, new Long[]{null, 1l});

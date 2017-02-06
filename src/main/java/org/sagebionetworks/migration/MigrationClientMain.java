@@ -9,7 +9,7 @@ import org.sagebionetworks.migration.config.MigrationConfigurationImpl;
 import org.sagebionetworks.migration.factory.SynapseClientFactory;
 
 /**
- * The main entry point for the V3 data migration process.
+ * The main entry point for the data migration process.
  * @author jmhill
  *
  */
@@ -32,7 +32,8 @@ public class MigrationClientMain {
 		MigrationClient client = new MigrationClient(factory);
 		boolean failed = client.migrate(
 				configuration.getMaxRetries(),
-				configuration.getMaximumBatchSize(),
+				configuration.getMaximumBackupBatchSize(),
+				configuration.getMinimumRangeSize(),
 				configuration.getWorkerTimeoutMs());
 		if (failed) {
 			System.exit(-1);

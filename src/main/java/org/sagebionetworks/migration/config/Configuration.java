@@ -25,11 +25,18 @@ public interface Configuration {
 	public int getMaximumNumberThreads();
 
 	/**
-	 * The Maximum batch size.
+	 * The Maximum backup batch size.
 	 * 
 	 * @return
 	 */
-	public int getMaximumBatchSize();
+	public int getMaximumBackupBatchSize();
+
+	/**
+	 * The minimum range size before searching for diffs serially
+	 *
+	 * @return
+	 */
+	public int getMinimumRangeSize();
 
 	public long getWorkerTimeoutMs();
 

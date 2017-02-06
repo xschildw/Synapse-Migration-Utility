@@ -54,7 +54,7 @@ public class RangeMetadataIterator implements Iterator<RowMetadata> {
 		isLastPage = false;
 	}
 
-	// TODO: If maxId-minId < batchSize, should only fetch one page ==> simplify below
+	// TODO: If maxId-minId < minRangeSize, should only fetch one page ==> simplify below
 	
 	/**
 	 * Get the next page with exponential back-off.
