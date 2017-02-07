@@ -143,7 +143,7 @@ public class MigrationClient {
 	 * 
 	 * @throws Exception 
 	 */
-	public boolean migrate(int maxRetries, long batchSize, long timeoutMS, int retryDenominator) throws SynapseException, JSONObjectAdapterException {
+	public boolean migrate(int maxRetries, long batchSize, long timeoutMS) throws SynapseException, JSONObjectAdapterException {
 		boolean failed = false;
 		try {
 			// First set the destination stack status to down
@@ -165,7 +165,7 @@ public class MigrationClient {
 					printDiffsInCounts(startSourceCounts, startDestCounts);
 
 					// Actual migration
-					this.migrateTypes(typesToMigrateMetadata, batchSize, timeoutMS, retryDenominator);
+					this.migrateTypes(typesToMigrateMetadata, batchSize, timeoutMS);
 
 					// Print the final counts
 					List<MigrationTypeCount> endSourceCounts = getTypeCounts(factory.getSourceClient(), typesToMigrate);
@@ -254,11 +254,10 @@ public class MigrationClient {
 	 *
 	 * @param batchSize
 	 * @param timeoutMS
-	 * @param retryDenominator
 	 * @param primaryTypes
 	 * @throws Exception
 	 */
-	public void migrateTypes(List<TypeToMigrateMetadata> primaryTypes, long batchSize, long timeoutMS,	int retryDenominator)
+	public void migrateTypes(List<TypeToMigrateMetadata> primaryTypes, long batchSize, long timeoutMS)
 			throws Exception {
 
 		// Each migration uses a different salt (same for each type)
@@ -284,7 +283,7 @@ public class MigrationClient {
 			DeltaData dd = deltaList.get(i);
 			long count = dd.getCounts().getCreate();
 			if(count > 0){
-				createUpdateInDestination(dd.getType(), dd.getCreateTemp(), count, batchSize, timeoutMS, retryDenominator);
+				createUpdateInDestination(dd.getType(), dd.getCreateTemp(), count, batchSize, timeoutMS);
 			}
 		}
 
@@ -293,7 +292,7 @@ public class MigrationClient {
 			DeltaData dd = deltaList.get(i);
 			long count = dd.getCounts().getUpdate();
 			if(count > 0){
-				createUpdateInDestination(dd.getType(), dd.getUpdateTemp(), count, batchSize, timeoutMS, retryDenominator);
+				createUpdateInDestination(dd.getType(), dd.getUpdateTemp(), count, batchSize, timeoutMS);
 			}
 		}
 	}
@@ -306,11 +305,11 @@ public class MigrationClient {
 	 * @param batchSize
 	 * @throws Exception
 	 */
-	private void createUpdateInDestination(MigrationType type, File createUpdateTemp, long count, long batchSize, long timeout, int retryDenominator) throws Exception {
+	private void createUpdateInDestination(MigrationType type, File createUpdateTemp, long count, long batchSize, long timeout) throws Exception {
 		BufferedRowMetadataReader reader = new BufferedRowMetadataReader(new FileReader(createUpdateTemp));
 		try{
 			BasicProgress progress = new BasicProgress();
-			CreateUpdateWorker worker = new CreateUpdateWorker(type, count, reader,progress,factory.getDestinationClient(), factory.getSourceClient(), batchSize, timeout, retryDenominator);
+			CreateUpdateWorker worker = new CreateUpdateWorker(type, count, reader,progress,factory.getDestinationClient(), factory.getSourceClient(), batchSize, timeout);
 			Future<Long> future = this.threadPool.submit(worker);
 			while(!future.isDone()){
 				// Log the progress

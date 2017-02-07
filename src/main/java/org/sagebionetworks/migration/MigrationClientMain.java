@@ -33,8 +33,7 @@ public class MigrationClientMain {
 		boolean failed = client.migrate(
 				configuration.getMaxRetries(),
 				configuration.getMaximumBatchSize(),
-				configuration.getWorkerTimeoutMs(),
-				configuration.getRetryDenominator());
+				configuration.getWorkerTimeoutMs());
 		if (failed) {
 			System.exit(-1);
 		} else {
