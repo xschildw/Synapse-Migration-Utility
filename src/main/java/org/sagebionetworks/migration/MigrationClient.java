@@ -43,8 +43,7 @@ public class MigrationClient {
 	SynapseClientFactory factory;
 	ExecutorService threadPool;
 	List<Exception> deferredExceptions;
-	final int MAX_DEFERRED_EXCEPTIONS = 10;
-	
+
 	/**
 	 * New migration client.
 	 * @param factory
@@ -296,13 +295,15 @@ public class MigrationClient {
 			}
 		}
 	}
-	
+
 	/**
 	 * Create or update
+	 * 
 	 * @param type
 	 * @param createUpdateTemp
-	 * @param create
+	 * @param count
 	 * @param batchSize
+	 * @param timeout
 	 * @throws Exception
 	 */
 	private void createUpdateInDestination(MigrationType type, File createUpdateTemp, long count, long batchSize, long timeout) throws Exception {
