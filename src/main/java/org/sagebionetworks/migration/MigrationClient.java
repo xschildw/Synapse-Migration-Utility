@@ -179,7 +179,7 @@ public class MigrationClient {
 					// If final sync (source is in read-only mode) then do a table checksum
 					// Note: Destination is always in read-only during migration
 					if (factory.getSourceClient().getCurrentStackStatus().getStatus() == StatusEnum.READ_ONLY) {
-						doChecksumForMigratedTypes(factory.getSourceClient(), factory.getDestinationClient(), typesToMigrateMetadata);
+						doChecksumForMigratedTypes(factory.getSourceClient(), factory.getDestinationClient(), primaryTypesToMigrate);
 					}
 
 					// Exit on 1st success
@@ -201,17 +201,17 @@ public class MigrationClient {
 
 	private void doChecksumForMigratedTypes(SynapseAdminClient source,
 			SynapseAdminClient destination,
-			List<TypeToMigrateMetadata> typesToMigrateMetadata)
+			List<MigrationType> typesToMigrate)
 			throws SynapseException, JSONObjectAdapterException,
 			RuntimeException, InterruptedException {
 		logger.info("Final migration, checking table checksums");
 		boolean isChecksumDiff = false;
-		for (TypeToMigrateMetadata t: typesToMigrateMetadata) {
-			String srcTableChecksum = doAsyncChecksumForType(source, t.getType());
-			String destTableChecksum = doAsyncChecksumForType(destination, t.getType());
+		for (MigrationType t: typesToMigrate) {
+			String srcTableChecksum = doAsyncChecksumForType(source, t);
+			String destTableChecksum = doAsyncChecksumForType(destination, t);
 			StringBuilder sb = new StringBuilder();
 			sb.append("Migration type: ");
-			sb.append(t.getType());
+			sb.append(t);
 			sb.append(": ");
 			if (! srcTableChecksum.equals(destTableChecksum)) {
 				isChecksumDiff = true;
@@ -224,20 +224,6 @@ public class MigrationClient {
 		if (isChecksumDiff) {
 			throw new RuntimeException("Table checksum differences in final sync.");
 		}
-	}
-	
-	private String doChecksumForTypeWithOneRetry(SynapseAdminClient client, MigrationType t) throws SynapseException, JSONObjectAdapterException {
-		String checksum = null;
-		try {
-			checksum = client.getChecksumForType(t).getChecksum();
-		} catch (SynapseException e) {
-			if (e.getCause() instanceof SocketTimeoutException) {
-				checksum = client.getChecksumForType(t).getChecksum();
-			} else {
-				throw e;
-			}
-		}
-		return checksum;
 	}
 	
 	public String doAsyncChecksumForType(SynapseAdminClient client, MigrationType t) throws SynapseException, InterruptedException, JSONObjectAdapterException {
