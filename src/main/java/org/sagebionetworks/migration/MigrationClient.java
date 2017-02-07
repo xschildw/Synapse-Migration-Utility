@@ -9,7 +9,6 @@ import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -38,7 +37,7 @@ import org.sagebionetworks.tool.progress.BasicProgress;
  */
 public class MigrationClient {
 	
-	static private Logger log = LogManager.getLogger(MigrationClient.class);
+	static private Logger logger = LogManager.getLogger(MigrationClient.class);
 
 	SynapseClientFactory factory;
 	ExecutorService threadPool;
@@ -90,6 +89,10 @@ public class MigrationClient {
 	private List<String> getCommonTypeNames(MigrationTypeNames srcTypeNames, MigrationTypeNames destTypeNames) {
 		List<String> commonNames = new LinkedList<String>();
 		for (String typeName: destTypeNames.getList()) {
+			// TODO: remove when PLFM-4246 fixed, also fix MigrationClientTest.testGetCommonMigrationTypes()
+			if (MigrationType.STORAGE_QUOTA.name().equals(typeName)) {
+				continue;
+			}
 			// Only keep the destination names that are in the source
 			if (srcTypeNames.getList().contains(typeName)) {
 				commonNames.add(typeName);
@@ -150,6 +153,7 @@ public class MigrationClient {
 			for (int i = 0; i < maxRetries; i++) {
 				try {
 					// Determine which types to migrate
+					logger.info("Determining types to migrate...");
 					List<MigrationType> typesToMigrate = this.getCommonMigrationTypes();
 					List<MigrationType> primaryTypesToMigrate = this.getCommonPrimaryMigrationTypes();
 					// Get the counts
@@ -160,7 +164,7 @@ public class MigrationClient {
 					List<TypeToMigrateMetadata> typesToMigrateMetadata = ToolMigrationUtils.buildTypeToMigrateMetadata(startSourceCounts, startDestCounts, primaryTypesToMigrate);
 
 					// Display starting counts
-					log.info("Starting diffs in counts:");
+					logger.info("Starting diffs in counts:");
 					printDiffsInCounts(startSourceCounts, startDestCounts);
 
 					// Actual migration
@@ -169,7 +173,7 @@ public class MigrationClient {
 					// Print the final counts
 					List<MigrationTypeCount> endSourceCounts = getTypeCounts(factory.getSourceClient(), typesToMigrate);
 					List<MigrationTypeCount> endDestCounts = getTypeCounts(factory.getDestinationClient(), typesToMigrate);
-					log.info("Ending diffs in  counts:");
+					logger.info("Ending diffs in  counts:");
 					printDiffsInCounts(endSourceCounts, endDestCounts);
 
 					// If final sync (source is in read-only mode) then do a table checksum
@@ -182,7 +186,7 @@ public class MigrationClient {
 					failed = false;
 				} catch (Exception e) {
 					failed = true;
-					log.error("Failed at attempt: " + i + " with error " + e.getMessage(), e);
+					logger.error("Failed at attempt: " + i + " with error " + e.getMessage(), e);
 				}
 				if (! failed) {
 					break;
@@ -200,7 +204,7 @@ public class MigrationClient {
 			List<TypeToMigrateMetadata> typesToMigrateMetadata)
 			throws SynapseException, JSONObjectAdapterException,
 			RuntimeException, InterruptedException {
-		log.info("Final migration, checking table checksums");
+		logger.info("Final migration, checking table checksums");
 		boolean isChecksumDiff = false;
 		for (TypeToMigrateMetadata t: typesToMigrateMetadata) {
 			String srcTableChecksum = doAsyncChecksumForType(source, t.getType());
@@ -215,7 +219,7 @@ public class MigrationClient {
 			} else {
 				sb.append("Table checksums identical.");
 			}
-			log.info(sb.toString());
+			logger.info(sb.toString());
 		}
 		if (isChecksumDiff) {
 			throw new RuntimeException("Table checksum differences in final sync.");
@@ -298,7 +302,7 @@ public class MigrationClient {
 
 	/**
 	 * Create or update
-	 * 
+	 *
 	 * @param type
 	 * @param createUpdateTemp
 	 * @param count
@@ -318,11 +322,11 @@ public class MigrationClient {
 				if(message == null){
 					message = "";
 				}
-				log.info("Creating/updating data for type: "+type.name()+" Progress: "+progress.getCurrentStatus()+" "+message);
+				logger.info("Creating/updating data for type: "+type.name()+" Progress: "+progress.getCurrentStatus()+" "+message);
 				Thread.sleep(2000);
 			}
 				Long counts = future.get();
-				log.info("Creating/updating the following counts for type: "+type.name()+" Counts: "+counts);
+				logger.info("Creating/updating the following counts for type: "+type.name()+" Counts: "+counts);
 		} finally {
 			reader.close();
 		}
@@ -333,9 +337,9 @@ public class MigrationClient {
 		for (MigrationTypeCountDiff d: diffs) {
 			// Missing at source
 			if (d.getDelta() == null) {
-				log.info("\t" + d.getType().name() + "\tNA\t" + d.getDestinationCount());
+				logger.info("\t" + d.getType().name() + "\tNA\t" + d.getDestinationCount());
 			} else if (d.getDelta() != 0L) {
-					log.info("\t" + d.getType().name() + ":\t" + d.getDelta() + "\t" + d.getSourceCount() + "\t" + d.getDestinationCount());
+					logger.info("\t" + d.getType().name() + ":\t" + d.getDelta() + "\t" + d.getSourceCount() + "\t" + d.getDestinationCount());
 			}
 		}
 	}
@@ -403,7 +407,7 @@ public class MigrationClient {
 			counts.setCreate(counts.getCreate()+insCount);
 			counts.setDelete(counts.getDelete()+delCount);
 			
-			log.info("Calculated the following counts for type: "+typeMeta.getType().name()+" Counts: "+counts);
+			logger.info("Calculated the following counts for type: "+typeMeta.getType().name()+" Counts: "+counts);
 			
 			return counts;
 			
@@ -440,11 +444,11 @@ public class MigrationClient {
 			Future<Long> future = this.threadPool.submit(worker);
 			while(!future.isDone()){
 				// Log the progress
-				log.info("Deleting data for type: "+type.name()+" Progress: "+progress.getCurrentStatus());
+				logger.info("Deleting data for type: "+type.name()+" Progress: "+progress.getCurrentStatus());
 				Thread.sleep(2000);
 			}
 			Long counts = future.get();
-			log.info("Deleted the following counts for type: "+type.name()+" Counts: "+counts);
+			logger.info("Deleted the following counts for type: "+type.name()+" Counts: "+counts);
 		} finally{
 			reader.close();
 		}
