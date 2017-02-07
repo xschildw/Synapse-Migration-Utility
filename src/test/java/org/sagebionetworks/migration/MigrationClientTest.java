@@ -149,7 +149,7 @@ public class MigrationClientTest {
 				new Long[]{1L, 0L}, new Long[]{2L, 0L}, new Long[]{1L, 0L});
 		
 		// Migrate the data
-		migrationClient.migrateTypes(typesToMigrateMetadata, 10L, 1000*60);
+		migrationClient.migrateTypes(typesToMigrateMetadata, 10L, 10L, 1000*60);
 		
 		// Now validate the results
 		List<RowMetadata> expected0 = createRowMetadataList(new Long[]{2L, 3L}, new String[]{"e2changed","e3"}, new Long[]{null, 1l});

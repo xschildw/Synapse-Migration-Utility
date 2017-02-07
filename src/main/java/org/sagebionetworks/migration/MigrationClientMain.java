@@ -32,7 +32,8 @@ public class MigrationClientMain {
 		MigrationClient client = new MigrationClient(factory);
 		boolean failed = client.migrate(
 				configuration.getMaxRetries(),
-				configuration.getMaximumBatchSize(),
+				configuration.getMaximumBackupBatchSize(),
+				configuration.getMinDeltaRangeSize(),
 				configuration.getWorkerTimeoutMs());
 		if (failed) {
 			System.exit(-1);

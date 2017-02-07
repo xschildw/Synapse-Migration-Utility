@@ -51,9 +51,12 @@ public class ConfigurationTest {
 	}
 	
 	@Test
-	public void testMaxBatchSize(){
-		assertEquals(100, configuration.getMaximumBatchSize());
+	public void testMaxBackupBatchSize(){
+		assertEquals(100, configuration.getMaximumBackupBatchSize());
 	}
+
+	@Test
+	public void testMinDeltaRangeSize() { assertEquals(1000, configuration.getMinDeltaRangeSize()); }
 	
 	@Test
 	public void testWorkerTimeout(){

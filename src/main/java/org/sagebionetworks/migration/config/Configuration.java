@@ -29,7 +29,14 @@ public interface Configuration {
 	 * 
 	 * @return
 	 */
-	public int getMaximumBatchSize();
+	public int getMaximumBackupBatchSize();
+
+	/**
+	 * The minimum size for a DeltaRange (before deltas are calculated serially vs checksum
+	 *
+	 * @return
+	 */
+	public int getMinDeltaRangeSize();
 
 	public long getWorkerTimeoutMs();
 

@@ -132,8 +132,13 @@ public class MigrationConfigurationImpl implements Configuration {
 	}
 	
 	@Override
-	public int getMaximumBatchSize(){
-		return Integer.parseInt(System.getProperty("org.sagebionetworks.batch.size"));
+	public int getMaximumBackupBatchSize(){
+		return Integer.parseInt(System.getProperty("org.sagebionetworks.max.backup.batchsize"));
+	}
+
+	@Override
+	public int getMinDeltaRangeSize() {
+		return Integer.parseInt(System.getProperty("org.sagebionetworks.min.delta.rangesize"));
 	}
 	
 	@Override

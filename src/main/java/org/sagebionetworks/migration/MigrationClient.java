@@ -145,7 +145,7 @@ public class MigrationClient {
 	 * 
 	 * @throws Exception 
 	 */
-	public boolean migrate(int maxRetries, long batchSize, long timeoutMS) throws SynapseException, JSONObjectAdapterException {
+	public boolean migrate(int maxRetries, long maxBackupBatchSize, long minRangeSize, long timeoutMS) throws SynapseException, JSONObjectAdapterException {
 		boolean failed = false;
 		try {
 			// First set the destination stack status to down
@@ -168,7 +168,7 @@ public class MigrationClient {
 					printDiffsInCounts(startSourceCounts, startDestCounts);
 
 					// Actual migration
-					this.migrateTypes(typesToMigrateMetadata, batchSize, timeoutMS);
+					this.migrateTypes(typesToMigrateMetadata, maxBackupBatchSize, minRangeSize, timeoutMS);
 
 					// Print the final counts
 					List<MigrationTypeCount> endSourceCounts = getTypeCounts(factory.getSourceClient(), typesToMigrate);
@@ -255,12 +255,13 @@ public class MigrationClient {
 	/**
 	 * Does the actual migration work.
 	 *
-	 * @param batchSize
-	 * @param timeoutMS
 	 * @param primaryTypes
+	 * @param maxBackupBatchSize
+	 * @param minRangeSize
+	 * @param timeoutMS
 	 * @throws Exception
 	 */
-	public void migrateTypes(List<TypeToMigrateMetadata> primaryTypes, long batchSize, long timeoutMS)
+	public void migrateTypes(List<TypeToMigrateMetadata> primaryTypes, long maxBackupBatchSize, long minRangeSize, long timeoutMS)
 			throws Exception {
 
 		// Each migration uses a different salt (same for each type)
@@ -268,7 +269,7 @@ public class MigrationClient {
 		
 		List<DeltaData> deltaList = new LinkedList<DeltaData>();
 		for (TypeToMigrateMetadata tm: primaryTypes) {
-			DeltaData dd = calculateDeltaForType(tm, salt, batchSize);
+			DeltaData dd = calculateDeltaForType(tm, salt, minRangeSize);
 			deltaList.add(dd);
 		}
 		
@@ -277,7 +278,7 @@ public class MigrationClient {
 			DeltaData dd = deltaList.get(i);
 			long count =  dd.getCounts().getDelete();
 			if(count > 0){
-				deleteFromDestination(dd.getType(), dd.getDeleteTemp(), count, batchSize);
+				deleteFromDestination(dd.getType(), dd.getDeleteTemp(), count, maxBackupBatchSize);
 			}
 		}
 
@@ -286,7 +287,7 @@ public class MigrationClient {
 			DeltaData dd = deltaList.get(i);
 			long count = dd.getCounts().getCreate();
 			if(count > 0){
-				createUpdateInDestination(dd.getType(), dd.getCreateTemp(), count, batchSize, timeoutMS);
+				createUpdateInDestination(dd.getType(), dd.getCreateTemp(), count, maxBackupBatchSize, timeoutMS);
 			}
 		}
 
@@ -295,7 +296,7 @@ public class MigrationClient {
 			DeltaData dd = deltaList.get(i);
 			long count = dd.getCounts().getUpdate();
 			if(count > 0){
-				createUpdateInDestination(dd.getType(), dd.getUpdateTemp(), count, batchSize, timeoutMS);
+				createUpdateInDestination(dd.getType(), dd.getUpdateTemp(), count, maxBackupBatchSize, timeoutMS);
 			}
 		}
 	}
@@ -306,15 +307,15 @@ public class MigrationClient {
 	 * @param type
 	 * @param createUpdateTemp
 	 * @param count
-	 * @param batchSize
+	 * @param maxBackupBatchSize
 	 * @param timeout
 	 * @throws Exception
 	 */
-	private void createUpdateInDestination(MigrationType type, File createUpdateTemp, long count, long batchSize, long timeout) throws Exception {
+	private void createUpdateInDestination(MigrationType type, File createUpdateTemp, long count, long maxBackupBatchSize, long timeout) throws Exception {
 		BufferedRowMetadataReader reader = new BufferedRowMetadataReader(new FileReader(createUpdateTemp));
 		try{
 			BasicProgress progress = new BasicProgress();
-			CreateUpdateWorker worker = new CreateUpdateWorker(type, count, reader,progress,factory.getDestinationClient(), factory.getSourceClient(), batchSize, timeout);
+			CreateUpdateWorker worker = new CreateUpdateWorker(type, count, reader,progress,factory.getDestinationClient(), factory.getSourceClient(), maxBackupBatchSize, timeout);
 			Future<Long> future = this.threadPool.submit(worker);
 			while(!future.isDone()){
 				// Log the progress
@@ -349,14 +350,14 @@ public class MigrationClient {
 	 *
 	 * @param tm
 	 * @param salt
-	 * @param batchSize
+	 * @param minRangeSize
 	 * @return
 	 * @throws Exception
 	 */
-	public DeltaData calculateDeltaForType(TypeToMigrateMetadata tm, String salt, long batchSize) throws Exception{
+	public DeltaData calculateDeltaForType(TypeToMigrateMetadata tm, String salt, long minRangeSize) throws Exception{
 
 		// First, we find the delta ranges
-		DeltaFinder finder = new DeltaFinder(tm, factory.getSourceClient(), factory.getDestinationClient(), salt, batchSize);
+		DeltaFinder finder = new DeltaFinder(tm, factory.getSourceClient(), factory.getDestinationClient(), salt, minRangeSize);
 		DeltaRanges ranges = finder.findDeltaRanges();
 		
 		// the first thing we need to do is calculate the what needs to be created, updated, or deleted.
@@ -366,7 +367,7 @@ public class MigrationClient {
 		File deleteTemp = File.createTempFile("delete", ".tmp");
 		
 		// Calculate the deltas
-		DeltaCounts counts = calculateDeltas(tm, ranges, batchSize, createTemp, updateTemp, deleteTemp);
+		DeltaCounts counts = calculateDeltas(tm, ranges, minRangeSize, createTemp, updateTemp, deleteTemp);
 		return new DeltaData(tm.getType(), createTemp, updateTemp, deleteTemp, counts);
 		
 	}
@@ -374,7 +375,7 @@ public class MigrationClient {
 	/**
 	 * Calculate the deltas
 	 * @param typeMeta
-	 * @param batchSize
+	 * @param minRangeSize
 	 * @param createTemp
 	 * @param updateTemp
 	 * @param deleteTemp
@@ -382,7 +383,7 @@ public class MigrationClient {
 	 * @throws FileNotFoundException
 	 * @throws IOException
 	 */
-	private DeltaCounts calculateDeltas(TypeToMigrateMetadata typeMeta, DeltaRanges ranges, long batchSize, File createTemp, File updateTemp, File deleteTemp)	throws Exception {
+	private DeltaCounts calculateDeltas(TypeToMigrateMetadata typeMeta, DeltaRanges ranges, long minRangeSize, File createTemp, File updateTemp, File deleteTemp)	throws Exception {
 
 		BasicProgress sourceProgress = new BasicProgress();
 		BasicProgress destProgress = new BasicProgress();
@@ -394,7 +395,7 @@ public class MigrationClient {
 			updateOut = new BufferedRowMetadataWriter(new FileWriter(updateTemp));
 			deleteOut = new BufferedRowMetadataWriter(new FileWriter(deleteTemp));
 			
-			DeltaBuilder builder = new DeltaBuilder(factory, batchSize, typeMeta, ranges, createOut, updateOut, deleteOut);
+			DeltaBuilder builder = new DeltaBuilder(factory, minRangeSize, typeMeta, ranges, createOut, updateOut, deleteOut);
 			
 			// Unconditional inserts
 			long insCount = builder.addInsertsFromSource();
@@ -436,11 +437,11 @@ public class MigrationClient {
 	 * @throws IOException 
 	 * 
 	 */
-	private void deleteFromDestination(MigrationType type, File deleteTemp, long count, long batchSize) throws Exception{
+	private void deleteFromDestination(MigrationType type, File deleteTemp, long count, long maxbackupBatchSize) throws Exception{
 		BufferedRowMetadataReader reader = new BufferedRowMetadataReader(new FileReader(deleteTemp));
 		try{
 			BasicProgress progress = new BasicProgress();
-			DeleteWorker worker = new DeleteWorker(type, count, reader, progress, factory.getDestinationClient(), batchSize);
+			DeleteWorker worker = new DeleteWorker(type, count, reader, progress, factory.getDestinationClient(), maxbackupBatchSize);
 			Future<Long> future = this.threadPool.submit(worker);
 			while(!future.isDone()){
 				// Log the progress
