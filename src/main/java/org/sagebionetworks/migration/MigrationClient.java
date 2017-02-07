@@ -5,7 +5,6 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -18,6 +17,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.sagebionetworks.client.SynapseAdminClient;
 import org.sagebionetworks.client.exceptions.SynapseException;
+import org.sagebionetworks.migration.async.AsyncMigrationWorker;
 import org.sagebionetworks.migration.delta.*;
 import org.sagebionetworks.repo.model.migration.*;
 import org.sagebionetworks.repo.model.status.StackStatus;
@@ -224,20 +224,6 @@ public class MigrationClient {
 		if (isChecksumDiff) {
 			throw new RuntimeException("Table checksum differences in final sync.");
 		}
-	}
-	
-	private String doChecksumForTypeWithOneRetry(SynapseAdminClient client, MigrationType t) throws SynapseException, JSONObjectAdapterException {
-		String checksum = null;
-		try {
-			checksum = client.getChecksumForType(t).getChecksum();
-		} catch (SynapseException e) {
-			if (e.getCause() instanceof SocketTimeoutException) {
-				checksum = client.getChecksumForType(t).getChecksum();
-			} else {
-				throw e;
-			}
-		}
-		return checksum;
 	}
 	
 	public String doAsyncChecksumForType(SynapseAdminClient client, MigrationType t) throws SynapseException, InterruptedException, JSONObjectAdapterException {

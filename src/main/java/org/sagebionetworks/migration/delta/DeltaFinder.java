@@ -12,10 +12,8 @@ import org.sagebionetworks.repo.model.migration.AsyncMigrationRangeChecksumReque
 import org.sagebionetworks.repo.model.migration.MigrationRangeChecksum;
 import org.sagebionetworks.repo.model.migration.MigrationType;
 import org.sagebionetworks.schema.adapter.JSONObjectAdapterException;
-import org.sagebionetworks.migration.delta.DeltaRanges;
-import org.sagebionetworks.migration.delta.IdRange;
 import org.sagebionetworks.migration.utils.TypeToMigrateMetadata;
-import org.sagebionetworks.migration.AsyncMigrationWorker;
+import org.sagebionetworks.migration.async.AsyncMigrationWorker;
 import org.sagebionetworks.tool.progress.BasicProgress;
 
 public class DeltaFinder {

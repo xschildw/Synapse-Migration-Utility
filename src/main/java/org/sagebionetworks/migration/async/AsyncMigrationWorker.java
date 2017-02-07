@@ -1,4 +1,4 @@
-package org.sagebionetworks.migration;
+package org.sagebionetworks.migration.async;
 
 import java.util.concurrent.Callable;
 
@@ -6,6 +6,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.sagebionetworks.client.SynapseAdminClient;
 import org.sagebionetworks.client.exceptions.SynapseException;
+import org.sagebionetworks.migration.AsyncMigrationException;
+import org.sagebionetworks.migration.WorkerFailedException;
 import org.sagebionetworks.repo.model.asynch.AsynchJobState;
 import org.sagebionetworks.repo.model.asynch.AsynchronousJobStatus;
 import org.sagebionetworks.repo.model.asynch.AsynchronousResponseBody;
