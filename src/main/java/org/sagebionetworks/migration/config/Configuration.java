@@ -29,28 +29,20 @@ public interface Configuration {
 	 * 
 	 * @return
 	 */
-	public int getMaximumBatchSize();
+	public int getMaximumBackupBatchSize();
+
+	/**
+	 * The minimum size for a DeltaRange (before deltas are calculated serially vs checksum
+	 *
+	 * @return
+	 */
+	public int getMinimumDeltaRangeSize();
 
 	public long getWorkerTimeoutMs();
 
-	/**
-	 * If a DaemonFailedException is thrown by the worker, then the batch will be
-	 * divide the batch into sub-batches using this number as the denominator.
-	 * An attempt will then be made to retry each sub-batch. If this is set to
-	 * less than 2, then no re-try will be attempted.
-	 * 
-	 * @return
-	 */
-	public int getRetryDenominator();
-	
 	/**
 	 * Maximum number of migration retries
 	 */
 	public int getMaxRetries();
 	
-	/**
-	 * Defer exceptions
-	 */
-	public boolean getDeferExceptions();
-
 }

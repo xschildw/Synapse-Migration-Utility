@@ -132,8 +132,13 @@ public class MigrationConfigurationImpl implements Configuration {
 	}
 	
 	@Override
-	public int getMaximumBatchSize(){
-		return Integer.parseInt(System.getProperty("org.sagebionetworks.batch.size"));
+	public int getMaximumBackupBatchSize(){
+		return Integer.parseInt(System.getProperty("org.sagebionetworks.max.backup.batchsize"));
+	}
+
+	@Override
+	public int getMinimumDeltaRangeSize() {
+		return Integer.parseInt(System.getProperty("org.sagebionetworks.min.delta.rangesize"));
 	}
 	
 	@Override
@@ -142,21 +147,8 @@ public class MigrationConfigurationImpl implements Configuration {
 	}
 
 	@Override
-	public int getRetryDenominator() {
-		return Integer.parseInt(System.getProperty("org.sagebionetworks.worker.retry.denominator"));
-	}
-
-	@Override
 	public int getMaxRetries() {
 		return Integer.parseInt(System.getProperty("org.sagebionetworks.max.retries"));
 	}
 	
-	@Override
-	public boolean getDeferExceptions() {
-		boolean v = false;
-		if (System.getProperty("org.sagebionetworks.defer.exceptions") != null) {
-			v = Boolean.parseBoolean(System.getProperty("org.sagebionetworks.defer.exceptions"));
-		}
-		return v;
-	}
 }

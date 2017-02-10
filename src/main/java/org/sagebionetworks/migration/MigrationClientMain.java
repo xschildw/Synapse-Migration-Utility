@@ -3,10 +3,10 @@ package org.sagebionetworks.migration;
 import java.io.IOException;
 
 import org.sagebionetworks.client.exceptions.SynapseException;
+import org.sagebionetworks.migration.factory.SynapseClientFactoryImpl;
 import org.sagebionetworks.schema.adapter.JSONObjectAdapterException;
 import org.sagebionetworks.migration.config.MigrationConfigurationImpl;
-import org.sagebionetworks.migration.SynapseClientFactory;
-import org.sagebionetworks.migration.SynapseClientFactoryImpl;
+import org.sagebionetworks.migration.factory.SynapseClientFactory;
 
 /**
  * The main entry point for the V3 data migration process.
@@ -32,9 +32,9 @@ public class MigrationClientMain {
 		MigrationClient client = new MigrationClient(factory);
 		boolean failed = client.migrate(
 				configuration.getMaxRetries(),
-				configuration.getMaximumBatchSize(),
-				configuration.getWorkerTimeoutMs(),
-				configuration.getRetryDenominator());
+				configuration.getMaximumBackupBatchSize(),
+				configuration.getMinimumDeltaRangeSize(),
+				configuration.getWorkerTimeoutMs());
 		if (failed) {
 			System.exit(-1);
 		} else {

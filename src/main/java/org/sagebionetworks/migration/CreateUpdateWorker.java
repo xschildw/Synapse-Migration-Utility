@@ -36,8 +36,7 @@ public class CreateUpdateWorker implements Callable<Long>, BatchWorker {
 	SynapseAdminClient sourceClient;
 	long batchSize;
 	long timeoutMS;
-	int retryDenominator;
-	
+
 	/**
 	 * 
 	 * @param type - The type to be migrated.
@@ -47,14 +46,13 @@ public class CreateUpdateWorker implements Callable<Long>, BatchWorker {
 	 * @param destClient - A handle to the destination SynapseAdministration client. Data will be pushed to the destination.
 	 * @param sourceClient - A handle to the source SynapseAdministration client. Data will be pulled from the source.
 	 * @param batchSize - Data is migrated in batches.  This controls the size of the batches.
-	 * @param timeout - How long should the worker wait for Daemon job to finish its task before timing out in milliseconds.
-	 * @param retryDenominator - If a daemon fails to backup or restore a single batch, the worker will divide the batch into sub-batches
+	 * @param timeoutMS - How long should the worker wait for Daemon job to finish its task before timing out in milliseconds.
 	 * using this number as the denominator. An attempt will then be made to retry the migration of each sub-batch in an attempt to isolate the problem.
 	 * If this is set to less than 2, then no re-try will be attempted.
 	 */
 	public CreateUpdateWorker(MigrationType type, long count, Iterator<RowMetadata> iterator, BasicProgress progress,
 			SynapseAdminClient destClient,
-			SynapseAdminClient sourceClient, long batchSize, long timeoutMS, int retryDenominator) {
+			SynapseAdminClient sourceClient, long batchSize, long timeoutMS) {
 		super();
 		this.type = type;
 		this.count = count;
@@ -66,7 +64,6 @@ public class CreateUpdateWorker implements Callable<Long>, BatchWorker {
 		this.sourceClient = sourceClient;
 		this.batchSize = batchSize;
 		this.timeoutMS = timeoutMS;
-		this.retryDenominator = retryDenominator;
 	}
 
 	@Override

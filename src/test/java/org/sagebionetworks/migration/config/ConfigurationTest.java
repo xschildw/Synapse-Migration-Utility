@@ -22,11 +22,6 @@ public class ConfigurationTest {
 		configuration.loadConfigurationFile(file);
 	}
 
-	@After
-	public void doAfter() {
-		System.clearProperty("org.sagebionetworks.defer.exceptions");
-	}
-	
 	@Test
 	public void testConfiguration() throws IOException{
 
@@ -51,9 +46,12 @@ public class ConfigurationTest {
 	}
 	
 	@Test
-	public void testMaxBatchSize(){
-		assertEquals(100, configuration.getMaximumBatchSize());
+	public void testMaxBackupBatchSize(){
+		assertEquals(100, configuration.getMaximumBackupBatchSize());
 	}
+
+	@Test
+	public void testMinDeltaRangeSize() { assertEquals(1000, configuration.getMinimumDeltaRangeSize()); }
 	
 	@Test
 	public void testWorkerTimeout(){
@@ -65,16 +63,4 @@ public class ConfigurationTest {
 		assertEquals(5, configuration.getMaxRetries());
 	}
 	
-	@Test
-	public void testGetDeferExceptionsNotSpecified() {
-		assertFalse(configuration.getDeferExceptions());
-	}
-	
-	@Test
-	public void testGetDeferExceptionsSpecified() {
-		System.setProperty("org.sagebionetworks.defer.exceptions", "false");
-		assertFalse(configuration.getDeferExceptions());
-		System.setProperty("org.sagebionetworks.defer.exceptions", "true");
-		assertTrue(configuration.getDeferExceptions());
-	}
 }

@@ -1,15 +1,11 @@
-package org.sagebionetworks.migration;
+package org.sagebionetworks.migration.delta;
 
 import java.util.List;
 import org.sagebionetworks.client.SynapseAdminClient;
 import org.sagebionetworks.client.exceptions.SynapseException;
 import org.sagebionetworks.repo.model.migration.RowMetadata;
-import org.sagebionetworks.migration.SynapseClientFactory;
+import org.sagebionetworks.migration.factory.SynapseClientFactory;
 import org.sagebionetworks.migration.stream.RowWriter;
-import org.sagebionetworks.migration.DeltaCounts;
-import org.sagebionetworks.migration.RangeDeltaBuilder;
-import org.sagebionetworks.migration.delta.DeltaRanges;
-import org.sagebionetworks.migration.delta.IdRange;
 import org.sagebionetworks.migration.utils.TypeToMigrateMetadata;
 import org.sagebionetworks.tool.progress.BasicProgress;
 
@@ -37,20 +33,20 @@ public class DeltaBuilder {
 	}
 	
 	public long addInsertsFromSource() throws SynapseException {
-		SynapseAdminClient srcClient = factory.createNewSourceClient();
+		SynapseAdminClient srcClient = factory.getSourceClient();
 		long deleteCount = DeltaBuilder.addUnconditionalDeltas(srcClient, type, batchSize, sourceProgress, this.deltaRanges.getInsRanges(), this.toCreate);
 		return deleteCount;
 	}
 	
 	public long addDeletesAtDestination() throws SynapseException {
-		SynapseAdminClient destClient = factory.createNewDestinationClient();
+		SynapseAdminClient destClient = factory.getDestinationClient();
 		long deleteCount = DeltaBuilder.addUnconditionalDeltas(destClient, type, batchSize, destProgress, this.deltaRanges.getDelRanges(), this.toDelete);
 		return deleteCount;
 	}
 	
 	public DeltaCounts addDifferencesBetweenSourceAndDestination() throws Exception {
-		SynapseAdminClient srcClient = factory.createNewSourceClient();
-		SynapseAdminClient destClient = factory.createNewDestinationClient();
+		SynapseAdminClient srcClient = factory.getSourceClient();
+		SynapseAdminClient destClient = factory.getDestinationClient();
 		List<IdRange> ranges = this.deltaRanges.getUpdRanges();
 		DeltaCounts counts = new DeltaCounts(0, 0, 0);
 		for (IdRange r: ranges) {

@@ -1,4 +1,4 @@
-package org.sagebionetworks.migration;
+package org.sagebionetworks.migration.delta;
 
 import java.io.File;
 

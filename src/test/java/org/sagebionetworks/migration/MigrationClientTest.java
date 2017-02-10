@@ -3,7 +3,6 @@ package org.sagebionetworks.migration;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.when;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
@@ -20,20 +19,18 @@ import org.sagebionetworks.client.SynapseAdminClient;
 import org.sagebionetworks.client.SynapseAdminClientImpl;
 import org.sagebionetworks.client.exceptions.SynapseException;
 import org.sagebionetworks.client.exceptions.SynapseServerException;
+import org.sagebionetworks.migration.utils.TypeToMigrateMetadata;
 import org.sagebionetworks.repo.model.asynch.AsynchJobState;
 import org.sagebionetworks.repo.model.asynch.AsynchronousJobStatus;
-import org.sagebionetworks.repo.model.migration.AdminRequest;
 import org.sagebionetworks.repo.model.migration.AsyncMigrationRequest;
 import org.sagebionetworks.repo.model.migration.AsyncMigrationResponse;
-import org.sagebionetworks.repo.model.migration.AsyncMigrationTypeCountRequest;
 import org.sagebionetworks.repo.model.migration.MigrationType;
-import org.sagebionetworks.repo.model.migration.MigrationTypeCount;
+import org.sagebionetworks.repo.model.migration.MigrationTypeNames;
 import org.sagebionetworks.repo.model.migration.RowMetadata;
 import org.sagebionetworks.repo.model.status.StackStatus;
 import org.sagebionetworks.repo.model.status.StatusEnum;
 import org.sagebionetworks.simpleHttpClient.SimpleHttpClientConfig;
-import org.sagebionetworks.migration.SynapseAdminClientMockState;
-import org.sagebionetworks.migration.SynapseClientFactory;
+import org.sagebionetworks.migration.factory.SynapseClientFactory;
 
 /**
  * Migration client test.
@@ -64,8 +61,8 @@ public class MigrationClientTest {
 		sourceSynapse = SynapseAdminClientMocker.createMock(mockSource);
 		
 		mockFactory = Mockito.mock(SynapseClientFactory.class);
-		when(mockFactory.createNewDestinationClient()).thenReturn(destSynapse);
-		when(mockFactory.createNewSourceClient()).thenReturn(sourceSynapse);
+		when(mockFactory.getDestinationClient()).thenReturn(destSynapse);
+		when(mockFactory.getSourceClient()).thenReturn(sourceSynapse);
 		migrationClient = new MigrationClient(mockFactory);
 	}
 	
@@ -96,18 +93,41 @@ public class MigrationClientTest {
 		assertEquals(expected, status);
 	}
 	
+	@Test
+	public void testGetCommonMigrationTypes() throws Exception {
+		MigrationTypeNames expectedSrcTypeNames = new MigrationTypeNames();
+		expectedSrcTypeNames.setList(Arrays.asList("PRINCIPAL", "GROUP_MEMBERS", "STORAGE_QUOTA", "CREDENTIAL"));
+		MigrationTypeNames expectedDestTypeNames = new MigrationTypeNames();
+		expectedDestTypeNames.setList(Arrays.asList("PRINCIPAL", "CREDENTIAL", "STORAGE_QUOTA", "PRINCIPAL_ALIAS"));
+		List<MigrationType> expectedCommonTypes = Arrays.asList(MigrationType.PRINCIPAL, MigrationType.CREDENTIAL);
+
+		SynapseAdminClient mockSrc = Mockito.mock(SynapseAdminClient.class);
+		when(mockSrc.getMigrationTypeNames()).thenReturn(expectedSrcTypeNames);
+		SynapseAdminClient mockDest = Mockito.mock(SynapseAdminClient.class);
+		when(mockDest.getMigrationTypeNames()).thenReturn(expectedDestTypeNames);
+
+		SynapseClientFactory mf = Mockito.mock(SynapseClientFactory.class);
+		when(mf.getSourceClient()).thenReturn(mockSrc);
+		when(mf.getDestinationClient()).thenReturn(mockDest);
+
+		MigrationClient migClient = new MigrationClient(mf);
+
+		List<MigrationType> commonTypes = migClient.getCommonMigrationTypes();
+		assertEquals(expectedCommonTypes, commonTypes);
+	}
+
 	/**
 	 * Test the full migration of data from the source to destination.
 	 */
 	@Test
-	public void testMigrateAllTypes() throws Exception{
+	public void testMigrateTypes() throws Exception{
 		// Setup the destination
 		// The first element should get deleted and second should get updated.
-		List<RowMetadata> list = createList(new Long[]{1L, 2L}, new String[]{"e1","e2"}, new Long[]{null, null});
+		List<RowMetadata> list = createRowMetadataList(new Long[]{1L, 2L}, new String[]{"e1","e2"}, new Long[]{null, null});
 		mockDestination.metadata.put(MigrationType.values()[0], list);
 		
 		// Setup a second type with no values
-		list = createList(new Long[]{}, new String[]{}, new Long[]{});
+		list = createRowMetadataList(new Long[]{}, new String[]{}, new Long[]{});
 		mockDestination.metadata.put(MigrationType.values()[1], list);
 		
 		mockDestination.currentChangeNumberStack.push(11L);
@@ -116,19 +136,24 @@ public class MigrationClientTest {
 		
 		// setup the source
 		// The first element should get trigger an update and the second should trigger an add
-		list = createList(new Long[]{2L, 3L}, new String[]{"e2changed","e3"}, new Long[]{null, 1l});
+		list = createRowMetadataList(new Long[]{2L, 3L}, new String[]{"e2changed","e3"}, new Long[]{null, 1l});
 		mockSource.metadata.put(MigrationType.values()[0], list);
 		
 		// both values should get added
-		list = createList(new Long[]{5L, 6L}, new String[]{"e5","e6"}, new Long[]{null, 6L});
+		list = createRowMetadataList(new Long[]{5L, 6L}, new String[]{"e5","e6"}, new Long[]{null, 6L});
 		mockSource.metadata.put(MigrationType.values()[1], list);
+
+		List<TypeToMigrateMetadata> typesToMigrateMetadata = createTypeToMigrateMetadataList(
+				Arrays.copyOfRange(MigrationType.values(), 0, 2),
+				new Long[]{2L, 5L}, new Long[]{3L, 6L}, new Long[]{2L, 2L},
+				new Long[]{1L, 0L}, new Long[]{2L, 0L}, new Long[]{1L, 0L});
 		
 		// Migrate the data
-		migrationClient.migrateAllTypes(10L, 1000*60, 2);
+		migrationClient.migrateTypes(typesToMigrateMetadata, 10L, 10L, 1000*60);
 		
 		// Now validate the results
-		List<RowMetadata> expected0 = createList(new Long[]{2L, 3L}, new String[]{"e2changed","e3"}, new Long[]{null, 1l});
-		List<RowMetadata> expected1 = createList(new Long[]{5L, 6L}, new String[]{"e5","e6"}, new Long[]{null, 6L});
+		List<RowMetadata> expected0 = createRowMetadataList(new Long[]{2L, 3L}, new String[]{"e2changed","e3"}, new Long[]{null, 1l});
+		List<RowMetadata> expected1 = createRowMetadataList(new Long[]{5L, 6L}, new String[]{"e5","e6"}, new Long[]{null, 6L});
 		
 		// check the state of the destination.
 		assertEquals(expected0, mockDestination.metadata.get(MigrationType.values()[0]));
@@ -168,7 +193,7 @@ public class MigrationClientTest {
 	/**
 	 * Helper to build up lists of metadata
 	 */
-	public static List<RowMetadata> createList(Long[] ids, String[] etags, Long[] parentId){
+	public static List<RowMetadata> createRowMetadataList(Long[] ids, String[] etags, Long[] parentId){
 		List<RowMetadata> list = new LinkedList<RowMetadata>();
 		for (int i=0;  i<ids.length; i++) {
 			if (ids[i] == null) {
@@ -182,6 +207,26 @@ public class MigrationClientTest {
 			}
 		}
 		return list;
+	}
+
+	public static List<TypeToMigrateMetadata> createTypeToMigrateMetadataList(MigrationType[] types, Long[] srcMins, Long[] srcMaxs, Long[] srcCounts, Long[] destMins, Long[] destMaxs, Long[] destCounts) {
+		List<TypeToMigrateMetadata> l = new LinkedList<TypeToMigrateMetadata>();
+		for (int i = 0;  i < types.length; i++) {
+			if (types[i] == null) {
+				l.add(null);
+			} else {
+				TypeToMigrateMetadata tm = new TypeToMigrateMetadata();
+				tm.setType(types[i]);
+				tm.setSrcMinId(srcMins[i]);
+				tm.setSrcMaxId(srcMaxs[i]);
+				tm.setSrcCount(srcCounts[i]);
+				tm.setDestMinId(destMins[i]);
+				tm.setDestMaxId(destMaxs[i]);
+				tm.setDestCount(destCounts[i]);
+				l.add(tm);
+			}
+		}
+		return l;
 	}
 
 }

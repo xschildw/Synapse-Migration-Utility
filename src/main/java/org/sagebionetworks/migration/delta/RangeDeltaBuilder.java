@@ -1,7 +1,6 @@
-package org.sagebionetworks.migration;
+package org.sagebionetworks.migration.delta;
 
 import java.util.Iterator;
-import java.util.concurrent.Callable;
 
 import org.sagebionetworks.repo.model.migration.RowMetadata;
 import org.sagebionetworks.migration.stream.RowWriter;
