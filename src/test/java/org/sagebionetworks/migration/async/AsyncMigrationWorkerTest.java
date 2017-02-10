@@ -1,4 +1,4 @@
-package org.sagebionetworks.migration;
+package org.sagebionetworks.migration.async;
 
 import static org.junit.Assert.*;
 
@@ -17,6 +17,8 @@ import static org.mockito.Matchers.anyString;
 
 import org.mockito.internal.util.reflection.Whitebox;
 import org.sagebionetworks.client.SynapseAdminClient;
+import org.sagebionetworks.migration.AsyncMigrationException;
+import org.sagebionetworks.migration.WorkerFailedException;
 import org.sagebionetworks.migration.async.AsyncMigrationWorker;
 import org.sagebionetworks.repo.model.asynch.AsynchJobState;
 import org.sagebionetworks.repo.model.asynch.AsynchronousJobStatus;
@@ -26,6 +28,8 @@ import org.sagebionetworks.repo.model.migration.AsyncMigrationRequest;
 import org.sagebionetworks.repo.model.migration.AsyncMigrationResponse;
 import org.sagebionetworks.tool.progress.BasicProgress;
 import org.sagebionetworks.util.Clock;
+
+import java.util.concurrent.TimeoutException;
 
 public class AsyncMigrationWorkerTest {
 	
@@ -61,7 +65,7 @@ public class AsyncMigrationWorkerTest {
 	public void tearDown() throws Exception {
 	}
 
-	@Test(expected = InterruptedException.class)
+	@Test
 	public void testTimeout() throws Exception {
 		when(mockClock.currentTimeMillis()).thenReturn(1000L, 2500L);
 
@@ -69,7 +73,11 @@ public class AsyncMigrationWorkerTest {
 		Whitebox.setInternalState(worker, "clock", mockClock);
 		
 		// Call under test
-		AdminResponse resp = worker.call();
+		try {
+			AdminResponse resp = worker.call();
+		} catch (AsyncMigrationException e) {
+			assertTrue(e.getCause() instanceof TimeoutException);
+		}
 
 		verify(mockClient, never()).getAsynchronousJobStatus(anyString());
 		verify(mockProgress, never()).setCurrent(anyLong());
@@ -77,7 +85,7 @@ public class AsyncMigrationWorkerTest {
 		verify(mockClock, never()).sleep(anyLong());
 	}
 	
-	@Test(expected = WorkerFailedException.class)
+	@Test
 	public void testFailed() throws Exception {
 		when(mockClock.currentTimeMillis()).thenReturn(1000L, 2500L);
 		AsynchronousJobStatus jobStatus1 = new AsynchronousJobStatus();
@@ -89,7 +97,11 @@ public class AsyncMigrationWorkerTest {
 		Whitebox.setInternalState(worker, "clock", mockClock);
 		
 		// Call under test
-		AdminResponse resp = worker.call();
+		try {
+			AdminResponse resp = worker.call();
+		} catch (AsyncMigrationException e) {
+			assertTrue(e.getCause() instanceof WorkerFailedException);
+		}
 
 		verify(mockProgress, never()).setCurrent(anyLong());
 		verify(mockProgress, never()).setTotal(anyLong());

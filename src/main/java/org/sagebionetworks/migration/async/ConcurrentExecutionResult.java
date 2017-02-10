@@ -3,26 +3,26 @@ package org.sagebionetworks.migration.async;
 import org.sagebionetworks.repo.model.migration.AdminResponse;
 
 /**
- * A container for a pair of AdminResponse returned by ConcurrentAdminRequestExecutor.call()
+ * A container for a pair of results (any type)
  */
-public class ConcurrentExecutionResult {
+public class ConcurrentExecutionResult<T> {
 
-	private AdminResponse srcResponse;
-	private AdminResponse destResponse;
+	private T srcResponse;
+	private T destResponse;
 
-	public void setSourceResponse(AdminResponse resp) {
+	public void setSourceResponse(T resp) {
 		this.srcResponse = resp;
 	}
 
-	public AdminResponse getSourceResponse() {
+	public T getSourceResponse() {
 		return this.srcResponse;
 	}
 
-	public void setDestinationResponse(AdminResponse resp) {
+	public void setDestinationResponse(T resp) {
 		this.destResponse = resp;
 	}
 
-	public AdminResponse getDestinationResponse() {
+	public T getDestinationResponse() {
 		return this.destResponse;
 	}
 }

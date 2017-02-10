@@ -9,15 +9,14 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.sagebionetworks.client.SynapseAdminClient;
 import org.sagebionetworks.client.exceptions.SynapseException;
 import org.sagebionetworks.migration.async.AsyncMigrationWorker;
+import org.sagebionetworks.migration.async.ConcurrentExecutionResult;
 import org.sagebionetworks.migration.delta.*;
 import org.sagebionetworks.repo.model.migration.*;
 import org.sagebionetworks.repo.model.status.StackStatus;
@@ -236,6 +235,53 @@ public class MigrationClient {
 		MigrationTypeChecksum res = (MigrationTypeChecksum)resp;
 		checksum = res.getChecksum();
 		return checksum;
+	}
+
+	public ConcurrentExecutionResult<String> doConcurrentChecksumForType(SynapseAdminClient source, SynapseAdminClient destination, MigrationType t)
+		throws InterruptedException, AsyncMigrationException {
+		AsyncMigrationTypeChecksumRequest srcReq = new AsyncMigrationTypeChecksumRequest();
+		srcReq.setType(t.name());
+		BasicProgress srcProgress = new BasicProgress();
+		AsyncMigrationWorker srcWorker = new AsyncMigrationWorker(source, srcReq, 900000, srcProgress);
+		AsyncMigrationTypeChecksumRequest destReq = new AsyncMigrationTypeChecksumRequest();
+		destReq.setType(t.name());
+		BasicProgress destProgress = new BasicProgress();
+		AsyncMigrationWorker destWorker = new AsyncMigrationWorker(source, srcReq, 900000, destProgress);
+		Future<AdminResponse> fSrcResp = threadPool.submit(srcWorker);
+		Future<AdminResponse> fDestResp = threadPool.submit(destWorker);
+		/* Order does not really matter, have to wait for slowest */
+		waitForResults(fSrcResp);
+		waitForResults(fDestResp);
+		AdminResponse srcResp = getResponse(fSrcResp);
+		AdminResponse destResp= getResponse(fDestResp);
+		MigrationTypeChecksum srcChecksum = (MigrationTypeChecksum)srcResp;
+		MigrationTypeChecksum destChecksum = (MigrationTypeChecksum)destResp;
+		ConcurrentExecutionResult<String> result = new ConcurrentExecutionResult<String>();
+		result.setSourceResponse(srcChecksum.getChecksum());
+		result.setDestinationResponse(destChecksum.getChecksum());
+		return result;
+	}
+
+	private void waitForResults(Future<AdminResponse> f) {
+		while (! f.isDone()) {
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				// Should never happen!
+				assert false;
+			}
+		}
+	}
+
+	private AdminResponse getResponse(Future<AdminResponse> f) throws InterruptedException, AsyncMigrationException {
+		AdminResponse response = null;
+		try {
+			response = f.get();
+		} catch (ExecutionException e) {
+			logger.debug("Execution exception in table checksum.");
+			throw (AsyncMigrationException)e.getCause();
+		}
+		return response;
 	}
 
 	/**

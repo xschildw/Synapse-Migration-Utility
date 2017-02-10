@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -19,14 +20,11 @@ import org.sagebionetworks.client.SynapseAdminClient;
 import org.sagebionetworks.client.SynapseAdminClientImpl;
 import org.sagebionetworks.client.exceptions.SynapseException;
 import org.sagebionetworks.client.exceptions.SynapseServerException;
+import org.sagebionetworks.migration.async.ConcurrentExecutionResult;
 import org.sagebionetworks.migration.utils.TypeToMigrateMetadata;
 import org.sagebionetworks.repo.model.asynch.AsynchJobState;
 import org.sagebionetworks.repo.model.asynch.AsynchronousJobStatus;
-import org.sagebionetworks.repo.model.migration.AsyncMigrationRequest;
-import org.sagebionetworks.repo.model.migration.AsyncMigrationResponse;
-import org.sagebionetworks.repo.model.migration.MigrationType;
-import org.sagebionetworks.repo.model.migration.MigrationTypeNames;
-import org.sagebionetworks.repo.model.migration.RowMetadata;
+import org.sagebionetworks.repo.model.migration.*;
 import org.sagebionetworks.repo.model.status.StackStatus;
 import org.sagebionetworks.repo.model.status.StatusEnum;
 import org.sagebionetworks.simpleHttpClient.SimpleHttpClientConfig;
@@ -188,6 +186,34 @@ public class MigrationClientTest {
 		migrationClient.getTypeCount(mockConn, t);
 		
 		verify(mockConn).startAdminAsynchronousJob(any(AsyncMigrationRequest.class));
+	}
+
+	@Test
+	public void testDoConcurrentChecksumForType() throws Exception {
+
+		SynapseAdminClient mockSrcClient = Mockito.mock(SynapseAdminClient.class);
+		SynapseAdminClient mockDestClient = Mockito.mock(SynapseAdminClient.class);
+
+		MigrationTypeChecksum expectedChecksum = new MigrationTypeChecksum();
+		expectedChecksum.setType(MigrationType.ACL);
+		expectedChecksum.setChecksum("checksum");
+		AsyncMigrationResponse expectedResponse = new AsyncMigrationResponse();
+		expectedResponse.setAdminResponse(expectedChecksum);
+		AsynchronousJobStatus expectedJobStatus = new AsynchronousJobStatus();
+		expectedJobStatus.setJobId("1");
+		expectedJobStatus.setJobState(AsynchJobState.COMPLETE);
+		expectedJobStatus.setResponseBody(expectedResponse);
+
+		when(mockSrcClient.startAdminAsynchronousJob(any(AsyncMigrationRequest.class))).thenReturn(expectedJobStatus);
+		when(mockDestClient.startAdminAsynchronousJob(any(AsyncMigrationRequest.class))).thenReturn(expectedJobStatus);
+		when(mockSrcClient.getAdminAsynchronousJobStatus(anyString())).thenReturn(expectedJobStatus);
+		when(mockDestClient.getAdminAsynchronousJobStatus(anyString())).thenReturn(expectedJobStatus);
+
+		// Call under test
+		ConcurrentExecutionResult<String> result = migrationClient.doConcurrentChecksumForType(mockSrcClient, mockDestClient, MigrationType.ACL);
+
+		assertEquals("checksum", result.getSourceResponse());
+		assertEquals("checksum", result.getDestinationResponse());
 	}
 	
 	/**
