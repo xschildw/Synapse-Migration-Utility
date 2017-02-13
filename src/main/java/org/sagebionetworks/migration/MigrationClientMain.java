@@ -30,7 +30,7 @@ public class MigrationClientMain {
 		// Create the client factory
 		SynapseClientFactory factory = new SynapseClientFactoryImpl(configuration);
 		MigrationClient client = new MigrationClient(factory);
-		boolean failed = client.migrate(
+		boolean failed = client.migrateWithRetry(
 				configuration.getMaxRetries(),
 				configuration.getMaximumBackupBatchSize(),
 				configuration.getMinimumDeltaRangeSize(),

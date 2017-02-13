@@ -17,7 +17,7 @@ import org.sagebionetworks.schema.adapter.JSONObjectAdapterException;
 public class ToolMigrationUtils {
 
 	/**
-	 * Build the metadata for the primary types to migrate
+	 * Build the metadata for the primary types to migrateWithRetry
 	 *
 	 * @param srcCounts
 	 * @param destCounts

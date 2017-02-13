@@ -60,13 +60,7 @@ public class MigrationClient {
 		MigrationTypeNames srcMigrationTypeNames = srcClient.getMigrationTypeNames();
 		MigrationTypeNames destMigrationTypeNames = destClient.getMigrationTypeNames();
 
-		List<String> commonTypeNames = getCommonTypeNames(srcMigrationTypeNames, destMigrationTypeNames);
-
-		List<MigrationType> commonTypes = new LinkedList<MigrationType>();
-		for (String t: commonTypeNames) {
-			commonTypes.add(MigrationType.valueOf(t));
-		}
-		return commonTypes;
+		return getCommonMigrationTypes(srcMigrationTypeNames, destMigrationTypeNames);
 	}
 
 	public List<MigrationType> getCommonPrimaryMigrationTypes() throws SynapseException {
@@ -76,6 +70,10 @@ public class MigrationClient {
 		MigrationTypeNames srcMigrationTypeNames = srcClient.getPrimaryTypeNames();
 		MigrationTypeNames destMigrationTypeNames = destClient.getPrimaryTypeNames();
 
+		return getCommonMigrationTypes(srcMigrationTypeNames, destMigrationTypeNames);
+	}
+
+	private List<MigrationType> getCommonMigrationTypes(MigrationTypeNames srcMigrationTypeNames, MigrationTypeNames destMigrationTypeNames) {
 		List<String> commonTypeNames = getCommonTypeNames(srcMigrationTypeNames, destMigrationTypeNames);
 
 		List<MigrationType> commonTypes = new LinkedList<MigrationType>();
@@ -144,45 +142,15 @@ public class MigrationClient {
 	 * 
 	 * @throws Exception 
 	 */
-	public boolean migrate(int maxRetries, long maxBackupBatchSize, long minRangeSize, long timeoutMS) throws SynapseException, JSONObjectAdapterException {
+	public boolean migrateWithRetry(int maxRetries, long maxBackupBatchSize, long minRangeSize, long timeoutMS) throws SynapseException, JSONObjectAdapterException {
 		boolean failed = false;
 		try {
 			// First set the destination stack status to down
 			setDestinationStatus(StatusEnum.READ_ONLY, "Staging is down for data migration");
 			for (int i = 0; i < maxRetries; i++) {
 				try {
-					// Determine which types to migrate
-					logger.info("Determining types to migrate...");
-					List<MigrationType> typesToMigrate = this.getCommonMigrationTypes();
-					List<MigrationType> primaryTypesToMigrate = this.getCommonPrimaryMigrationTypes();
-					// Get the counts
-					// TODO: Replace by async when supported by backend
-					List<MigrationTypeCount> startSourceCounts = getTypeCounts(factory.getSourceClient(), typesToMigrate);
-					List<MigrationTypeCount> startDestCounts = getTypeCounts(factory.getDestinationClient(), typesToMigrate);
-					// Build the metadata for each type
-					List<TypeToMigrateMetadata> typesToMigrateMetadata = ToolMigrationUtils.buildTypeToMigrateMetadata(startSourceCounts, startDestCounts, primaryTypesToMigrate);
+					failed = migrate(minRangeSize, maxBackupBatchSize, timeoutMS);
 
-					// Display starting counts
-					logger.info("Starting diffs in counts:");
-					printDiffsInCounts(startSourceCounts, startDestCounts);
-
-					// Actual migration
-					this.migrateTypes(typesToMigrateMetadata, maxBackupBatchSize, minRangeSize, timeoutMS);
-
-					// Print the final counts
-					List<MigrationTypeCount> endSourceCounts = getTypeCounts(factory.getSourceClient(), typesToMigrate);
-					List<MigrationTypeCount> endDestCounts = getTypeCounts(factory.getDestinationClient(), typesToMigrate);
-					logger.info("Ending diffs in  counts:");
-					printDiffsInCounts(endSourceCounts, endDestCounts);
-
-					// If final sync (source is in read-only mode) then do a table checksum
-					// Note: Destination is always in read-only during migration
-					if (factory.getSourceClient().getCurrentStackStatus().getStatus() == StatusEnum.READ_ONLY) {
-						doChecksumForMigratedTypes(factory.getSourceClient(), factory.getDestinationClient(), primaryTypesToMigrate);
-					}
-
-					// Exit on 1st success
-					failed = false;
 				} catch (Exception e) {
 					failed = true;
 					logger.error("Failed at attempt: " + i + " with error " + e.getMessage(), e);
@@ -195,6 +163,42 @@ public class MigrationClient {
 			// After migration is complete, re-enable read/write
 			setDestinationStatus(StatusEnum.READ_WRITE, "Synapse is ready for read/write");
 		}
+		return failed;
+	}
+
+	private boolean migrate(long minRangeSize, long maxBackupBatchSize, long timeoutMS) throws Exception {
+		boolean failed;// Determine which types to migrateWithRetry
+		logger.info("Determining types to migrateWithRetry...");
+		List<MigrationType> typesToMigrate = this.getCommonMigrationTypes();
+		List<MigrationType> primaryTypesToMigrate = this.getCommonPrimaryMigrationTypes();
+		// Get the counts
+		// TODO: Replace by async when supported by backend
+		List<MigrationTypeCount> startSourceCounts = getTypeCounts(factory.getSourceClient(), typesToMigrate);
+		List<MigrationTypeCount> startDestCounts = getTypeCounts(factory.getDestinationClient(), typesToMigrate);
+		// Build the metadata for each type
+		List<TypeToMigrateMetadata> typesToMigrateMetadata = ToolMigrationUtils.buildTypeToMigrateMetadata(startSourceCounts, startDestCounts, primaryTypesToMigrate);
+
+		// Display starting counts
+		logger.info("Starting diffs in counts:");
+		printDiffsInCounts(startSourceCounts, startDestCounts);
+
+		// Actual migration
+		this.migrateTypes(typesToMigrateMetadata, maxBackupBatchSize, minRangeSize, timeoutMS);
+
+		// Print the final counts
+		List<MigrationTypeCount> endSourceCounts = getTypeCounts(factory.getSourceClient(), typesToMigrate);
+		List<MigrationTypeCount> endDestCounts = getTypeCounts(factory.getDestinationClient(), typesToMigrate);
+		logger.info("Ending diffs in  counts:");
+		printDiffsInCounts(endSourceCounts, endDestCounts);
+
+		// If final sync (source is in read-only mode) then do a table checksum
+		// Note: Destination is always in read-only during migration
+		if (factory.getSourceClient().getCurrentStackStatus().getStatus() == StatusEnum.READ_ONLY) {
+            doChecksumForMigratedTypes(factory.getSourceClient(), factory.getDestinationClient(), primaryTypesToMigrate);
+        }
+
+		// Exit on 1st success
+		failed = false;
 		return failed;
 	}
 
