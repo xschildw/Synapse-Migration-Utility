@@ -145,8 +145,7 @@ public class DeltaFinder {
 			req.setSalt(salt);
 			req.setMinId(minId);
 			req.setMaxId(maxId);
-			BasicProgress progress = new BasicProgress();
-			AsyncMigrationWorker worker = new AsyncMigrationWorker(conn, req, 900000, progress);
+			AsyncMigrationWorker worker = new AsyncMigrationWorker(conn, req, 900000);
 			AdminResponse resp = worker.call();
 			res = (MigrationRangeChecksum)resp;
 			return res;

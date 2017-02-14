@@ -27,15 +27,13 @@ public class AsyncMigrationWorker implements Callable<AdminResponse> {
 
 	private SynapseAdminClient client;
 	private AdminRequest request;
-	private BasicProgress progress;
 	long timeoutMs;
 	private Clock clock;
 
-	public AsyncMigrationWorker(SynapseAdminClient client, AdminRequest request, long timeoutMs, BasicProgress progress) {
+	public AsyncMigrationWorker(SynapseAdminClient client, AdminRequest request, long timeoutMs) {
 		this.client = client;
 		this.request = request;
 		this.timeoutMs = timeoutMs;
-		this.progress = progress;
 		this.clock = new DefaultClock();
 	}
 	

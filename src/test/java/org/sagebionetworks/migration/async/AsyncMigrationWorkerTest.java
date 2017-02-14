@@ -38,8 +38,6 @@ public class AsyncMigrationWorkerTest {
 	@Mock
 	private Clock mockClock;
 	@Mock
-	private BasicProgress mockProgress;
-	@Mock
 	private AdminRequest request;
 	@Mock
 	private AdminResponse response;
@@ -69,7 +67,7 @@ public class AsyncMigrationWorkerTest {
 	public void testTimeout() throws Exception {
 		when(mockClock.currentTimeMillis()).thenReturn(1000L, 2500L);
 
-		worker = new AsyncMigrationWorker(mockClient, request, 1000L, mockProgress);
+		worker = new AsyncMigrationWorker(mockClient, request, 1000L);
 		Whitebox.setInternalState(worker, "clock", mockClock);
 		
 		// Call under test
@@ -80,8 +78,6 @@ public class AsyncMigrationWorkerTest {
 		}
 
 		verify(mockClient, never()).getAsynchronousJobStatus(anyString());
-		verify(mockProgress, never()).setCurrent(anyLong());
-		verify(mockProgress, never()).setTotal(anyLong());
 		verify(mockClock, never()).sleep(anyLong());
 	}
 	
@@ -93,7 +89,7 @@ public class AsyncMigrationWorkerTest {
 		jobStatus1.setJobState(AsynchJobState.FAILED);
 		when(mockClient.getAdminAsynchronousJobStatus("jobId")).thenReturn(jobStatus1);
 		
-		worker = new AsyncMigrationWorker(mockClient, request, 10000L, mockProgress);
+		worker = new AsyncMigrationWorker(mockClient, request, 10000L);
 		Whitebox.setInternalState(worker, "clock", mockClock);
 		
 		// Call under test
@@ -103,8 +99,6 @@ public class AsyncMigrationWorkerTest {
 			assertTrue(e.getCause() instanceof WorkerFailedException);
 		}
 
-		verify(mockProgress, never()).setCurrent(anyLong());
-		verify(mockProgress, never()).setTotal(anyLong());
 		verify(mockClock, never()).sleep(anyLong());
 	}
 	
@@ -120,7 +114,7 @@ public class AsyncMigrationWorkerTest {
 		jobStatus1.setResponseBody(migResp);
 		when(mockClient.getAdminAsynchronousJobStatus("jobId")).thenReturn(jobStatus1);
 
-		worker = new AsyncMigrationWorker(mockClient, request, 3000L, mockProgress);
+		worker = new AsyncMigrationWorker(mockClient, request, 3000L);
 		Whitebox.setInternalState(worker, "clock", mockClock);
 		
 		// Call under test
@@ -128,8 +122,6 @@ public class AsyncMigrationWorkerTest {
 		
 		assertNotNull(resp);
 
-		verify(mockProgress, never()).setCurrent(anyLong());
-		verify(mockProgress, never()).setTotal(anyLong());
 		verify(mockClock, never()).sleep(anyLong());
 	}
 	
@@ -150,7 +142,7 @@ public class AsyncMigrationWorkerTest {
 		jobStatus2.setResponseBody(migResp);
 		when(mockClient.getAdminAsynchronousJobStatus("jobId")).thenReturn(jobStatus1, jobStatus2);
 		
-		worker = new AsyncMigrationWorker(mockClient, request, 3000L, mockProgress);
+		worker = new AsyncMigrationWorker(mockClient, request, 3000L);
 		Whitebox.setInternalState(worker, "clock", mockClock);
 		
 		// Call under test

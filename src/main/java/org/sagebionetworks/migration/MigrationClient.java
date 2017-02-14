@@ -5,7 +5,6 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
@@ -17,6 +16,7 @@ import org.sagebionetworks.client.SynapseAdminClient;
 import org.sagebionetworks.client.exceptions.SynapseException;
 import org.sagebionetworks.migration.async.AsyncMigrationWorker;
 import org.sagebionetworks.migration.async.ConcurrentExecutionResult;
+import org.sagebionetworks.migration.async.ConcurrentMigrationTypeCountsExecutor;
 import org.sagebionetworks.migration.delta.*;
 import org.sagebionetworks.repo.model.migration.*;
 import org.sagebionetworks.repo.model.status.StackStatus;
@@ -40,7 +40,6 @@ public class MigrationClient {
 
 	SynapseClientFactory factory;
 	ExecutorService threadPool;
-	List<Exception> deferredExceptions;
 
 	/**
 	 * New migration client.
@@ -50,7 +49,6 @@ public class MigrationClient {
 		if(factory == null) throw new IllegalArgumentException("Factory cannot be null");
 		this.factory = factory;
 		threadPool = Executors.newFixedThreadPool(1);
-		deferredExceptions = new ArrayList<Exception>();
 	}
 
 	public List<MigrationType> getCommonMigrationTypes() throws SynapseException {
@@ -167,27 +165,36 @@ public class MigrationClient {
 	}
 
 	private boolean migrate(long minRangeSize, long maxBackupBatchSize, long timeoutMS) throws Exception {
-		boolean failed;// Determine which types to migrateWithRetry
-		logger.info("Determining types to migrateWithRetry...");
+		boolean failed;
+		// Determine which types to migrate
+		logger.info("Determining types to migrate...");
 		List<MigrationType> typesToMigrate = this.getCommonMigrationTypes();
 		List<MigrationType> primaryTypesToMigrate = this.getCommonPrimaryMigrationTypes();
+
 		// Get the counts
 		// TODO: Replace by async when supported by backend
-		List<MigrationTypeCount> startSourceCounts = getTypeCounts(factory.getSourceClient(), typesToMigrate);
-		List<MigrationTypeCount> startDestCounts = getTypeCounts(factory.getDestinationClient(), typesToMigrate);
+		CompletionService<MigrationTypeCounts> concMigrationTypeCountsCompletionSvc = new ExecutorCompletionService<MigrationTypeCounts>(this.threadPool);
+		ConcurrentMigrationTypeCountsExecutor typeCountsExecutor = new ConcurrentMigrationTypeCountsExecutor(concMigrationTypeCountsCompletionSvc, this.factory, typesToMigrate, timeoutMS);
+
+		ConcurrentExecutionResult<List<MigrationTypeCount>> migrationTypeCounts = typeCountsExecutor.getMigrationTypeCounts();
+		List<MigrationTypeCount> startSourceCounts = migrationTypeCounts.getSourceResult();
+		List<MigrationTypeCount> startDestinationCounts = migrationTypeCounts.getDestinationResult();
+
 		// Build the metadata for each type
-		List<TypeToMigrateMetadata> typesToMigrateMetadata = ToolMigrationUtils.buildTypeToMigrateMetadata(startSourceCounts, startDestCounts, primaryTypesToMigrate);
+		List<TypeToMigrateMetadata> typesToMigrateMetadata = ToolMigrationUtils.buildTypeToMigrateMetadata(startSourceCounts, startDestinationCounts, primaryTypesToMigrate);
 
 		// Display starting counts
 		logger.info("Starting diffs in counts:");
-		printDiffsInCounts(startSourceCounts, startDestCounts);
+		printDiffsInCounts(startSourceCounts, startDestinationCounts);
 
 		// Actual migration
 		this.migrateTypes(typesToMigrateMetadata, maxBackupBatchSize, minRangeSize, timeoutMS);
 
 		// Print the final counts
-		List<MigrationTypeCount> endSourceCounts = getTypeCounts(factory.getSourceClient(), typesToMigrate);
-		List<MigrationTypeCount> endDestCounts = getTypeCounts(factory.getDestinationClient(), typesToMigrate);
+		migrationTypeCounts = typeCountsExecutor.getMigrationTypeCounts();
+		List<MigrationTypeCount> endSourceCounts = migrationTypeCounts.getSourceResult();
+		List<MigrationTypeCount> endDestCounts = migrationTypeCounts.getDestinationResult();
+
 		logger.info("Ending diffs in  counts:");
 		printDiffsInCounts(endSourceCounts, endDestCounts);
 
@@ -233,8 +240,7 @@ public class MigrationClient {
 		String checksum = null;
 		AsyncMigrationTypeChecksumRequest req = new AsyncMigrationTypeChecksumRequest();
 		req.setType(t.name());
-		BasicProgress progress = new BasicProgress();
-		AsyncMigrationWorker worker = new AsyncMigrationWorker(client, req, 900000, progress);
+		AsyncMigrationWorker worker = new AsyncMigrationWorker(client, req, 900000);
 		AdminResponse resp = worker.call();
 		MigrationTypeChecksum res = (MigrationTypeChecksum)resp;
 		checksum = res.getChecksum();
@@ -245,12 +251,10 @@ public class MigrationClient {
 		throws InterruptedException, AsyncMigrationException {
 		AsyncMigrationTypeChecksumRequest srcReq = new AsyncMigrationTypeChecksumRequest();
 		srcReq.setType(t.name());
-		BasicProgress srcProgress = new BasicProgress();
-		AsyncMigrationWorker srcWorker = new AsyncMigrationWorker(source, srcReq, 900000, srcProgress);
+		AsyncMigrationWorker srcWorker = new AsyncMigrationWorker(source, srcReq, 900000);
 		AsyncMigrationTypeChecksumRequest destReq = new AsyncMigrationTypeChecksumRequest();
 		destReq.setType(t.name());
-		BasicProgress destProgress = new BasicProgress();
-		AsyncMigrationWorker destWorker = new AsyncMigrationWorker(source, srcReq, 900000, destProgress);
+		AsyncMigrationWorker destWorker = new AsyncMigrationWorker(source, srcReq, 900000);
 		Future<AdminResponse> fSrcResp = threadPool.submit(srcWorker);
 		Future<AdminResponse> fDestResp = threadPool.submit(destWorker);
 		/* Order does not really matter, have to wait for slowest */
@@ -261,8 +265,8 @@ public class MigrationClient {
 		MigrationTypeChecksum srcChecksum = (MigrationTypeChecksum)srcResp;
 		MigrationTypeChecksum destChecksum = (MigrationTypeChecksum)destResp;
 		ConcurrentExecutionResult<String> result = new ConcurrentExecutionResult<String>();
-		result.setSourceResponse(srcChecksum.getChecksum());
-		result.setDestinationResponse(destChecksum.getChecksum());
+		result.setSourceResult(srcChecksum.getChecksum());
+		result.setDestinationResult(destChecksum.getChecksum());
 		return result;
 	}
 
@@ -513,7 +517,7 @@ public class MigrationClient {
 			AsyncMigrationTypeCountRequest req = new AsyncMigrationTypeCountRequest();
 			req.setType(type.name());
 			BasicProgress progress = new BasicProgress();
-			AsyncMigrationWorker worker = new AsyncMigrationWorker(conn, req, 900000, progress);
+			AsyncMigrationWorker worker = new AsyncMigrationWorker(conn, req, 900000);
 			AdminResponse resp = worker.call();
 			res = (MigrationTypeCount)resp;
 		}

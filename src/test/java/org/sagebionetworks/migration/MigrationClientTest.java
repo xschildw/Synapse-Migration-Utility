@@ -7,7 +7,6 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -212,8 +211,8 @@ public class MigrationClientTest {
 		// Call under test
 		ConcurrentExecutionResult<String> result = migrationClient.doConcurrentChecksumForType(mockSrcClient, mockDestClient, MigrationType.ACL);
 
-		assertEquals("checksum", result.getSourceResponse());
-		assertEquals("checksum", result.getDestinationResponse());
+		assertEquals("checksum", result.getSourceResult());
+		assertEquals("checksum", result.getDestinationResult());
 	}
 	
 	/**

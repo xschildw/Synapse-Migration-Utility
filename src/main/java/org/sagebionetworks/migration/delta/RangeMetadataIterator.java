@@ -133,8 +133,7 @@ public class RangeMetadataIterator implements Iterator<RowMetadata> {
 			req.setMaxId(maxId);
 			req.setLimit(batchSize);
 			req.setOffset(offset);
-			BasicProgress progress = new BasicProgress();
-			AsyncMigrationWorker worker = new AsyncMigrationWorker(conn, req, 900000, progress);
+			AsyncMigrationWorker worker = new AsyncMigrationWorker(conn, req, 900000);
 			AdminResponse resp = worker.call();
 			res = (RowMetadataResult)resp;
 			return res.getList();
