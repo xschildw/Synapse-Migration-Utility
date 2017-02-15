@@ -172,9 +172,7 @@ public class MigrationClient {
 		List<MigrationType> primaryTypesToMigrate = this.getCommonPrimaryMigrationTypes();
 
 		// Get the counts
-		// TODO: Replace by async when supported by backend
-		CompletionService<MigrationTypeCounts> concMigrationTypeCountsCompletionSvc = new ExecutorCompletionService<MigrationTypeCounts>(this.threadPool);
-		ConcurrentMigrationTypeCountsExecutor typeCountsExecutor = new ConcurrentMigrationTypeCountsExecutor(concMigrationTypeCountsCompletionSvc, this.factory, typesToMigrate, timeoutMS);
+		ConcurrentMigrationTypeCountsExecutor typeCountsExecutor = new ConcurrentMigrationTypeCountsExecutor(this.threadPool, this.factory, typesToMigrate, timeoutMS);
 
 		ConcurrentExecutionResult<List<MigrationTypeCount>> migrationTypeCounts = typeCountsExecutor.getMigrationTypeCounts();
 		List<MigrationTypeCount> startSourceCounts = migrationTypeCounts.getSourceResult();
