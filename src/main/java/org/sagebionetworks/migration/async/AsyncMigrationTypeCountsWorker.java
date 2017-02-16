@@ -16,22 +16,16 @@ import java.util.concurrent.Callable;
 public class AsyncMigrationTypeCountsWorker implements Callable<MigrationTypeCounts> {
     static private Logger logger = LogManager.getLogger(AsyncMigrationTypeCountsWorker.class);
 
-    private SynapseAdminClientImpl client;
-    private List<MigrationType> migrationTypes;
-    private long timeoutMS;
+    AsyncMigrationWorker worker;
 
     public AsyncMigrationTypeCountsWorker(SynapseAdminClient client, List<MigrationType> migrationTypes, long timeoutMS) {
-        this.client = (SynapseAdminClientImpl)client;
-        this.migrationTypes = migrationTypes;
-        this.timeoutMS = timeoutMS;
+        AsyncMigrationTypeCountsRequest asyncMigrationRequest = new AsyncMigrationTypeCountsRequest();
+        asyncMigrationRequest.setTypes(migrationTypes);
+        this.worker = new AsyncMigrationWorker(client, asyncMigrationRequest, timeoutMS);
     }
 
     @Override
     public MigrationTypeCounts call() throws Exception {
-        AsyncMigrationTypeCountsRequest req = new AsyncMigrationTypeCountsRequest();
-        req.setTypes(this.migrationTypes);
-        AsyncMigrationWorker worker = new AsyncMigrationWorker(this.client, req, this.timeoutMS);
-        MigrationTypeCounts counts = null;
         AdminResponse response = worker.call();
         if (! (response instanceof MigrationTypeCounts)) {
             throw(new IllegalArgumentException("Should not happen!"));
