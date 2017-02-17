@@ -81,6 +81,7 @@ public class AsyncMigrationTypeCountsWorkerTest {
 		// Expected exception
 		TimeoutException timeoutException = new TimeoutException("Timed out waiting for the job to complete");
 		AsyncMigrationException expectedException = new AsyncMigrationException(timeoutException);
+		// Technically it would not throw that exception on start...
 		when(mockClient.startAdminAsynchronousJob(any(AsyncMigrationRequest.class))).thenThrow(expectedException);
 
 		AsyncMigrationTypeCountsWorker worker = new AsyncMigrationTypeCountsWorker(mockClient, types, 1000);

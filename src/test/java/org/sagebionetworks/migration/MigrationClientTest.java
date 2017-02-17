@@ -187,34 +187,6 @@ public class MigrationClientTest {
 		verify(mockConn).startAdminAsynchronousJob(any(AsyncMigrationRequest.class));
 	}
 
-	@Test
-	public void testDoConcurrentChecksumForType() throws Exception {
-
-		SynapseAdminClient mockSrcClient = Mockito.mock(SynapseAdminClient.class);
-		SynapseAdminClient mockDestClient = Mockito.mock(SynapseAdminClient.class);
-
-		MigrationTypeChecksum expectedChecksum = new MigrationTypeChecksum();
-		expectedChecksum.setType(MigrationType.ACL);
-		expectedChecksum.setChecksum("checksum");
-		AsyncMigrationResponse expectedResponse = new AsyncMigrationResponse();
-		expectedResponse.setAdminResponse(expectedChecksum);
-		AsynchronousJobStatus expectedJobStatus = new AsynchronousJobStatus();
-		expectedJobStatus.setJobId("1");
-		expectedJobStatus.setJobState(AsynchJobState.COMPLETE);
-		expectedJobStatus.setResponseBody(expectedResponse);
-
-		when(mockSrcClient.startAdminAsynchronousJob(any(AsyncMigrationRequest.class))).thenReturn(expectedJobStatus);
-		when(mockDestClient.startAdminAsynchronousJob(any(AsyncMigrationRequest.class))).thenReturn(expectedJobStatus);
-		when(mockSrcClient.getAdminAsynchronousJobStatus(anyString())).thenReturn(expectedJobStatus);
-		when(mockDestClient.getAdminAsynchronousJobStatus(anyString())).thenReturn(expectedJobStatus);
-
-		// Call under test
-		ConcurrentExecutionResult<String> result = migrationClient.doConcurrentChecksumForType(mockSrcClient, mockDestClient, MigrationType.ACL);
-
-		assertEquals("checksum", result.getSourceResult());
-		assertEquals("checksum", result.getDestinationResult());
-	}
-	
 	/**
 	 * Helper to build up lists of metadata
 	 */

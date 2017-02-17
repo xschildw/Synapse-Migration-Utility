@@ -6,6 +6,7 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.sagebionetworks.client.SynapseAdminClient;
+import org.sagebionetworks.migration.AsyncMigrationException;
 import org.sagebionetworks.migration.factory.SynapseClientFactory;
 import org.sagebionetworks.repo.model.asynch.AsynchJobState;
 import org.sagebionetworks.repo.model.asynch.AsynchronousJobStatus;
@@ -15,6 +16,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeoutException;
 
 import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
@@ -47,6 +49,7 @@ public class ConcurrentMigrationTypeCountsExecutorTest {
         // Some types
         List<MigrationType> types = new LinkedList<MigrationType>();
         types.add(MigrationType.ACCESS_APPROVAL);
+
         // Expected from mockClient
         AsynchronousJobStatus expectedStatus = new AsynchronousJobStatus();
         expectedStatus.setJobId("1");
@@ -65,15 +68,35 @@ public class ConcurrentMigrationTypeCountsExecutorTest {
         when(mockClient.startAdminAsynchronousJob(any(AsyncMigrationRequest.class))).thenReturn(expectedStatus, expectedStatus);
         when(mockClient.getAdminAsynchronousJobStatus("1")).thenReturn(expectedStatus, expectedStatus);
 
+        // Expected result
+        ConcurrentExecutionResult<List<MigrationTypeCount>> expectedResult = new ConcurrentExecutionResult<List<MigrationTypeCount>>();
+        expectedResult.setSourceResult(l);
+        expectedResult.setDestinationResult(l);
+
         ConcurrentMigrationTypeCountsExecutor executor = new ConcurrentMigrationTypeCountsExecutor(threadPool, mockFactory, types, 100);
 
         // Call under test
         ConcurrentExecutionResult<List<MigrationTypeCount>> concTypeCounts = executor.getMigrationTypeCounts();
 
         assertNotNull(concTypeCounts);
-        assertNotNull(concTypeCounts.getSourceResult());
-        assertNotNull(concTypeCounts.getDestinationResult());
+        assertEquals(expectedResult, concTypeCounts);
 
+    }
+
+    @Test(expected = AsyncMigrationException.class)
+    public void testException() throws Exception {
+        // Some types
+        List<MigrationType> types = new LinkedList<MigrationType>();
+        types.add(MigrationType.ACCESS_APPROVAL);
+        // Expected exception
+        TimeoutException timeoutException = new TimeoutException("Timed out waiting for the job to complete");
+        AsyncMigrationException expectedException = new AsyncMigrationException(timeoutException);
+        when(mockClient.startAdminAsynchronousJob(any(AsyncMigrationRequest.class))).thenThrow(expectedException);
+
+        ConcurrentMigrationTypeCountsExecutor executor = new ConcurrentMigrationTypeCountsExecutor(threadPool, mockFactory, types, 100);
+
+        // Call under test
+        ConcurrentExecutionResult<List<MigrationTypeCount>> concTypeCounts = executor.getMigrationTypeCounts();
     }
 
 }

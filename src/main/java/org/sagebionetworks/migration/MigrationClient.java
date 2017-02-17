@@ -16,6 +16,7 @@ import org.sagebionetworks.client.SynapseAdminClient;
 import org.sagebionetworks.client.exceptions.SynapseException;
 import org.sagebionetworks.migration.async.AsyncMigrationWorker;
 import org.sagebionetworks.migration.async.ConcurrentExecutionResult;
+import org.sagebionetworks.migration.async.ConcurrentMigrationTypeChecksumsExecutor;
 import org.sagebionetworks.migration.async.ConcurrentMigrationTypeCountsExecutor;
 import org.sagebionetworks.migration.delta.*;
 import org.sagebionetworks.repo.model.migration.*;
@@ -199,7 +200,15 @@ public class MigrationClient {
 		// If final sync (source is in read-only mode) then do a table checksum
 		// Note: Destination is always in read-only during migration
 		if (factory.getSourceClient().getCurrentStackStatus().getStatus() == StatusEnum.READ_ONLY) {
-            doChecksumForMigratedTypes(factory.getSourceClient(), factory.getDestinationClient(), primaryTypesToMigrate);
+			boolean foundChecksumDiff = false;
+			for (MigrationType t: typesToMigrate) {
+				if (doConcurrentChecksumForType(timeoutMS, t)) {
+					foundChecksumDiff = true;
+				}
+			}
+			if (foundChecksumDiff) {
+				throw new RuntimeException("Table checksum differences in final sync.");
+			}
         }
 
 		// Exit on 1st success
@@ -207,87 +216,21 @@ public class MigrationClient {
 		return failed;
 	}
 
-	private void doChecksumForMigratedTypes(SynapseAdminClient source,
-			SynapseAdminClient destination,
-			List<MigrationType> typesToMigrate)
-			throws SynapseException, JSONObjectAdapterException,
-			RuntimeException, InterruptedException {
-		logger.info("Final migration, checking table checksums");
-		boolean isChecksumDiff = false;
-		for (MigrationType t: typesToMigrate) {
-			String srcTableChecksum = doAsyncChecksumForType(source, t);
-			String destTableChecksum = doAsyncChecksumForType(destination, t);
-			StringBuilder sb = new StringBuilder();
-			sb.append("Migration type: ");
-			sb.append(t);
-			sb.append(": ");
-			if (! srcTableChecksum.equals(destTableChecksum)) {
-				isChecksumDiff = true;
-				sb.append("\n*** Found table checksum difference. ***\n");
-			} else {
-				sb.append("Table checksums identical.");
-			}
-			logger.info(sb.toString());
-		}
-		if (isChecksumDiff) {
-			throw new RuntimeException("Table checksum differences in final sync.");
-		}
-	}
-	
-	public String doAsyncChecksumForType(SynapseAdminClient client, MigrationType t) throws SynapseException, InterruptedException, JSONObjectAdapterException {
-		String checksum = null;
-		AsyncMigrationTypeChecksumRequest req = new AsyncMigrationTypeChecksumRequest();
-		req.setType(t.name());
-		AsyncMigrationWorker worker = new AsyncMigrationWorker(client, req, 900000);
-		AdminResponse resp = worker.call();
-		MigrationTypeChecksum res = (MigrationTypeChecksum)resp;
-		checksum = res.getChecksum();
-		return checksum;
-	}
-
-	public ConcurrentExecutionResult<String> doConcurrentChecksumForType(SynapseAdminClient source, SynapseAdminClient destination, MigrationType t)
-		throws InterruptedException, AsyncMigrationException {
-		AsyncMigrationTypeChecksumRequest srcReq = new AsyncMigrationTypeChecksumRequest();
-		srcReq.setType(t.name());
-		AsyncMigrationWorker srcWorker = new AsyncMigrationWorker(source, srcReq, 900000);
-		AsyncMigrationTypeChecksumRequest destReq = new AsyncMigrationTypeChecksumRequest();
-		destReq.setType(t.name());
-		AsyncMigrationWorker destWorker = new AsyncMigrationWorker(source, srcReq, 900000);
-		Future<AdminResponse> fSrcResp = threadPool.submit(srcWorker);
-		Future<AdminResponse> fDestResp = threadPool.submit(destWorker);
-		/* Order does not really matter, have to wait for slowest */
-		waitForResults(fSrcResp);
-		waitForResults(fDestResp);
-		AdminResponse srcResp = getResponse(fSrcResp);
-		AdminResponse destResp= getResponse(fDestResp);
-		MigrationTypeChecksum srcChecksum = (MigrationTypeChecksum)srcResp;
-		MigrationTypeChecksum destChecksum = (MigrationTypeChecksum)destResp;
-		ConcurrentExecutionResult<String> result = new ConcurrentExecutionResult<String>();
-		result.setSourceResult(srcChecksum.getChecksum());
-		result.setDestinationResult(destChecksum.getChecksum());
-		return result;
-	}
-
-	private void waitForResults(Future<AdminResponse> f) {
-		while (! f.isDone()) {
-			try {
-				Thread.sleep(1000);
-			} catch (InterruptedException e) {
-				// Should never happen!
-				assert false;
-			}
-		}
-	}
-
-	private AdminResponse getResponse(Future<AdminResponse> f) throws InterruptedException, AsyncMigrationException {
-		AdminResponse response = null;
-		try {
-			response = f.get();
-		} catch (ExecutionException e) {
-			logger.debug("Execution exception in table checksum.");
-			throw (AsyncMigrationException)e.getCause();
-		}
-		return response;
+	private boolean doConcurrentChecksumForType(long timeoutMS, MigrationType t) {
+		ConcurrentMigrationTypeChecksumsExecutor typeChecksumExecutor = new ConcurrentMigrationTypeChecksumsExecutor(threadPool, factory, t, timeoutMS);
+		ConcurrentExecutionResult<String> typeChecksums = typeChecksumExecutor.getMigrationTypeChecksums();
+		StringBuilder sb = new StringBuilder();
+		sb.append("Migration type: ");
+		sb.append(t);
+		sb.append(": ");
+		boolean foundDiff = (! typeChecksums.getSourceResult().equals(typeChecksums.getDestinationResult()));
+		if (foundDiff) {
+            sb.append("\n*** Found table checksum difference. ***\n");
+        } else {
+            sb.append("Table checksums identical.");
+        }
+		logger.info(sb.toString());
+		return foundDiff;
 	}
 
 	/**
