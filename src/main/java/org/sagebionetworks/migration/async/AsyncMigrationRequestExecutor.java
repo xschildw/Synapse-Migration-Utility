@@ -1,6 +1,5 @@
 package org.sagebionetworks.migration.async;
 
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.logging.log4j.LogManager;
@@ -16,29 +15,26 @@ import org.sagebionetworks.repo.model.migration.AdminRequest;
 import org.sagebionetworks.repo.model.migration.AdminResponse;
 import org.sagebionetworks.repo.model.migration.AsyncMigrationRequest;
 import org.sagebionetworks.repo.model.migration.AsyncMigrationResponse;
-import org.sagebionetworks.schema.adapter.JSONObjectAdapterException;
-import org.sagebionetworks.tool.progress.BasicProgress;
 import org.sagebionetworks.util.Clock;
 import org.sagebionetworks.util.DefaultClock;
 
-public class AsyncMigrationWorker implements Callable<AdminResponse> {
+public class AsyncMigrationRequestExecutor {
 
-	static private Logger logger = LogManager.getLogger(AsyncMigrationWorker.class);
+	static private Logger logger = LogManager.getLogger(AsyncMigrationRequestExecutor.class);
 
 	private SynapseAdminClient client;
 	private AdminRequest request;
 	long timeoutMs;
 	private Clock clock;
 
-	public AsyncMigrationWorker(SynapseAdminClient client, AdminRequest request, long timeoutMs) {
+	public AsyncMigrationRequestExecutor(SynapseAdminClient client, AdminRequest request, long timeoutMs) {
 		this.client = client;
 		this.request = request;
 		this.timeoutMs = timeoutMs;
 		this.clock = new DefaultClock();
 	}
-	
-	@Override
-	public AdminResponse call() throws AsyncMigrationException {
+
+	public AdminResponse execute() throws AsyncMigrationException {
 		AsynchronousResponseBody resp = null;
 		try {
 			AsyncMigrationRequest migRequest = new AsyncMigrationRequest();

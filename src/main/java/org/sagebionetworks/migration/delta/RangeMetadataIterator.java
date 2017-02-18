@@ -7,7 +7,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.sagebionetworks.client.SynapseAdminClient;
 import org.sagebionetworks.client.exceptions.SynapseException;
-import org.sagebionetworks.migration.async.AsyncMigrationWorker;
+import org.sagebionetworks.migration.async.AsyncMigrationRequestExecutor;
 import org.sagebionetworks.repo.model.migration.AdminResponse;
 import org.sagebionetworks.repo.model.migration.AsyncMigrationRowMetadataRequest;
 import org.sagebionetworks.repo.model.migration.MigrationType;
@@ -74,7 +74,7 @@ public class RangeMetadataIterator implements Iterator<RowMetadata> {
 	@Override
 	public RowMetadata next() {
 		if (this.currentIterator == null) {
-			throw new IllegalStateException("Must call hasNext() before calling next().");
+			throw new IllegalStateException("Must execute hasNext() before calling next().");
 		}
 		progress.setCurrent(progress.getCurrent()+1);
 		return this.currentIterator.next();
@@ -83,7 +83,7 @@ public class RangeMetadataIterator implements Iterator<RowMetadata> {
 	@Override
 	public boolean hasNext() {
 		if (currentIterator == null) {
-			// First call
+			// First execute
 			currentIterator = fetchNextPage();
 		}
 		if (currentIterator.hasNext()) {
@@ -133,8 +133,8 @@ public class RangeMetadataIterator implements Iterator<RowMetadata> {
 			req.setMaxId(maxId);
 			req.setLimit(batchSize);
 			req.setOffset(offset);
-			AsyncMigrationWorker worker = new AsyncMigrationWorker(conn, req, 900000);
-			AdminResponse resp = worker.call();
+			AsyncMigrationRequestExecutor worker = new AsyncMigrationRequestExecutor(conn, req, 900000);
+			AdminResponse resp = worker.execute();
 			res = (RowMetadataResult)resp;
 			return res.getList();
 		}

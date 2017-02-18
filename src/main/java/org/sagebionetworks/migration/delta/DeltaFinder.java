@@ -13,8 +13,7 @@ import org.sagebionetworks.repo.model.migration.MigrationRangeChecksum;
 import org.sagebionetworks.repo.model.migration.MigrationType;
 import org.sagebionetworks.schema.adapter.JSONObjectAdapterException;
 import org.sagebionetworks.migration.utils.TypeToMigrateMetadata;
-import org.sagebionetworks.migration.async.AsyncMigrationWorker;
-import org.sagebionetworks.tool.progress.BasicProgress;
+import org.sagebionetworks.migration.async.AsyncMigrationRequestExecutor;
 
 public class DeltaFinder {
 
@@ -145,8 +144,8 @@ public class DeltaFinder {
 			req.setSalt(salt);
 			req.setMinId(minId);
 			req.setMaxId(maxId);
-			AsyncMigrationWorker worker = new AsyncMigrationWorker(conn, req, 900000);
-			AdminResponse resp = worker.call();
+			AsyncMigrationRequestExecutor worker = new AsyncMigrationRequestExecutor(conn, req, 900000);
+			AdminResponse resp = worker.execute();
 			res = (MigrationRangeChecksum)resp;
 			return res;
 		}

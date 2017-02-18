@@ -3,6 +3,7 @@ package org.sagebionetworks.migration.async;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.sagebionetworks.migration.AsyncMigrationException;
+import org.sagebionetworks.migration.factory.AsyncMigrationTypeCountsWorkerFactory;
 import org.sagebionetworks.migration.factory.SynapseClientFactory;
 import org.sagebionetworks.repo.model.migration.MigrationType;
 import org.sagebionetworks.repo.model.migration.MigrationTypeCount;
@@ -16,32 +17,22 @@ import java.util.concurrent.Future;
 public class ConcurrentMigrationTypeCountsExecutor {
     static private Logger logger = LogManager.getLogger(ConcurrentMigrationTypeCountsExecutor.class);
 
-    private ExecutorService executorSvc;
-    private SynapseClientFactory factory;
-    private List<MigrationType> migrationTypes;
-    private long timeoutMS;
-    private AsyncMigrationTypeCountsWorker sourceWorker;
-    private AsyncMigrationTypeCountsWorker destinationWorker;
-    private Future<MigrationTypeCounts> futureSourceMigrationTypeCounts;
-    private Future<MigrationTypeCounts> futureDestinationMigrationTypeCounts;
+    private ExecutorService threadPool;
+    private AsyncMigrationTypeCountsWorkerFactory workerFactory;
 
-    public ConcurrentMigrationTypeCountsExecutor(ExecutorService executorSvc,
-                                                 SynapseClientFactory factory,
-                                                 List<MigrationType> migrationTypes,
-                                                 long timeoutMS) {
-        this.executorSvc = executorSvc;
-        this.factory = factory;
-        this.migrationTypes = migrationTypes;
-        this.timeoutMS = timeoutMS;
+    public ConcurrentMigrationTypeCountsExecutor(ExecutorService threadPool,
+                                                 AsyncMigrationTypeCountsWorkerFactory asyncMigrationTypeCountsFactory) {
+        this.threadPool = threadPool;
+        this.workerFactory = asyncMigrationTypeCountsFactory;
     }
 
-    public ConcurrentExecutionResult<List<MigrationTypeCount>> getMigrationTypeCounts() throws AsyncMigrationException {
+    public ConcurrentExecutionResult<List<MigrationTypeCount>> getMigrationTypeCounts(List<MigrationType> migrationTypes, long timeoutMS) throws AsyncMigrationException {
 
         try {
-            this.sourceWorker = new AsyncMigrationTypeCountsWorker(this.factory.getSourceClient(), this.migrationTypes, this.timeoutMS);
-            this.futureSourceMigrationTypeCounts = this.executorSvc.submit(this.sourceWorker);
-            this.destinationWorker = new AsyncMigrationTypeCountsWorker(this.factory.getDestinationClient(), this.migrationTypes, this.timeoutMS);
-            this.futureDestinationMigrationTypeCounts = this.executorSvc.submit(this.destinationWorker);
+            AsyncMigrationTypeCountsWorker sourceWorker = this.workerFactory.getSourceWorker(migrationTypes, timeoutMS);
+            Future<MigrationTypeCounts> futureSourceMigrationTypeCounts = this.threadPool.submit(sourceWorker);
+            AsyncMigrationTypeCountsWorker destinationWorker = this.workerFactory.getDestinationWorker(migrationTypes, timeoutMS);
+            Future<MigrationTypeCounts> futureDestinationMigrationTypeCounts = this.threadPool.submit(destinationWorker);
 
             // Wait for results
             MigrationTypeCounts sourceMigrationTypeCounts = futureSourceMigrationTypeCounts.get();

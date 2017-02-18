@@ -13,17 +13,17 @@ import java.util.concurrent.Callable;
 public class AsyncMigrationTypeChecksumWorker implements Callable<MigrationTypeChecksum> {
     static private Logger logger = LogManager.getLogger(AsyncMigrationTypeChecksumWorker.class);
 
-    private AsyncMigrationWorker worker;
+    private AsyncMigrationRequestExecutor worker;
 
     public AsyncMigrationTypeChecksumWorker(SynapseAdminClient client, MigrationType type, long timeoutMS) {
         AsyncMigrationTypeChecksumRequest request = new AsyncMigrationTypeChecksumRequest();
         request.setType(type.name());
-        this.worker = new AsyncMigrationWorker(client, request, timeoutMS);
+        this.worker = new AsyncMigrationRequestExecutor(client, request, timeoutMS);
     }
 
     @Override
     public MigrationTypeChecksum call() {
-        AdminResponse response = worker.call();
+        AdminResponse response = worker.execute();
         if (! (response instanceof MigrationTypeChecksum)) {
             throw(new IllegalArgumentException("Should not happen!"));
         } else {

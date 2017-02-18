@@ -14,11 +14,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.sagebionetworks.client.SynapseAdminClient;
 import org.sagebionetworks.client.exceptions.SynapseException;
-import org.sagebionetworks.migration.async.AsyncMigrationWorker;
+import org.sagebionetworks.migration.async.AsyncMigrationRequestExecutor;
 import org.sagebionetworks.migration.async.ConcurrentExecutionResult;
 import org.sagebionetworks.migration.async.ConcurrentMigrationTypeChecksumsExecutor;
 import org.sagebionetworks.migration.async.ConcurrentMigrationTypeCountsExecutor;
 import org.sagebionetworks.migration.delta.*;
+import org.sagebionetworks.migration.factory.AsyncMigrationTypeCountsWorkerFactoryImpl;
 import org.sagebionetworks.repo.model.migration.*;
 import org.sagebionetworks.repo.model.status.StackStatus;
 import org.sagebionetworks.repo.model.status.StatusEnum;
@@ -167,15 +168,17 @@ public class MigrationClient {
 
 	private boolean migrate(long minRangeSize, long maxBackupBatchSize, long timeoutMS) throws Exception {
 		boolean failed;
+		AsyncMigrationTypeCountsWorkerFactoryImpl workerFactory = new AsyncMigrationTypeCountsWorkerFactoryImpl(this.factory);
+
 		// Determine which types to migrate
 		logger.info("Determining types to migrate...");
 		List<MigrationType> typesToMigrate = this.getCommonMigrationTypes();
 		List<MigrationType> primaryTypesToMigrate = this.getCommonPrimaryMigrationTypes();
 
 		// Get the counts
-		ConcurrentMigrationTypeCountsExecutor typeCountsExecutor = new ConcurrentMigrationTypeCountsExecutor(this.threadPool, this.factory, typesToMigrate, timeoutMS);
+		ConcurrentMigrationTypeCountsExecutor typeCountsExecutor = new ConcurrentMigrationTypeCountsExecutor(this.threadPool, workerFactory);
 
-		ConcurrentExecutionResult<List<MigrationTypeCount>> migrationTypeCounts = typeCountsExecutor.getMigrationTypeCounts();
+		ConcurrentExecutionResult<List<MigrationTypeCount>> migrationTypeCounts = typeCountsExecutor.getMigrationTypeCounts(typesToMigrate, timeoutMS);
 		List<MigrationTypeCount> startSourceCounts = migrationTypeCounts.getSourceResult();
 		List<MigrationTypeCount> startDestinationCounts = migrationTypeCounts.getDestinationResult();
 
@@ -190,7 +193,7 @@ public class MigrationClient {
 		this.migrateTypes(typesToMigrateMetadata, maxBackupBatchSize, minRangeSize, timeoutMS);
 
 		// Print the final counts
-		migrationTypeCounts = typeCountsExecutor.getMigrationTypeCounts();
+		migrationTypeCounts = typeCountsExecutor.getMigrationTypeCounts(typesToMigrate, timeoutMS);
 		List<MigrationTypeCount> endSourceCounts = migrationTypeCounts.getSourceResult();
 		List<MigrationTypeCount> endDestCounts = migrationTypeCounts.getDestinationResult();
 
@@ -458,8 +461,8 @@ public class MigrationClient {
 			AsyncMigrationTypeCountRequest req = new AsyncMigrationTypeCountRequest();
 			req.setType(type.name());
 			BasicProgress progress = new BasicProgress();
-			AsyncMigrationWorker worker = new AsyncMigrationWorker(conn, req, 900000);
-			AdminResponse resp = worker.call();
+			AsyncMigrationRequestExecutor worker = new AsyncMigrationRequestExecutor(conn, req, 900000);
+			AdminResponse resp = worker.execute();
 			res = (MigrationTypeCount)resp;
 		}
 		return res;
