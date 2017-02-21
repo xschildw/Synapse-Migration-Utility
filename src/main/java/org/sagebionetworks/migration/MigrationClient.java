@@ -19,12 +19,11 @@ import org.sagebionetworks.migration.async.ConcurrentExecutionResult;
 import org.sagebionetworks.migration.async.ConcurrentMigrationTypeChecksumsExecutor;
 import org.sagebionetworks.migration.async.ConcurrentMigrationTypeCountsExecutor;
 import org.sagebionetworks.migration.delta.*;
-import org.sagebionetworks.migration.factory.AsyncMigrationTypeCountsWorkerFactoryImpl;
+import org.sagebionetworks.migration.factory.*;
 import org.sagebionetworks.repo.model.migration.*;
 import org.sagebionetworks.repo.model.status.StackStatus;
 import org.sagebionetworks.repo.model.status.StatusEnum;
 import org.sagebionetworks.schema.adapter.JSONObjectAdapterException;
-import org.sagebionetworks.migration.factory.SynapseClientFactory;
 import org.sagebionetworks.migration.stream.BufferedRowMetadataReader;
 import org.sagebionetworks.migration.stream.BufferedRowMetadataWriter;
 import org.sagebionetworks.migration.utils.MigrationTypeCountDiff;
@@ -40,22 +39,28 @@ public class MigrationClient {
 	
 	static private Logger logger = LogManager.getLogger(MigrationClient.class);
 
-	SynapseClientFactory factory;
+	SynapseClientFactory clientFactory;
+	AsyncMigrationTypeCountsWorkerFactory typeCountsWorkerFactory;
+	AsyncMigrationTypeChecksumWorkerFactory typeChecksumWorkerFactory;
 	ExecutorService threadPool;
+	long workerTimeoutMS;
 
 	/**
 	 * New migration client.
-	 * @param factory
+	 * @param clientFactory
 	 */
-	public MigrationClient(SynapseClientFactory factory) {
-		if(factory == null) throw new IllegalArgumentException("Factory cannot be null");
-		this.factory = factory;
-		threadPool = Executors.newFixedThreadPool(1);
+	public MigrationClient(SynapseClientFactory clientFactory, long workerTimeoutMS) {
+		if(clientFactory == null) throw new IllegalArgumentException("Factory cannot be null");
+		this.clientFactory = clientFactory;
+		this.typeCountsWorkerFactory = new AsyncMigrationTypeCountsWorkerFactoryImpl(clientFactory);
+		this.typeChecksumWorkerFactory = new AsyncMigrationTypeChecksumWorkerFactoryImpl(clientFactory);
+		threadPool = Executors.newFixedThreadPool(2);
+		this.workerTimeoutMS = workerTimeoutMS;
 	}
 
 	public List<MigrationType> getCommonMigrationTypes() throws SynapseException {
-		SynapseAdminClient srcClient = factory.getSourceClient();
-		SynapseAdminClient destClient = factory.getDestinationClient();
+		SynapseAdminClient srcClient = clientFactory.getSourceClient();
+		SynapseAdminClient destClient = clientFactory.getDestinationClient();
 
 		MigrationTypeNames srcMigrationTypeNames = srcClient.getMigrationTypeNames();
 		MigrationTypeNames destMigrationTypeNames = destClient.getMigrationTypeNames();
@@ -64,8 +69,8 @@ public class MigrationClient {
 	}
 
 	public List<MigrationType> getCommonPrimaryMigrationTypes() throws SynapseException {
-		SynapseAdminClient srcClient = factory.getSourceClient();
-		SynapseAdminClient destClient = factory.getDestinationClient();
+		SynapseAdminClient srcClient = clientFactory.getSourceClient();
+		SynapseAdminClient destClient = clientFactory.getDestinationClient();
 
 		MigrationTypeNames srcMigrationTypeNames = srcClient.getPrimaryTypeNames();
 		MigrationTypeNames destMigrationTypeNames = destClient.getPrimaryTypeNames();
@@ -106,7 +111,7 @@ public class MigrationClient {
 	 * @throws JSONObjectAdapterException
 	 */
 	public void setDestinationStatus(StatusEnum status, String message) throws SynapseException, JSONObjectAdapterException {
-		setStatus(this.factory.getDestinationClient(), status, message);
+		setStatus(this.clientFactory.getDestinationClient(), status, message);
 	}
 
 	/**
@@ -117,7 +122,7 @@ public class MigrationClient {
 	 * @throws JSONObjectAdapterException
 	 */
 	public void setSourceStatus(StatusEnum status, String message) throws SynapseException, JSONObjectAdapterException {
-		setStatus(this.factory.getSourceClient(), status, message);
+		setStatus(this.clientFactory.getSourceClient(), status, message);
 	}
 
 	/**
@@ -142,14 +147,14 @@ public class MigrationClient {
 	 * 
 	 * @throws Exception 
 	 */
-	public boolean migrateWithRetry(int maxRetries, long maxBackupBatchSize, long minRangeSize, long timeoutMS) throws SynapseException, JSONObjectAdapterException {
+	public boolean migrateWithRetry(int maxRetries, long maxBackupBatchSize, long minRangeSize) throws SynapseException, JSONObjectAdapterException {
 		boolean failed = false;
 		try {
 			// First set the destination stack status to down
 			setDestinationStatus(StatusEnum.READ_ONLY, "Staging is down for data migration");
 			for (int i = 0; i < maxRetries; i++) {
 				try {
-					failed = migrate(minRangeSize, maxBackupBatchSize, timeoutMS);
+					failed = migrate(minRangeSize, maxBackupBatchSize, workerTimeoutMS);
 
 				} catch (Exception e) {
 					failed = true;
@@ -168,7 +173,6 @@ public class MigrationClient {
 
 	private boolean migrate(long minRangeSize, long maxBackupBatchSize, long timeoutMS) throws Exception {
 		boolean failed;
-		AsyncMigrationTypeCountsWorkerFactoryImpl workerFactory = new AsyncMigrationTypeCountsWorkerFactoryImpl(this.factory);
 
 		// Determine which types to migrate
 		logger.info("Determining types to migrate...");
@@ -176,7 +180,7 @@ public class MigrationClient {
 		List<MigrationType> primaryTypesToMigrate = this.getCommonPrimaryMigrationTypes();
 
 		// Get the counts
-		ConcurrentMigrationTypeCountsExecutor typeCountsExecutor = new ConcurrentMigrationTypeCountsExecutor(this.threadPool, workerFactory);
+		ConcurrentMigrationTypeCountsExecutor typeCountsExecutor = new ConcurrentMigrationTypeCountsExecutor(this.threadPool, this.typeCountsWorkerFactory);
 
 		ConcurrentExecutionResult<List<MigrationTypeCount>> migrationTypeCounts = typeCountsExecutor.getMigrationTypeCounts(typesToMigrate, timeoutMS);
 		List<MigrationTypeCount> startSourceCounts = migrationTypeCounts.getSourceResult();
@@ -202,7 +206,7 @@ public class MigrationClient {
 
 		// If final sync (source is in read-only mode) then do a table checksum
 		// Note: Destination is always in read-only during migration
-		if (factory.getSourceClient().getCurrentStackStatus().getStatus() == StatusEnum.READ_ONLY) {
+		if (clientFactory.getSourceClient().getCurrentStackStatus().getStatus() == StatusEnum.READ_ONLY) {
 			boolean foundChecksumDiff = false;
 			for (MigrationType t: typesToMigrate) {
 				if (doConcurrentChecksumForType(timeoutMS, t)) {
@@ -220,7 +224,8 @@ public class MigrationClient {
 	}
 
 	private boolean doConcurrentChecksumForType(long timeoutMS, MigrationType t) {
-		ConcurrentMigrationTypeChecksumsExecutor typeChecksumExecutor = new ConcurrentMigrationTypeChecksumsExecutor(threadPool, factory, t, timeoutMS);
+
+		ConcurrentMigrationTypeChecksumsExecutor typeChecksumExecutor = new ConcurrentMigrationTypeChecksumsExecutor(threadPool, typeChecksumWorkerFactory, t, timeoutMS);
 		ConcurrentExecutionResult<String> typeChecksums = typeChecksumExecutor.getMigrationTypeChecksums();
 		StringBuilder sb = new StringBuilder();
 		sb.append("Migration type: ");
@@ -299,7 +304,7 @@ public class MigrationClient {
 		BufferedRowMetadataReader reader = new BufferedRowMetadataReader(new FileReader(createUpdateTemp));
 		try{
 			BasicProgress progress = new BasicProgress();
-			CreateUpdateWorker worker = new CreateUpdateWorker(type, count, reader,progress,factory.getDestinationClient(), factory.getSourceClient(), maxBackupBatchSize, timeout);
+			CreateUpdateWorker worker = new CreateUpdateWorker(type, count, reader,progress, clientFactory.getDestinationClient(), clientFactory.getSourceClient(), maxBackupBatchSize, timeout);
 			Future<Long> future = this.threadPool.submit(worker);
 			while(!future.isDone()){
 				// Log the progress
@@ -341,7 +346,7 @@ public class MigrationClient {
 	public DeltaData calculateDeltaForType(TypeToMigrateMetadata tm, String salt, long minRangeSize) throws Exception{
 
 		// First, we find the delta ranges
-		DeltaFinder finder = new DeltaFinder(tm, factory.getSourceClient(), factory.getDestinationClient(), salt, minRangeSize);
+		DeltaFinder finder = new DeltaFinder(tm, clientFactory.getSourceClient(), clientFactory.getDestinationClient(), salt, minRangeSize);
 		DeltaRanges ranges = finder.findDeltaRanges();
 		
 		// the first thing we need to do is calculate the what needs to be created, updated, or deleted.
@@ -379,7 +384,7 @@ public class MigrationClient {
 			updateOut = new BufferedRowMetadataWriter(new FileWriter(updateTemp));
 			deleteOut = new BufferedRowMetadataWriter(new FileWriter(deleteTemp));
 			
-			DeltaBuilder builder = new DeltaBuilder(factory, minRangeSize, typeMeta, ranges, createOut, updateOut, deleteOut);
+			DeltaBuilder builder = new DeltaBuilder(clientFactory, minRangeSize, typeMeta, ranges, createOut, updateOut, deleteOut);
 			
 			// Unconditional inserts
 			long insCount = builder.addInsertsFromSource();
@@ -425,7 +430,7 @@ public class MigrationClient {
 		BufferedRowMetadataReader reader = new BufferedRowMetadataReader(new FileReader(deleteTemp));
 		try{
 			BasicProgress progress = new BasicProgress();
-			DeleteWorker worker = new DeleteWorker(type, count, reader, progress, factory.getDestinationClient(), maxbackupBatchSize);
+			DeleteWorker worker = new DeleteWorker(type, count, reader, progress, clientFactory.getDestinationClient(), maxbackupBatchSize);
 			Future<Long> future = this.threadPool.submit(worker);
 			while(!future.isDone()){
 				// Log the progress

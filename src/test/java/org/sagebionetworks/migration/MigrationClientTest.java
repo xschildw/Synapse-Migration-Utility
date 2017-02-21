@@ -20,6 +20,8 @@ import org.sagebionetworks.client.SynapseAdminClientImpl;
 import org.sagebionetworks.client.exceptions.SynapseException;
 import org.sagebionetworks.client.exceptions.SynapseServerException;
 import org.sagebionetworks.migration.async.ConcurrentExecutionResult;
+import org.sagebionetworks.migration.factory.AsyncMigrationTypeChecksumWorkerFactory;
+import org.sagebionetworks.migration.factory.AsyncMigrationTypeCountsWorkerFactory;
 import org.sagebionetworks.migration.utils.TypeToMigrateMetadata;
 import org.sagebionetworks.repo.model.asynch.AsynchJobState;
 import org.sagebionetworks.repo.model.asynch.AsynchronousJobStatus;
@@ -44,6 +46,8 @@ public class MigrationClientTest {
 	private SynapseAdminClient sourceSynapse;
 	
 	private SynapseClientFactory mockFactory;
+	private AsyncMigrationTypeChecksumWorkerFactory typeChecksumWorkerFactory;
+	private AsyncMigrationTypeCountsWorkerFactory typeCountsWorkerFactory;
 	private MigrationClient migrationClient;
 	
 	@Before
@@ -60,7 +64,8 @@ public class MigrationClientTest {
 		mockFactory = Mockito.mock(SynapseClientFactory.class);
 		when(mockFactory.getDestinationClient()).thenReturn(destSynapse);
 		when(mockFactory.getSourceClient()).thenReturn(sourceSynapse);
-		migrationClient = new MigrationClient(mockFactory);
+
+		migrationClient = new MigrationClient(mockFactory, 1000);
 	}
 	
 	// Used to fail after moving to SimpleHttpClient
@@ -107,7 +112,7 @@ public class MigrationClientTest {
 		when(mf.getSourceClient()).thenReturn(mockSrc);
 		when(mf.getDestinationClient()).thenReturn(mockDest);
 
-		MigrationClient migClient = new MigrationClient(mf);
+		MigrationClient migClient = new MigrationClient(mf, 1000);
 
 		List<MigrationType> commonTypes = migClient.getCommonMigrationTypes();
 		assertEquals(expectedCommonTypes, commonTypes);
