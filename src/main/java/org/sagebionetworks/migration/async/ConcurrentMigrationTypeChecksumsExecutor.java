@@ -17,20 +17,14 @@ public class ConcurrentMigrationTypeChecksumsExecutor {
 
     private ExecutorService threadPool;
     private AsyncMigrationTypeChecksumWorkerFactory workerFactory;
-    private MigrationType migrationType;
-    private long timeoutMS;
 
     public ConcurrentMigrationTypeChecksumsExecutor(ExecutorService executorSvc,
-                                                    AsyncMigrationTypeChecksumWorkerFactory workerFactory,
-                                                    MigrationType migrationType,
-                                                    long timeoutMS) {
+                                                    AsyncMigrationTypeChecksumWorkerFactory workerFactory) {
         this.threadPool = executorSvc;
         this.workerFactory = workerFactory;
-        this.migrationType = migrationType;
-        this.timeoutMS = timeoutMS;
     }
 
-    public ConcurrentExecutionResult<String> getMigrationTypeChecksums() throws AsyncMigrationException {
+    public ConcurrentExecutionResult<String> getMigrationTypeChecksums(MigrationType migrationType, long timeoutMS) throws AsyncMigrationException {
 
         try {
             AsyncMigrationTypeChecksumWorker sourceWorker = workerFactory.getSourceWorker(migrationType, timeoutMS);

@@ -225,8 +225,8 @@ public class MigrationClient {
 
 	private boolean doConcurrentChecksumForType(long timeoutMS, MigrationType t) {
 
-		ConcurrentMigrationTypeChecksumsExecutor typeChecksumExecutor = new ConcurrentMigrationTypeChecksumsExecutor(threadPool, typeChecksumWorkerFactory, t, timeoutMS);
-		ConcurrentExecutionResult<String> typeChecksums = typeChecksumExecutor.getMigrationTypeChecksums();
+		ConcurrentMigrationTypeChecksumsExecutor typeChecksumExecutor = new ConcurrentMigrationTypeChecksumsExecutor(threadPool, typeChecksumWorkerFactory);
+		ConcurrentExecutionResult<String> typeChecksums = typeChecksumExecutor.getMigrationTypeChecksums(t, timeoutMS);
 		StringBuilder sb = new StringBuilder();
 		sb.append("Migration type: ");
 		sb.append(t);
