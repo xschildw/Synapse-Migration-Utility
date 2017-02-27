@@ -37,8 +37,8 @@ public class ConcurrentMigrationTypeChecksumsExecutorTest {
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
 
-        when(mockFactory.getSourceWorker(MigrationType.ACL, 1000)).thenReturn(mockSourceWorker);
-        when(mockFactory.getDestinationWorker(MigrationType.ACL, 1000)).thenReturn(mockDestinationWorker);
+        when(mockFactory.getSourceWorker(MigrationType.ACL)).thenReturn(mockSourceWorker);
+        when(mockFactory.getDestinationWorker(MigrationType.ACL)).thenReturn(mockDestinationWorker);
 
         threadPool = Executors.newFixedThreadPool(1);
     }

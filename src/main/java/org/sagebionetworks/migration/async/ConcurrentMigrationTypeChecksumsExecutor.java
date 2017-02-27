@@ -27,9 +27,9 @@ public class ConcurrentMigrationTypeChecksumsExecutor {
     public ConcurrentExecutionResult<String> getMigrationTypeChecksums(MigrationType migrationType, long timeoutMS) throws AsyncMigrationException {
 
         try {
-            AsyncMigrationTypeChecksumWorker sourceWorker = workerFactory.getSourceWorker(migrationType, timeoutMS);
+            AsyncMigrationTypeChecksumWorker sourceWorker = workerFactory.getSourceWorker(migrationType);
             Future<MigrationTypeChecksum> futureSourceMigrationTypeChecksum = threadPool.submit(sourceWorker);
-            AsyncMigrationTypeChecksumWorker destinationWorker = workerFactory.getDestinationWorker(migrationType, timeoutMS);
+            AsyncMigrationTypeChecksumWorker destinationWorker = workerFactory.getDestinationWorker(migrationType);
             Future<MigrationTypeChecksum> futureDestinationMigrationTypeChecksum = threadPool.submit(destinationWorker);
 
             // Wait for results

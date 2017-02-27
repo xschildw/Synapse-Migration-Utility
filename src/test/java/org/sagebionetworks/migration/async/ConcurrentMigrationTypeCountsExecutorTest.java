@@ -49,8 +49,8 @@ public class ConcurrentMigrationTypeCountsExecutorTest {
         List<MigrationType> types = new LinkedList<MigrationType>();
         types.add(MigrationType.ACCESS_APPROVAL);
 
-        when(mockFactory.getSourceWorker(types, 1000)).thenReturn(mockSourceWorker);
-        when(mockFactory.getDestinationWorker(types, 1000)).thenReturn(mockDestinationWorker);
+        when(mockFactory.getSourceWorker(types)).thenReturn(mockSourceWorker);
+        when(mockFactory.getDestinationWorker(types)).thenReturn(mockDestinationWorker);
 
         threadPool = Executors.newFixedThreadPool(1);
     }

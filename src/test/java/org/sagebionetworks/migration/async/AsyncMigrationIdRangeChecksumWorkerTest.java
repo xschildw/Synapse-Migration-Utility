@@ -17,6 +17,7 @@ import static org.mockito.Mockito.verify;
 import org.sagebionetworks.client.SynapseAdminClient;
 import org.sagebionetworks.client.exceptions.SynapseException;
 import org.sagebionetworks.client.exceptions.SynapseServerException;
+import org.sagebionetworks.migration.AsyncMigrationException;
 import org.sagebionetworks.repo.model.asynch.AsynchJobState;
 import org.sagebionetworks.repo.model.asynch.AsynchronousJobStatus;
 import org.sagebionetworks.repo.model.migration.*;
@@ -27,8 +28,6 @@ public class AsyncMigrationIdRangeChecksumWorkerTest {
 
 	@Mock
 	SynapseAdminClient mockClient;
-
-
 
 	@Before
 	public void setUp() throws Exception {
@@ -93,7 +92,7 @@ public class AsyncMigrationIdRangeChecksumWorkerTest {
 
 	}
 
-	@Test
+	@Test(expected = AsyncMigrationException.class)
 	public void testException() throws Exception {
 		// Expected from mockClient on startJob, getJobStatus
 		AsynchronousJobStatus expectedStatus = new AsynchronousJobStatus();

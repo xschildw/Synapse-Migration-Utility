@@ -8,20 +8,22 @@ import java.util.List;
 public class AsyncMigrationTypeCountsWorkerFactoryImpl implements AsyncMigrationTypeCountsWorkerFactory {
 
     private SynapseClientFactory clientFactory;
+    private long timeoutMS;
 
-    public AsyncMigrationTypeCountsWorkerFactoryImpl(SynapseClientFactory client) {
-        this.clientFactory = client;
+    public AsyncMigrationTypeCountsWorkerFactoryImpl(SynapseClientFactory clientFactory, long timeoutMS) {
+        this.clientFactory = clientFactory;
+        this.timeoutMS = timeoutMS;
     }
 
     @Override
-    public AsyncMigrationTypeCountsWorker getSourceWorker(List<MigrationType> types, long timeoutMS) {
-        AsyncMigrationTypeCountsWorker worker = new AsyncMigrationTypeCountsWorker(this.clientFactory.getSourceClient(), types, timeoutMS);
+    public AsyncMigrationTypeCountsWorker getSourceWorker(List<MigrationType> types) {
+        AsyncMigrationTypeCountsWorker worker = new AsyncMigrationTypeCountsWorker(this.clientFactory.getSourceClient(), types, this.timeoutMS);
         return worker;
     }
 
     @Override
-    public AsyncMigrationTypeCountsWorker getDestinationWorker(List<MigrationType> types, long timeoutMS) {
-        AsyncMigrationTypeCountsWorker worker = new AsyncMigrationTypeCountsWorker(this.clientFactory.getDestinationClient(), types, timeoutMS);
+    public AsyncMigrationTypeCountsWorker getDestinationWorker(List<MigrationType> types) {
+        AsyncMigrationTypeCountsWorker worker = new AsyncMigrationTypeCountsWorker(this.clientFactory.getDestinationClient(), types, this.timeoutMS);
         return worker;
     }
 }

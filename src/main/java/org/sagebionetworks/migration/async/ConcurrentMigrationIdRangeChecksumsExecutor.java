@@ -29,9 +29,9 @@ public class ConcurrentMigrationIdRangeChecksumsExecutor {
 																 long maxId,
 																 long timeoutMS) {
 		try {
-			AsyncMigrationIdRangeChecksumWorker sourceWorker = workerFactory.getSourceWorker(type, salt, minId, maxId, timeoutMS);
+			AsyncMigrationIdRangeChecksumWorker sourceWorker = workerFactory.getSourceWorker(type, salt, minId, maxId);
 			Future<MigrationRangeChecksum> futureSourceChecksum = threadPool.submit(sourceWorker);
-			AsyncMigrationIdRangeChecksumWorker destinationWorker = workerFactory.getDestinationWorker(type, salt, minId, maxId, timeoutMS);
+			AsyncMigrationIdRangeChecksumWorker destinationWorker = workerFactory.getDestinationWorker(type, salt, minId, maxId);
 			Future<MigrationRangeChecksum> futureDestinationChecksum = threadPool.submit(destinationWorker);
 
 			// Wait for results

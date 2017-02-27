@@ -34,8 +34,8 @@ public class ConcurrentMigrationIdRangeChecksumsExecutorTest {
 	public void setUp() throws Exception {
 		MockitoAnnotations.initMocks(this);
 
-		when(mockWorkerFactory.getSourceWorker(MigrationType.ACL, "salt", 0, 100, 1000)).thenReturn(mockSourceWorker);
-		when(mockWorkerFactory.getDestinationWorker(MigrationType.ACL, "salt", 0, 100 , 1000)).thenReturn(mockDestinationWorker);
+		when(mockWorkerFactory.getSourceWorker(MigrationType.ACL, "salt", 0, 100)).thenReturn(mockSourceWorker);
+		when(mockWorkerFactory.getDestinationWorker(MigrationType.ACL, "salt", 0, 100)).thenReturn(mockDestinationWorker);
 
 		threadPool = Executors.newFixedThreadPool(1);
 	}

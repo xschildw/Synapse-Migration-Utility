@@ -42,6 +42,7 @@ public class MigrationClient {
 	SynapseClientFactory clientFactory;
 	AsyncMigrationTypeCountsWorkerFactory typeCountsWorkerFactory;
 	AsyncMigrationTypeChecksumWorkerFactory typeChecksumWorkerFactory;
+	AsyncMigrationIdRangeChecksumWorkerFactory idRangeChecksumWorkerFactory;
 	ExecutorService threadPool;
 	long workerTimeoutMS;
 
@@ -52,8 +53,9 @@ public class MigrationClient {
 	public MigrationClient(SynapseClientFactory clientFactory, long workerTimeoutMS) {
 		if(clientFactory == null) throw new IllegalArgumentException("Factory cannot be null");
 		this.clientFactory = clientFactory;
-		this.typeCountsWorkerFactory = new AsyncMigrationTypeCountsWorkerFactoryImpl(clientFactory);
-		this.typeChecksumWorkerFactory = new AsyncMigrationTypeChecksumWorkerFactoryImpl(clientFactory);
+		this.typeCountsWorkerFactory = new AsyncMigrationTypeCountsWorkerFactoryImpl(clientFactory, workerTimeoutMS);
+		this.typeChecksumWorkerFactory = new AsyncMigrationTypeChecksumWorkerFactoryImpl(clientFactory, workerTimeoutMS);
+		this.idRangeChecksumWorkerFactory = new AsyncMigrationIdRangeChecksumWorkerFactoryImpl(clientFactory, workerTimeoutMS);
 		threadPool = Executors.newFixedThreadPool(2);
 		this.workerTimeoutMS = workerTimeoutMS;
 	}
@@ -180,6 +182,7 @@ public class MigrationClient {
 		List<MigrationType> primaryTypesToMigrate = this.getCommonPrimaryMigrationTypes();
 
 		// Get the counts
+		logger.info("Computing counts for migrating types...");
 		ConcurrentMigrationTypeCountsExecutor typeCountsExecutor = new ConcurrentMigrationTypeCountsExecutor(this.threadPool, this.typeCountsWorkerFactory);
 
 		ConcurrentExecutionResult<List<MigrationTypeCount>> migrationTypeCounts = typeCountsExecutor.getMigrationTypeCounts(typesToMigrate, timeoutMS);
