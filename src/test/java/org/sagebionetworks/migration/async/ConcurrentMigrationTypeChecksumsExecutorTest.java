@@ -66,7 +66,7 @@ public class ConcurrentMigrationTypeChecksumsExecutorTest {
         ConcurrentMigrationTypeChecksumsExecutor executor = new ConcurrentMigrationTypeChecksumsExecutor(threadPool, mockFactory);
 
         // Call under test
-        ConcurrentExecutionResult<String> results = executor.getMigrationTypeChecksums(MigrationType.ACL, 1000);
+        ConcurrentExecutionResult<String> results = executor.getMigrationTypeChecksums(MigrationType.ACL);
 
         assertNotNull(results);
         assertEquals(expectedResults, results);
@@ -84,7 +84,7 @@ public class ConcurrentMigrationTypeChecksumsExecutorTest {
         ConcurrentMigrationTypeChecksumsExecutor executor = new ConcurrentMigrationTypeChecksumsExecutor(threadPool, mockFactory);
 
         // Call under test
-        ConcurrentExecutionResult<String> checksums = executor.getMigrationTypeChecksums(MigrationType.ACL, 1000);
+        ConcurrentExecutionResult<String> checksums = executor.getMigrationTypeChecksums(MigrationType.ACL);
 
     }
 

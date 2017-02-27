@@ -185,7 +185,7 @@ public class MigrationClient {
 		logger.info("Computing counts for migrating types...");
 		ConcurrentMigrationTypeCountsExecutor typeCountsExecutor = new ConcurrentMigrationTypeCountsExecutor(this.threadPool, this.typeCountsWorkerFactory);
 
-		ConcurrentExecutionResult<List<MigrationTypeCount>> migrationTypeCounts = typeCountsExecutor.getMigrationTypeCounts(typesToMigrate, timeoutMS);
+		ConcurrentExecutionResult<List<MigrationTypeCount>> migrationTypeCounts = typeCountsExecutor.getMigrationTypeCounts(typesToMigrate);
 		List<MigrationTypeCount> startSourceCounts = migrationTypeCounts.getSourceResult();
 		List<MigrationTypeCount> startDestinationCounts = migrationTypeCounts.getDestinationResult();
 
@@ -200,7 +200,7 @@ public class MigrationClient {
 		this.migrateTypes(typesToMigrateMetadata, maxBackupBatchSize, minRangeSize, timeoutMS);
 
 		// Print the final counts
-		migrationTypeCounts = typeCountsExecutor.getMigrationTypeCounts(typesToMigrate, timeoutMS);
+		migrationTypeCounts = typeCountsExecutor.getMigrationTypeCounts(typesToMigrate);
 		List<MigrationTypeCount> endSourceCounts = migrationTypeCounts.getSourceResult();
 		List<MigrationTypeCount> endDestCounts = migrationTypeCounts.getDestinationResult();
 
@@ -229,7 +229,7 @@ public class MigrationClient {
 	private boolean doConcurrentChecksumForType(long timeoutMS, MigrationType t) {
 
 		ConcurrentMigrationTypeChecksumsExecutor typeChecksumExecutor = new ConcurrentMigrationTypeChecksumsExecutor(threadPool, typeChecksumWorkerFactory);
-		ConcurrentExecutionResult<String> typeChecksums = typeChecksumExecutor.getMigrationTypeChecksums(t, timeoutMS);
+		ConcurrentExecutionResult<String> typeChecksums = typeChecksumExecutor.getMigrationTypeChecksums(t);
 		StringBuilder sb = new StringBuilder();
 		sb.append("Migration type: ");
 		sb.append(t);

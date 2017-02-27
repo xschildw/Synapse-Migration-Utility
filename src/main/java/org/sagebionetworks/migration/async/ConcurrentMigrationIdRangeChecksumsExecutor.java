@@ -26,8 +26,7 @@ public class ConcurrentMigrationIdRangeChecksumsExecutor {
 	public ConcurrentExecutionResult<String> getIdRangeChecksums(MigrationType type,
 																 String salt,
 																 long minId,
-																 long maxId,
-																 long timeoutMS) {
+																 long maxId) {
 		try {
 			AsyncMigrationIdRangeChecksumWorker sourceWorker = workerFactory.getSourceWorker(type, salt, minId, maxId);
 			Future<MigrationRangeChecksum> futureSourceChecksum = threadPool.submit(sourceWorker);

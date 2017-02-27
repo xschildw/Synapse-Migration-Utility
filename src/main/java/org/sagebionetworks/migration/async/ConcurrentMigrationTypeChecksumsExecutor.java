@@ -24,7 +24,7 @@ public class ConcurrentMigrationTypeChecksumsExecutor {
         this.workerFactory = workerFactory;
     }
 
-    public ConcurrentExecutionResult<String> getMigrationTypeChecksums(MigrationType migrationType, long timeoutMS) throws AsyncMigrationException {
+    public ConcurrentExecutionResult<String> getMigrationTypeChecksums(MigrationType migrationType) throws AsyncMigrationException {
 
         try {
             AsyncMigrationTypeChecksumWorker sourceWorker = workerFactory.getSourceWorker(migrationType);

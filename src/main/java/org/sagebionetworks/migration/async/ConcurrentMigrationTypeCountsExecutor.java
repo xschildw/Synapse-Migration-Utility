@@ -26,7 +26,7 @@ public class ConcurrentMigrationTypeCountsExecutor {
         this.workerFactory = asyncMigrationTypeCountsFactory;
     }
 
-    public ConcurrentExecutionResult<List<MigrationTypeCount>> getMigrationTypeCounts(List<MigrationType> migrationTypes, long timeoutMS) throws AsyncMigrationException {
+    public ConcurrentExecutionResult<List<MigrationTypeCount>> getMigrationTypeCounts(List<MigrationType> migrationTypes) throws AsyncMigrationException {
 
         try {
             AsyncMigrationTypeCountsWorker sourceWorker = this.workerFactory.getSourceWorker(migrationTypes);
