@@ -90,10 +90,6 @@ public class MigrationClient {
 	private List<String> getCommonTypeNames(MigrationTypeNames srcTypeNames, MigrationTypeNames destTypeNames) {
 		List<String> commonNames = new LinkedList<String>();
 		for (String typeName: destTypeNames.getList()) {
-			// TODO: remove when PLFM-4246 fixed, also fix MigrationClientTest.testGetCommonMigrationTypes()
-			if (MigrationType.STORAGE_QUOTA.name().equals(typeName)) {
-				continue;
-			}
 			// Only keep the destination names that are in the source
 			if (srcTypeNames.getList().contains(typeName)) {
 				commonNames.add(typeName);
