@@ -347,7 +347,7 @@ public class MigrationClient {
 
 		ConcurrentMigrationIdRangeChecksumsExecutor idRangeChecksumsExecutor = new ConcurrentMigrationIdRangeChecksumsExecutor(this.threadPool, this.idRangeChecksumWorkerFactory);
 		// First, we find the delta ranges
-		DeltaFinder finder = new DeltaFinder(tm, clientFactory.getSourceClient(), clientFactory.getDestinationClient(), salt, minRangeSize, idRangeChecksumsExecutor);
+		DeltaFinder finder = new DeltaFinder(tm, salt, minRangeSize, idRangeChecksumsExecutor);
 		DeltaRanges ranges = finder.findDeltaRanges();
 		
 		// the first thing we need to do is calculate the what needs to be created, updated, or deleted.

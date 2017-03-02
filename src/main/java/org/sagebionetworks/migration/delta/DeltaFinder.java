@@ -27,8 +27,6 @@ public class DeltaFinder {
 	ConcurrentMigrationIdRangeChecksumsExecutor concurrentIdRangeChecksumExecutor;
 	
 	public DeltaFinder(TypeToMigrateMetadata tm,
-			SynapseAdminClient srcClient,
-			SynapseAdminClient destClient,
 			String salt,
 			Long bSize,
 					   ConcurrentMigrationIdRangeChecksumsExecutor executor) {

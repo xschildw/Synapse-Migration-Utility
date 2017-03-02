@@ -50,7 +50,7 @@ public class DeltaFinderTest {
 		meta.setDestCount(1345L);
 		meta.setDestMinId(1000L);
 		meta.setDestMaxId(2344L);
-		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", batchSize, mockChecksumsExecutor);
+		DeltaFinder finder = new DeltaFinder(meta, "salt", batchSize, mockChecksumsExecutor);
 
 		DeltaRanges ranges = finder.findDeltaRanges();
 
@@ -77,7 +77,7 @@ public class DeltaFinderTest {
 		meta.setDestCount(0L);
 		meta.setDestMinId(null);
 		meta.setDestMaxId(null);
-		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", batchSize, mockChecksumsExecutor);
+		DeltaFinder finder = new DeltaFinder(meta, "salt", batchSize, mockChecksumsExecutor);
 
 		DeltaRanges ranges = finder.findDeltaRanges();
 
@@ -104,7 +104,7 @@ public class DeltaFinderTest {
 		meta.setDestCount(100L);
 		meta.setDestMinId(1000L);
 		meta.setDestMaxId(1099L);
-		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", batchSize, mockChecksumsExecutor);
+		DeltaFinder finder = new DeltaFinder(meta, "salt", batchSize, mockChecksumsExecutor);
 
 		DeltaRanges ranges = finder.findDeltaRanges();
 
@@ -133,7 +133,7 @@ public class DeltaFinderTest {
 		meta.setDestCount(10L);
 		meta.setDestMinId(10L);
 		meta.setDestMaxId(19L);
-		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", batchSize, mockChecksumsExecutor);
+		DeltaFinder finder = new DeltaFinder(meta, "salt", batchSize, mockChecksumsExecutor);
 
 		DeltaRanges ranges = finder.findDeltaRanges();
 
@@ -173,7 +173,7 @@ public class DeltaFinderTest {
 		expectedChecksums.setSourceResult(checksum);
 
 		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1000L, 2344L)).thenReturn(expectedChecksums);
-		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", batchSize, mockChecksumsExecutor);
+		DeltaFinder finder = new DeltaFinder(meta, "salt", batchSize, mockChecksumsExecutor);
 
 		DeltaRanges ranges = finder.findDeltaRanges();
 
@@ -207,7 +207,7 @@ public class DeltaFinderTest {
 		expectedChecksums.setSourceResult(checksum);
 
 		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1000L, 2344L)).thenReturn(expectedChecksums);
-		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", batchSize, mockChecksumsExecutor);
+		DeltaFinder finder = new DeltaFinder(meta, "salt", batchSize, mockChecksumsExecutor);
 
 		// Call under test
 		DeltaRanges ranges = finder.findDeltaRanges();
@@ -247,7 +247,7 @@ public class DeltaFinderTest {
 
 
 		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1000L, 2344L)).thenReturn(expectedChecksums);
-		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", batchSize, mockChecksumsExecutor);
+		DeltaFinder finder = new DeltaFinder(meta, "salt", batchSize, mockChecksumsExecutor);
 
 		// Call under test
 		DeltaRanges ranges = finder.findDeltaRanges();
@@ -286,7 +286,7 @@ public class DeltaFinderTest {
 		expectedChecksums.setSourceResult(checksum);
 
 		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1000L, 2344L)).thenReturn(expectedChecksums);
-		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", batchSize, mockChecksumsExecutor);
+		DeltaFinder finder = new DeltaFinder(meta, "salt", batchSize, mockChecksumsExecutor);
 
 		// Call under test
 		DeltaRanges ranges = finder.findDeltaRanges();
@@ -325,7 +325,7 @@ public class DeltaFinderTest {
 		expectedChecksums.setSourceResult(checksum);
 
 		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1000L, 2344L)).thenReturn(expectedChecksums);
-		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", batchSize, mockChecksumsExecutor);
+		DeltaFinder finder = new DeltaFinder(meta, "salt", batchSize, mockChecksumsExecutor);
 
 		// Call under test
 		DeltaRanges ranges = finder.findDeltaRanges();
@@ -369,7 +369,7 @@ public class DeltaFinderTest {
 		expectedChecksums.setSourceResult(srcChecksum);
 
 		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1000L, 2344L)).thenReturn(expectedChecksums);
-		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", 5000L, mockChecksumsExecutor);
+		DeltaFinder finder = new DeltaFinder(meta, "salt", 5000L, mockChecksumsExecutor);
 
 		// Call under test
 		DeltaRanges ranges = finder.findDeltaRanges();
@@ -413,7 +413,7 @@ public class DeltaFinderTest {
 		expectedChecksums.setSourceResult(srcChecksum);
 
 		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1000L, 2344L)).thenReturn(expectedChecksums);
-		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", 5000L, mockChecksumsExecutor);
+		DeltaFinder finder = new DeltaFinder(meta, "salt", 5000L, mockChecksumsExecutor);
 
 		// Call under test
 		DeltaRanges ranges = finder.findDeltaRanges();
@@ -485,7 +485,7 @@ public class DeltaFinderTest {
 		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1010L, 1019L)).thenReturn(expectedChecksums3);
 
 		// Setup the batch size to 10 so we don't do more than 2 loops
-		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", 10L, mockChecksumsExecutor);
+		DeltaFinder finder = new DeltaFinder(meta, "salt", 10L, mockChecksumsExecutor);
 
 		// Call under test
 		DeltaRanges ranges = finder.findDeltaRanges();
@@ -557,7 +557,7 @@ public class DeltaFinderTest {
 		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1011L, 1020L)).thenReturn(expectedChecksums3);
 
 		// Setup the batch size to 10 so we don't do more than 2 loops
-		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", 10L, mockChecksumsExecutor);
+		DeltaFinder finder = new DeltaFinder(meta, "salt", 10L, mockChecksumsExecutor);
 		DeltaRanges ranges = finder.findDeltaRanges();
 		assertEquals(MigrationType.FILE_HANDLE, ranges.getMigrationType());
 		assertNotNull(ranges.getInsRanges());
@@ -687,7 +687,7 @@ public class DeltaFinderTest {
 		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1030L, 1039L)).thenReturn(expectedChecksums7);
 
 		// Setup the batch size to 10 so we don't do more than 2 loops
-		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", 10L, mockChecksumsExecutor);
+		DeltaFinder finder = new DeltaFinder(meta, "salt", 10L, mockChecksumsExecutor);
 		DeltaRanges ranges = finder.findDeltaRanges();
 		assertEquals(MigrationType.FILE_HANDLE, ranges.getMigrationType());
 		assertNotNull(ranges.getInsRanges());
