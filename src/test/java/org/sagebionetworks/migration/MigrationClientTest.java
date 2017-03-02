@@ -20,6 +20,7 @@ import org.sagebionetworks.client.SynapseAdminClientImpl;
 import org.sagebionetworks.client.exceptions.SynapseException;
 import org.sagebionetworks.client.exceptions.SynapseServerException;
 import org.sagebionetworks.migration.async.ConcurrentExecutionResult;
+import org.sagebionetworks.migration.factory.AsyncMigrationIdRangeChecksumWorkerFactory;
 import org.sagebionetworks.migration.factory.AsyncMigrationTypeChecksumWorkerFactory;
 import org.sagebionetworks.migration.factory.AsyncMigrationTypeCountsWorkerFactory;
 import org.sagebionetworks.migration.utils.TypeToMigrateMetadata;
@@ -46,8 +47,6 @@ public class MigrationClientTest {
 	private SynapseAdminClient sourceSynapse;
 	
 	private SynapseClientFactory mockFactory;
-	private AsyncMigrationTypeChecksumWorkerFactory typeChecksumWorkerFactory;
-	private AsyncMigrationTypeCountsWorkerFactory typeCountsWorkerFactory;
 	private MigrationClient migrationClient;
 	
 	@Before

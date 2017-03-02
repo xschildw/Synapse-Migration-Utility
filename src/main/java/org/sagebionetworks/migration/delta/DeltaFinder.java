@@ -7,6 +7,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.sagebionetworks.client.SynapseAdminClient;
 import org.sagebionetworks.client.exceptions.SynapseException;
+import org.sagebionetworks.migration.async.ConcurrentExecutionResult;
+import org.sagebionetworks.migration.async.ConcurrentMigrationIdRangeChecksumsExecutor;
 import org.sagebionetworks.repo.model.migration.AdminResponse;
 import org.sagebionetworks.repo.model.migration.AsyncMigrationRangeChecksumRequest;
 import org.sagebionetworks.repo.model.migration.MigrationRangeChecksum;
@@ -19,22 +21,21 @@ public class DeltaFinder {
 
 	static private Logger logger = LogManager.getLogger(DeltaFinder.class);
 
-	private SynapseAdminClient sourceClient;
-	private SynapseAdminClient destinationClient;
 	TypeToMigrateMetadata typeToMigrateMeta;
 	String salt;
 	Long batchSize;
+	ConcurrentMigrationIdRangeChecksumsExecutor concurrentIdRangeChecksumExecutor;
 	
 	public DeltaFinder(TypeToMigrateMetadata tm,
 			SynapseAdminClient srcClient,
 			SynapseAdminClient destClient,
 			String salt,
-			Long bSize) {
+			Long bSize,
+					   ConcurrentMigrationIdRangeChecksumsExecutor executor) {
 		typeToMigrateMeta = tm;
-		sourceClient = srcClient;
-		destinationClient = destClient;
 		this.salt = salt;
 		batchSize = bSize;
+		concurrentIdRangeChecksumExecutor = executor;
 	}
 
 	public DeltaRanges findDeltaRanges() throws SynapseException, JSONObjectAdapterException, InterruptedException {
@@ -95,7 +96,7 @@ public class DeltaFinder {
 					}
 					
 					// Update ranges
-					updRanges.addAll(findUpdDeltaRanges(sourceClient, destinationClient, typeToMigrateMeta.getType(), salt, updatesMinId, updatesMaxId, batchSize));
+					updRanges.addAll(findUpdDeltaRanges(typeToMigrateMeta.getType(), salt, updatesMinId, updatesMaxId, batchSize));
 				}
 
 			}
@@ -109,10 +110,11 @@ public class DeltaFinder {
 		return deltas;
 	}
 	
-	private List<IdRange> findUpdDeltaRanges(SynapseAdminClient srcClient, SynapseAdminClient destClient, MigrationType type, String salt, long minId, long maxId, long batchSize) throws SynapseException, JSONObjectAdapterException, InterruptedException {
+	private List<IdRange> findUpdDeltaRanges(MigrationType type, String salt, long minId, long maxId, long batchSize) throws SynapseException, JSONObjectAdapterException, InterruptedException {
 		List<IdRange> l = new LinkedList<IdRange>();
-		MigrationRangeChecksum srcCrc32 = getChecksumForIdRange(srcClient, type, salt, minId, maxId);
-		MigrationRangeChecksum destCrc32 = getChecksumForIdRange(destClient, type, salt, minId, maxId);
+		ConcurrentExecutionResult<MigrationRangeChecksum> rangeChecksums = this.concurrentIdRangeChecksumExecutor.getIdRangeChecksums(type, salt, minId, maxId);
+		MigrationRangeChecksum srcCrc32 = rangeChecksums.getSourceResult();
+		MigrationRangeChecksum destCrc32 = rangeChecksums.getDestinationResult();
 		//log.info("Computed range checksums from " + minId + " to " + maxId + ": (" + srcCrc32.getChecksum() + ", " + destCrc32.getChecksum() + ").");
 		if (srcCrc32.equals(destCrc32)) {
 			return l;
@@ -126,28 +128,10 @@ public class DeltaFinder {
 				long maxId1 = (minId+maxId)/2;
 				long minId2 = maxId1+1;
 				long maxId2 = maxId;
-				l.addAll(findUpdDeltaRanges(srcClient, destClient, type, salt, minId1, maxId1, batchSize));
-				l.addAll(findUpdDeltaRanges(srcClient, destClient, type, salt, minId2, maxId2, batchSize));
+				l.addAll(findUpdDeltaRanges(type, salt, minId1, maxId1, batchSize));
+				l.addAll(findUpdDeltaRanges(type, salt, minId2, maxId2, batchSize));
 				return l;
 			}
-		}
-	}
-	
-	public MigrationRangeChecksum getChecksumForIdRange(SynapseAdminClient conn, MigrationType type, String salt, Long minId, Long maxId) throws SynapseException, InterruptedException, JSONObjectAdapterException {
-		MigrationRangeChecksum res = null;
-		try {
-			res = conn.getChecksumForIdRange(type, salt, minId, maxId);
-			return res;
-		} catch (SynapseException e) {
-			AsyncMigrationRangeChecksumRequest req = new AsyncMigrationRangeChecksumRequest();
-			req.setType(type.name());
-			req.setSalt(salt);
-			req.setMinId(minId);
-			req.setMaxId(maxId);
-			AsyncMigrationRequestExecutor worker = new AsyncMigrationRequestExecutor(conn, req, 900000);
-			AdminResponse resp = worker.execute();
-			res = (MigrationRangeChecksum)resp;
-			return res;
 		}
 	}
 }

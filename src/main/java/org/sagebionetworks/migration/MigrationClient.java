@@ -14,10 +14,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.sagebionetworks.client.SynapseAdminClient;
 import org.sagebionetworks.client.exceptions.SynapseException;
-import org.sagebionetworks.migration.async.AsyncMigrationRequestExecutor;
-import org.sagebionetworks.migration.async.ConcurrentExecutionResult;
-import org.sagebionetworks.migration.async.ConcurrentMigrationTypeChecksumsExecutor;
-import org.sagebionetworks.migration.async.ConcurrentMigrationTypeCountsExecutor;
+import org.sagebionetworks.migration.async.*;
 import org.sagebionetworks.migration.delta.*;
 import org.sagebionetworks.migration.factory.*;
 import org.sagebionetworks.repo.model.migration.*;
@@ -348,8 +345,9 @@ public class MigrationClient {
 	 */
 	public DeltaData calculateDeltaForType(TypeToMigrateMetadata tm, String salt, long minRangeSize) throws Exception{
 
+		ConcurrentMigrationIdRangeChecksumsExecutor idRangeChecksumsExecutor = new ConcurrentMigrationIdRangeChecksumsExecutor(this.threadPool, this.idRangeChecksumWorkerFactory);
 		// First, we find the delta ranges
-		DeltaFinder finder = new DeltaFinder(tm, clientFactory.getSourceClient(), clientFactory.getDestinationClient(), salt, minRangeSize);
+		DeltaFinder finder = new DeltaFinder(tm, clientFactory.getSourceClient(), clientFactory.getDestinationClient(), salt, minRangeSize, idRangeChecksumsExecutor);
 		DeltaRanges ranges = finder.findDeltaRanges();
 		
 		// the first thing we need to do is calculate the what needs to be created, updated, or deleted.

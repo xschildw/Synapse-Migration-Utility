@@ -15,28 +15,24 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.sagebionetworks.client.SynapseAdminClient;
-import org.sagebionetworks.client.exceptions.SynapseException;
-import org.sagebionetworks.client.exceptions.SynapseServerException;
-import org.sagebionetworks.repo.model.asynch.AsynchJobState;
-import org.sagebionetworks.repo.model.asynch.AsynchronousJobStatus;
-import org.sagebionetworks.repo.model.migration.AsyncMigrationRequest;
-import org.sagebionetworks.repo.model.migration.AsyncMigrationResponse;
+import org.sagebionetworks.migration.async.ConcurrentExecutionResult;
+import org.sagebionetworks.migration.async.ConcurrentMigrationIdRangeChecksumsExecutor;
 import org.sagebionetworks.repo.model.migration.MigrationRangeChecksum;
 import org.sagebionetworks.repo.model.migration.MigrationType;
-import org.sagebionetworks.migration.delta.DeltaRanges;
 import org.sagebionetworks.migration.utils.TypeToMigrateMetadata;
-import org.sagebionetworks.migration.delta.DeltaFinder;
 
 public class DeltaFinderTest {
 	
 	SynapseAdminClient mockSrcClient;
 	SynapseAdminClient mockDestClient;
 	Long batchSize;
+	ConcurrentMigrationIdRangeChecksumsExecutor mockChecksumsExecutor;
 
 	@Before
 	public void setUp() throws Exception {
 		mockSrcClient = Mockito.mock(SynapseAdminClient.class);
 		mockDestClient = Mockito.mock(SynapseAdminClient.class);
+		mockChecksumsExecutor = Mockito.mock(ConcurrentMigrationIdRangeChecksumsExecutor.class);
 		batchSize = 100L;
 	}
 
@@ -54,8 +50,10 @@ public class DeltaFinderTest {
 		meta.setDestCount(1345L);
 		meta.setDestMinId(1000L);
 		meta.setDestMaxId(2344L);
-		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", batchSize);
+		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", batchSize, mockChecksumsExecutor);
+
 		DeltaRanges ranges = finder.findDeltaRanges();
+
 		assertEquals(MigrationType.FILE_HANDLE, ranges.getMigrationType());
 		assertNotNull(ranges.getInsRanges());
 		assertEquals(0, ranges.getInsRanges().size());
@@ -79,8 +77,10 @@ public class DeltaFinderTest {
 		meta.setDestCount(0L);
 		meta.setDestMinId(null);
 		meta.setDestMaxId(null);
-		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", batchSize);
+		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", batchSize, mockChecksumsExecutor);
+
 		DeltaRanges ranges = finder.findDeltaRanges();
+
 		assertEquals(MigrationType.FILE_HANDLE, ranges.getMigrationType());
 		assertNotNull(ranges.getInsRanges());
 		assertEquals(1, ranges.getInsRanges().size());
@@ -104,8 +104,10 @@ public class DeltaFinderTest {
 		meta.setDestCount(100L);
 		meta.setDestMinId(1000L);
 		meta.setDestMaxId(1099L);
-		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", batchSize);
+		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", batchSize, mockChecksumsExecutor);
+
 		DeltaRanges ranges = finder.findDeltaRanges();
+
 		assertEquals(MigrationType.FILE_HANDLE, ranges.getMigrationType());
 		assertNotNull(ranges.getInsRanges());
 		assertEquals(1, ranges.getInsRanges().size());
@@ -131,8 +133,10 @@ public class DeltaFinderTest {
 		meta.setDestCount(10L);
 		meta.setDestMinId(10L);
 		meta.setDestMaxId(19L);
-		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", batchSize);
+		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", batchSize, mockChecksumsExecutor);
+
 		DeltaRanges ranges = finder.findDeltaRanges();
+
 		assertEquals(MigrationType.FILE_HANDLE, ranges.getMigrationType());
 		assertNotNull(ranges.getInsRanges());
 		assertEquals(1, ranges.getInsRanges().size());
@@ -158,15 +162,21 @@ public class DeltaFinderTest {
 		meta.setDestCount(1345L);
 		meta.setDestMinId(1000L);
 		meta.setDestMaxId(2344L);
-		MigrationRangeChecksum expectedChecksum = new MigrationRangeChecksum();
-		expectedChecksum.setType(MigrationType.FILE_HANDLE);
-		expectedChecksum.setMinid(1000L);
-		expectedChecksum.setMaxid(2344L);
-		expectedChecksum.setChecksum("CRC32");
-		when(mockSrcClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(2344L))).thenReturn(expectedChecksum);
-		when(mockDestClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(2344L))).thenReturn(expectedChecksum);
-		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", batchSize);
+
+		MigrationRangeChecksum checksum = new MigrationRangeChecksum();
+		checksum.setType(MigrationType.FILE_HANDLE);
+		checksum.setMinid(1000L);
+		checksum.setMaxid(2344L);
+		checksum.setChecksum("CRC32");
+		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		expectedChecksums.setDestinationResult(checksum);
+		expectedChecksums.setSourceResult(checksum);
+
+		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1000L, 2344L)).thenReturn(expectedChecksums);
+		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", batchSize, mockChecksumsExecutor);
+
 		DeltaRanges ranges = finder.findDeltaRanges();
+
 		assertEquals(MigrationType.FILE_HANDLE, ranges.getMigrationType());
 		assertNotNull(ranges.getInsRanges());
 		assertEquals(0, ranges.getInsRanges().size());
@@ -174,8 +184,6 @@ public class DeltaFinderTest {
 		assertEquals(0, ranges.getUpdRanges().size());
 		assertEquals(0, ranges.getDelRanges().size());
 		assertNotNull(ranges.getDelRanges());
-		verify(mockSrcClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(2344L));
-		verify(mockDestClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(2344L));
 	}
 	
 	@Test
@@ -188,15 +196,22 @@ public class DeltaFinderTest {
 		meta.setDestCount(1345L);
 		meta.setDestMinId(1000L);
 		meta.setDestMaxId(2344L);
-		MigrationRangeChecksum expectedChecksum = new MigrationRangeChecksum();
-		expectedChecksum.setType(MigrationType.FILE_HANDLE);
-		expectedChecksum.setMinid(1000L);
-		expectedChecksum.setMaxid(2344L);
-		expectedChecksum.setChecksum("CRC32");
-		when(mockSrcClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(2344L))).thenReturn(expectedChecksum);
-		when(mockDestClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(2344L))).thenReturn(expectedChecksum);
-		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", batchSize);
+
+		MigrationRangeChecksum checksum = new MigrationRangeChecksum();
+		checksum.setType(MigrationType.FILE_HANDLE);
+		checksum.setMinid(1000L);
+		checksum.setMaxid(2344L);
+		checksum.setChecksum("CRC32");
+		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		expectedChecksums.setDestinationResult(checksum);
+		expectedChecksums.setSourceResult(checksum);
+
+		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1000L, 2344L)).thenReturn(expectedChecksums);
+		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", batchSize, mockChecksumsExecutor);
+
+		// Call under test
 		DeltaRanges ranges = finder.findDeltaRanges();
+
 		assertEquals(MigrationType.FILE_HANDLE, ranges.getMigrationType());
 		assertNotNull(ranges.getInsRanges());
 		assertEquals(1, ranges.getInsRanges().size());
@@ -206,12 +221,11 @@ public class DeltaFinderTest {
 		assertEquals(0, ranges.getUpdRanges().size());
 		assertEquals(0, ranges.getDelRanges().size());
 		assertNotNull(ranges.getDelRanges());
-		verify(mockSrcClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(2344L));
-		verify(mockDestClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(2344L));
 	}
 	
 	@Test
 	public void testInsMaxSrc() throws Exception {
+		// Input
 		TypeToMigrateMetadata meta = new TypeToMigrateMetadata();
 		meta.setType(MigrationType.FILE_HANDLE);
 		meta.setSrcCount(1445L);
@@ -220,15 +234,24 @@ public class DeltaFinderTest {
 		meta.setDestCount(1345L);
 		meta.setDestMinId(1000L);
 		meta.setDestMaxId(2344L);
-		MigrationRangeChecksum expectedChecksum = new MigrationRangeChecksum();
-		expectedChecksum.setType(MigrationType.FILE_HANDLE);
-		expectedChecksum.setMinid(1000L);
-		expectedChecksum.setMaxid(2344L);
-		expectedChecksum.setChecksum("CRC32");
-		when(mockSrcClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(2344L))).thenReturn(expectedChecksum);
-		when(mockDestClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(2344L))).thenReturn(expectedChecksum);
-		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", batchSize);
+
+		// Expected results
+		MigrationRangeChecksum checksum = new MigrationRangeChecksum();
+		checksum.setType(MigrationType.FILE_HANDLE);
+		checksum.setMinid(1000L);
+		checksum.setMaxid(2344L);
+		checksum.setChecksum("CRC32");
+		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		expectedChecksums.setDestinationResult(checksum);
+		expectedChecksums.setSourceResult(checksum);
+
+
+		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1000L, 2344L)).thenReturn(expectedChecksums);
+		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", batchSize, mockChecksumsExecutor);
+
+		// Call under test
 		DeltaRanges ranges = finder.findDeltaRanges();
+
 		assertEquals(MigrationType.FILE_HANDLE, ranges.getMigrationType());
 		assertNotNull(ranges.getInsRanges());
 		assertEquals(1, ranges.getInsRanges().size());
@@ -238,12 +261,11 @@ public class DeltaFinderTest {
 		assertEquals(0, ranges.getUpdRanges().size());
 		assertEquals(0, ranges.getDelRanges().size());
 		assertNotNull(ranges.getDelRanges());
-		verify(mockSrcClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(2344L));
-		verify(mockDestClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(2344L));
 	}
 	
 	@Test
 	public void testDelMinDest() throws Exception {
+		// Input
 		TypeToMigrateMetadata meta = new TypeToMigrateMetadata();
 		meta.setType(MigrationType.FILE_HANDLE);
 		meta.setSrcCount(1345L);
@@ -252,15 +274,23 @@ public class DeltaFinderTest {
 		meta.setDestCount(1445L);
 		meta.setDestMinId(900L);
 		meta.setDestMaxId(2344L);
-		MigrationRangeChecksum expectedChecksum = new MigrationRangeChecksum();
-		expectedChecksum.setType(MigrationType.FILE_HANDLE);
-		expectedChecksum.setMinid(1000L);
-		expectedChecksum.setMaxid(2344L);
-		expectedChecksum.setChecksum("CRC32");
-		when(mockSrcClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(2344L))).thenReturn(expectedChecksum);
-		when(mockDestClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(2344L))).thenReturn(expectedChecksum);
-		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", batchSize);
+
+		// Expected results
+		MigrationRangeChecksum checksum = new MigrationRangeChecksum();
+		checksum.setType(MigrationType.FILE_HANDLE);
+		checksum.setMinid(1000L);
+		checksum.setMaxid(2344L);
+		checksum.setChecksum("CRC32");
+		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		expectedChecksums.setDestinationResult(checksum);
+		expectedChecksums.setSourceResult(checksum);
+
+		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1000L, 2344L)).thenReturn(expectedChecksums);
+		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", batchSize, mockChecksumsExecutor);
+
+		// Call under test
 		DeltaRanges ranges = finder.findDeltaRanges();
+
 		assertEquals(MigrationType.FILE_HANDLE, ranges.getMigrationType());
 		assertNotNull(ranges.getInsRanges());
 		assertEquals(0, ranges.getInsRanges().size());
@@ -270,12 +300,11 @@ public class DeltaFinderTest {
 		assertEquals(1, ranges.getDelRanges().size());
 		assertEquals(900, ranges.getDelRanges().get(0).getMinId());
 		assertEquals(999, ranges.getDelRanges().get(0).getMaxId());
-		verify(mockSrcClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(2344L));
-		verify(mockDestClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(2344L));
 	}
 
 	@Test
 	public void testDelMaxSrc() throws Exception {
+		// Input
 		TypeToMigrateMetadata meta = new TypeToMigrateMetadata();
 		meta.setType(MigrationType.FILE_HANDLE);
 		meta.setSrcCount(1345L);
@@ -284,15 +313,23 @@ public class DeltaFinderTest {
 		meta.setDestCount(1445L);
 		meta.setDestMinId(1000L);
 		meta.setDestMaxId(2444L);
-		MigrationRangeChecksum expectedChecksum = new MigrationRangeChecksum();
-		expectedChecksum.setType(MigrationType.FILE_HANDLE);
-		expectedChecksum.setMinid(1000L);
-		expectedChecksum.setMaxid(2344L);
-		expectedChecksum.setChecksum("CRC32");
-		when(mockSrcClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(2344L))).thenReturn(expectedChecksum);
-		when(mockDestClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(2344L))).thenReturn(expectedChecksum);
-		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", batchSize);
+
+		// Expected results
+		MigrationRangeChecksum checksum = new MigrationRangeChecksum();
+		checksum.setType(MigrationType.FILE_HANDLE);
+		checksum.setMinid(1000L);
+		checksum.setMaxid(2344L);
+		checksum.setChecksum("CRC32");
+		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		expectedChecksums.setDestinationResult(checksum);
+		expectedChecksums.setSourceResult(checksum);
+
+		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1000L, 2344L)).thenReturn(expectedChecksums);
+		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", batchSize, mockChecksumsExecutor);
+
+		// Call under test
 		DeltaRanges ranges = finder.findDeltaRanges();
+
 		assertEquals(MigrationType.FILE_HANDLE, ranges.getMigrationType());
 		assertNotNull(ranges.getInsRanges());
 		assertEquals(0, ranges.getInsRanges().size());
@@ -302,12 +339,11 @@ public class DeltaFinderTest {
 		assertEquals(1, ranges.getDelRanges().size());
 		assertEquals(2345, ranges.getDelRanges().get(0).getMinId());
 		assertEquals(2444, ranges.getDelRanges().get(0).getMaxId());
-		verify(mockSrcClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(2344L));
-		verify(mockDestClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(2344L));
 	}
 	
 	@Test
 	public void testUpgRange() throws Exception {
+		// Input
 		TypeToMigrateMetadata meta = new TypeToMigrateMetadata();
 		meta.setType(MigrationType.FILE_HANDLE);
 		meta.setSrcCount(1345L);
@@ -316,20 +352,28 @@ public class DeltaFinderTest {
 		meta.setDestCount(1345L);
 		meta.setDestMinId(1000L);
 		meta.setDestMaxId(2344L);
-		MigrationRangeChecksum expectedChecksum1 = new MigrationRangeChecksum();
-		expectedChecksum1.setType(MigrationType.FILE_HANDLE);
-		expectedChecksum1.setMinid(1000L);
-		expectedChecksum1.setMaxid(2344L);
-		expectedChecksum1.setChecksum("CRC32-1");
-		MigrationRangeChecksum expectedChecksum2 = new MigrationRangeChecksum();
-		expectedChecksum2.setType(MigrationType.FILE_HANDLE);
-		expectedChecksum2.setMinid(1000L);
-		expectedChecksum2.setMaxid(2344L);
-		expectedChecksum2.setChecksum("CRC32-2");
-		when(mockSrcClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(2344L))).thenReturn(expectedChecksum1);
-		when(mockDestClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(2344L))).thenReturn(expectedChecksum2);
-		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", 5000L);
+
+		// Expected results
+		MigrationRangeChecksum srcChecksum = new MigrationRangeChecksum();
+		srcChecksum.setType(MigrationType.FILE_HANDLE);
+		srcChecksum.setMinid(1000L);
+		srcChecksum.setMaxid(2344L);
+		srcChecksum.setChecksum("CRC32-1");
+		MigrationRangeChecksum destChecksum = new MigrationRangeChecksum();
+		destChecksum.setType(MigrationType.FILE_HANDLE);
+		destChecksum.setMinid(1000L);
+		destChecksum.setMaxid(2344L);
+		destChecksum.setChecksum("CRC32-2");
+		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		expectedChecksums.setDestinationResult(destChecksum);
+		expectedChecksums.setSourceResult(srcChecksum);
+
+		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1000L, 2344L)).thenReturn(expectedChecksums);
+		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", 5000L, mockChecksumsExecutor);
+
+		// Call under test
 		DeltaRanges ranges = finder.findDeltaRanges();
+
 		assertEquals(MigrationType.FILE_HANDLE, ranges.getMigrationType());
 		assertNotNull(ranges.getInsRanges());
 		assertEquals(0, ranges.getInsRanges().size());
@@ -339,12 +383,11 @@ public class DeltaFinderTest {
 		assertEquals(2344, ranges.getUpdRanges().get(0).getMaxId());
 		assertEquals(0, ranges.getDelRanges().size());
 		assertNotNull(ranges.getDelRanges());
-		verify(mockSrcClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(2344L));
-		verify(mockDestClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(2344L));
 	}
 	
 	@Test
 	public void testUpgRangeNullChecksum() throws Exception {
+		// Input
 		TypeToMigrateMetadata meta = new TypeToMigrateMetadata();
 		meta.setType(MigrationType.FILE_HANDLE);
 		meta.setSrcCount(1345L);
@@ -353,18 +396,28 @@ public class DeltaFinderTest {
 		meta.setDestCount(1345L);
 		meta.setDestMinId(1000L);
 		meta.setDestMaxId(2344L);
-		MigrationRangeChecksum expectedChecksum1 = new MigrationRangeChecksum();
-		expectedChecksum1.setType(MigrationType.FILE_HANDLE);
-		expectedChecksum1.setMinid(1000L);
-		expectedChecksum1.setMaxid(2344L);
-		MigrationRangeChecksum expectedChecksum2 = new MigrationRangeChecksum();
-		expectedChecksum2.setType(MigrationType.FILE_HANDLE);
-		expectedChecksum2.setMinid(1000L);
-		expectedChecksum2.setMaxid(2344L);
-		when(mockSrcClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(2344L))).thenReturn(expectedChecksum1);
-		when(mockDestClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(2344L))).thenReturn(expectedChecksum2);
-		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", 5000L);
+
+		// Expected results
+		MigrationRangeChecksum srcChecksum = new MigrationRangeChecksum();
+		srcChecksum.setType(MigrationType.FILE_HANDLE);
+		srcChecksum.setMinid(1000L);
+		srcChecksum.setMaxid(2344L);
+		srcChecksum.setChecksum(null);
+		MigrationRangeChecksum destChecksum = new MigrationRangeChecksum();
+		destChecksum.setType(MigrationType.FILE_HANDLE);
+		destChecksum.setMinid(1000L);
+		destChecksum.setMaxid(2344L);
+		destChecksum.setChecksum(null);
+		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		expectedChecksums.setDestinationResult(destChecksum);
+		expectedChecksums.setSourceResult(srcChecksum);
+
+		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1000L, 2344L)).thenReturn(expectedChecksums);
+		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", 5000L, mockChecksumsExecutor);
+
+		// Call under test
 		DeltaRanges ranges = finder.findDeltaRanges();
+
 		assertEquals(MigrationType.FILE_HANDLE, ranges.getMigrationType());
 		assertNotNull(ranges.getInsRanges());
 		assertEquals(0, ranges.getInsRanges().size());
@@ -373,12 +426,11 @@ public class DeltaFinderTest {
 		assertNotNull(ranges.getDelRanges());
 		assertEquals(0, ranges.getDelRanges().size());
 		assertNotNull(ranges.getDelRanges());
-		verify(mockSrcClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(2344L));
-		verify(mockDestClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(2344L));
 	}
 	
 	@Test
 	public void testUpgRangeOneRecursion() throws Exception {
+		//Input
 		TypeToMigrateMetadata meta = new TypeToMigrateMetadata();
 		meta.setType(MigrationType.FILE_HANDLE);
 		meta.setSrcCount(20L);
@@ -387,6 +439,7 @@ public class DeltaFinderTest {
 		meta.setDestCount(20L);
 		meta.setDestMinId(1000L);
 		meta.setDestMaxId(1019L);
+
 		// The first pass will differ
 		MigrationRangeChecksum expectedChecksum1 = new MigrationRangeChecksum();
 		expectedChecksum1.setType(MigrationType.FILE_HANDLE);
@@ -398,8 +451,11 @@ public class DeltaFinderTest {
 		expectedChecksum2.setMinid(1000L);
 		expectedChecksum2.setMaxid(1019L);
 		expectedChecksum2.setChecksum("CRC32-1-2");
-		when(mockSrcClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(1019L))).thenReturn(expectedChecksum1);
-		when(mockDestClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(1019L))).thenReturn(expectedChecksum2);
+		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums1 = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		expectedChecksums1.setSourceResult(expectedChecksum1);
+		expectedChecksums1.setDestinationResult(expectedChecksum2);
+		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1000L, 1019L)).thenReturn(expectedChecksums1);
+
 		// The second pass will differ in the second half
 		// 1st half - same CRC32
 		MigrationRangeChecksum expectedChecksum3 = new MigrationRangeChecksum();
@@ -407,8 +463,11 @@ public class DeltaFinderTest {
 		expectedChecksum3.setMinid(1000L);
 		expectedChecksum3.setMaxid(1009L);
 		expectedChecksum3.setChecksum("CRC32-2-1");
-		when(mockSrcClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(1009L))).thenReturn(expectedChecksum3);
-		when(mockDestClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(1009L))).thenReturn(expectedChecksum3);
+		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums2 = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		expectedChecksums2.setSourceResult(expectedChecksum3);
+		expectedChecksums2.setDestinationResult(expectedChecksum3);
+		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1000L, 1009L)).thenReturn(expectedChecksums2);
+
 		// 2nd half - different CRC32
 		MigrationRangeChecksum expectedChecksum4 = new MigrationRangeChecksum();
 		expectedChecksum4.setType(MigrationType.FILE_HANDLE);
@@ -420,11 +479,17 @@ public class DeltaFinderTest {
 		expectedChecksum5.setMinid(1010L);
 		expectedChecksum5.setMaxid(1019L);
 		expectedChecksum5.setChecksum("CRC32-2-3");
-		when(mockSrcClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1010L), eq(1019L))).thenReturn(expectedChecksum4);
-		when(mockDestClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1010L), eq(1019L))).thenReturn(expectedChecksum5);
+		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums3 = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		expectedChecksums3.setSourceResult(expectedChecksum4);
+		expectedChecksums3.setDestinationResult(expectedChecksum5);
+		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1010L, 1019L)).thenReturn(expectedChecksums3);
+
 		// Setup the batch size to 10 so we don't do more than 2 loops
-		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", 10L);
+		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", 10L, mockChecksumsExecutor);
+
+		// Call under test
 		DeltaRanges ranges = finder.findDeltaRanges();
+
 		assertEquals(MigrationType.FILE_HANDLE, ranges.getMigrationType());
 		assertNotNull(ranges.getInsRanges());
 		assertEquals(0, ranges.getInsRanges().size());
@@ -434,12 +499,6 @@ public class DeltaFinderTest {
 		assertEquals(1019, ranges.getUpdRanges().get(0).getMaxId());
 		assertEquals(0, ranges.getDelRanges().size());
 		assertNotNull(ranges.getDelRanges());
-		verify(mockSrcClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(1019L));
-		verify(mockDestClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(1019L));
-		verify(mockSrcClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(1009L));
-		verify(mockDestClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(1009L));
-		verify(mockSrcClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1010L), eq(1019L));
-		verify(mockDestClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1010L), eq(1019L));
 	}
 	
 	@Test
@@ -452,6 +511,7 @@ public class DeltaFinderTest {
 		meta.setDestCount(21L);
 		meta.setDestMinId(1000L);
 		meta.setDestMaxId(1020L);
+
 		// The first pass will differ
 		MigrationRangeChecksum expectedChecksum1 = new MigrationRangeChecksum();
 		expectedChecksum1.setType(MigrationType.FILE_HANDLE);
@@ -463,8 +523,11 @@ public class DeltaFinderTest {
 		expectedChecksum2.setMinid(1000L);
 		expectedChecksum2.setMaxid(1020L);
 		expectedChecksum2.setChecksum("CRC32-1-2");
-		when(mockSrcClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(1020L))).thenReturn(expectedChecksum1);
-		when(mockDestClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(1020L))).thenReturn(expectedChecksum2);
+		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums1 = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		expectedChecksums1.setSourceResult(expectedChecksum1);
+		expectedChecksums1.setDestinationResult(expectedChecksum2);
+		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1000L, 1020L)).thenReturn(expectedChecksums1);
+
 		// The second pass will differ in the second half
 		// 1st half - same CRC32
 		MigrationRangeChecksum expectedChecksum3 = new MigrationRangeChecksum();
@@ -472,8 +535,11 @@ public class DeltaFinderTest {
 		expectedChecksum3.setMinid(1000L);
 		expectedChecksum3.setMaxid(1010L);
 		expectedChecksum3.setChecksum("CRC32-2-1");
-		when(mockSrcClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(1010L))).thenReturn(expectedChecksum3);
-		when(mockDestClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(1010L))).thenReturn(expectedChecksum3);
+		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums2 = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		expectedChecksums2.setSourceResult(expectedChecksum3);
+		expectedChecksums2.setDestinationResult(expectedChecksum3);
+		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1000L, 1010L)).thenReturn(expectedChecksums2);
+
 		// 2nd half - different CRC32
 		MigrationRangeChecksum expectedChecksum4 = new MigrationRangeChecksum();
 		expectedChecksum4.setType(MigrationType.FILE_HANDLE);
@@ -485,10 +551,13 @@ public class DeltaFinderTest {
 		expectedChecksum5.setMinid(1011L);
 		expectedChecksum5.setMaxid(1020L);
 		expectedChecksum5.setChecksum("CRC32-2-3");
-		when(mockSrcClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1011L), eq(1020L))).thenReturn(expectedChecksum4);
-		when(mockDestClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1011L), eq(1020L))).thenReturn(expectedChecksum5);
+		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums3 = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		expectedChecksums3.setSourceResult(expectedChecksum4);
+		expectedChecksums3.setDestinationResult(expectedChecksum5);
+		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1011L, 1020L)).thenReturn(expectedChecksums3);
+
 		// Setup the batch size to 10 so we don't do more than 2 loops
-		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", 10L);
+		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", 10L, mockChecksumsExecutor);
 		DeltaRanges ranges = finder.findDeltaRanges();
 		assertEquals(MigrationType.FILE_HANDLE, ranges.getMigrationType());
 		assertNotNull(ranges.getInsRanges());
@@ -499,16 +568,11 @@ public class DeltaFinderTest {
 		assertEquals(1020, ranges.getUpdRanges().get(0).getMaxId());
 		assertEquals(0, ranges.getDelRanges().size());
 		assertNotNull(ranges.getDelRanges());
-		verify(mockSrcClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(1020L));
-		verify(mockDestClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(1020L));
-		verify(mockSrcClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(1010L));
-		verify(mockDestClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(1010L));
-		verify(mockSrcClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1011L), eq(1020L));
-		verify(mockDestClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1011L), eq(1020L));
 	}
 	
 	@Test
 	public void testUpgRangeTwoRanges() throws Exception {
+		//Input
 		TypeToMigrateMetadata meta = new TypeToMigrateMetadata();
 		meta.setType(MigrationType.FILE_HANDLE);
 		meta.setSrcCount(40L);
@@ -517,6 +581,7 @@ public class DeltaFinderTest {
 		meta.setDestCount(40L);
 		meta.setDestMinId(1000L);
 		meta.setDestMaxId(1039L);
+
 		// The first pass will differ
 		MigrationRangeChecksum expectedChecksum1 = new MigrationRangeChecksum();
 		expectedChecksum1.setType(MigrationType.FILE_HANDLE);
@@ -528,8 +593,11 @@ public class DeltaFinderTest {
 		expectedChecksum2.setMinid(1000L);
 		expectedChecksum2.setMaxid(1039L);
 		expectedChecksum2.setChecksum("CRC32-1-2");
-		when(mockSrcClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(1039L))).thenReturn(expectedChecksum1);
-		when(mockDestClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(1039L))).thenReturn(expectedChecksum2);
+		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums1 = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		expectedChecksums1.setSourceResult(expectedChecksum1);
+		expectedChecksums1.setDestinationResult(expectedChecksum2);
+		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1000L, 1039L)).thenReturn(expectedChecksums1);
+
 		// The second pass will differ in both second half
 		// 1st half - different CRC32
 		MigrationRangeChecksum expectedChecksum3 = new MigrationRangeChecksum();
@@ -542,8 +610,11 @@ public class DeltaFinderTest {
 		expectedChecksum4.setMinid(1000L);
 		expectedChecksum4.setMaxid(1019L);
 		expectedChecksum4.setChecksum("CRC32-2-2");
-		when(mockSrcClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(1019L))).thenReturn(expectedChecksum3);
-		when(mockDestClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(1019L))).thenReturn(expectedChecksum4);
+		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums2 = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		expectedChecksums2.setSourceResult(expectedChecksum3);
+		expectedChecksums2.setDestinationResult(expectedChecksum4);
+		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1000L, 1019L)).thenReturn(expectedChecksums2);
+
 		// 2nd half - different CRC32
 		MigrationRangeChecksum expectedChecksum5 = new MigrationRangeChecksum();
 		expectedChecksum5.setType(MigrationType.FILE_HANDLE);
@@ -555,8 +626,11 @@ public class DeltaFinderTest {
 		expectedChecksum6.setMinid(1020L);
 		expectedChecksum6.setMaxid(1039L);
 		expectedChecksum6.setChecksum("CRC32-2-4");
-		when(mockSrcClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1020L), eq(1039L))).thenReturn(expectedChecksum5);
-		when(mockDestClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1020L), eq(1039L))).thenReturn(expectedChecksum6);
+		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums3 = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		expectedChecksums3.setSourceResult(expectedChecksum5);
+		expectedChecksums3.setDestinationResult(expectedChecksum6);
+		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1020L, 1039L)).thenReturn(expectedChecksums3);
+
 		// The 3rd pass will differ in first and last block
 		// 1st quarter - different CRC32
 		MigrationRangeChecksum expectedChecksum7 = new MigrationRangeChecksum();
@@ -569,24 +643,33 @@ public class DeltaFinderTest {
 		expectedChecksum8.setMinid(1000L);
 		expectedChecksum8.setMaxid(1009L);
 		expectedChecksum8.setChecksum("CRC32-3-2");
-		when(mockSrcClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(1009L))).thenReturn(expectedChecksum7);
-		when(mockDestClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(1009L))).thenReturn(expectedChecksum8);
+		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums4 = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		expectedChecksums4.setSourceResult(expectedChecksum7);
+		expectedChecksums4.setDestinationResult(expectedChecksum8);
+		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1000L, 1009L)).thenReturn(expectedChecksums4);
+
 		// 2nd quarter - same CRC32
 		MigrationRangeChecksum expectedChecksum9 = new MigrationRangeChecksum();
 		expectedChecksum9.setType(MigrationType.FILE_HANDLE);
 		expectedChecksum9.setMinid(1010L);
 		expectedChecksum9.setMaxid(1019L);
 		expectedChecksum9.setChecksum("CRC32-3-3");
-		when(mockSrcClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1010L), eq(1019L))).thenReturn(expectedChecksum9);
-		when(mockDestClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1010L), eq(1019L))).thenReturn(expectedChecksum9);
+		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums5 = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		expectedChecksums5.setSourceResult(expectedChecksum9);
+		expectedChecksums5.setDestinationResult(expectedChecksum9);
+		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1010L, 1019L)).thenReturn(expectedChecksums5);
+
 		// 3rd quarter - same CRC32
 		MigrationRangeChecksum expectedChecksum10 = new MigrationRangeChecksum();
 		expectedChecksum10.setType(MigrationType.FILE_HANDLE);
 		expectedChecksum10.setMinid(1020L);
 		expectedChecksum10.setMaxid(1029L);
 		expectedChecksum10.setChecksum("CRC32-3-4");
-		when(mockSrcClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1020L), eq(1029L))).thenReturn(expectedChecksum10);
-		when(mockDestClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1020L), eq(1029L))).thenReturn(expectedChecksum10);
+		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums6 = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		expectedChecksums6.setSourceResult(expectedChecksum10);
+		expectedChecksums6.setDestinationResult(expectedChecksum10);
+		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1020L, 1029L)).thenReturn(expectedChecksums6);
+
 		// 4th quarter - different CRC32
 		MigrationRangeChecksum expectedChecksum11 = new MigrationRangeChecksum();
 		expectedChecksum11.setType(MigrationType.FILE_HANDLE);
@@ -598,10 +681,13 @@ public class DeltaFinderTest {
 		expectedChecksum12.setMinid(1030L);
 		expectedChecksum12.setMaxid(1039L);
 		expectedChecksum12.setChecksum("CRC32-3-6");
-		when(mockSrcClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1030L), eq(1039L))).thenReturn(expectedChecksum11);
-		when(mockDestClient.getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1030L), eq(1039L))).thenReturn(expectedChecksum12);
+		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums7 = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		expectedChecksums7.setSourceResult(expectedChecksum11);
+		expectedChecksums7.setDestinationResult(expectedChecksum12);
+		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1030L, 1039L)).thenReturn(expectedChecksums7);
+
 		// Setup the batch size to 10 so we don't do more than 2 loops
-		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", 10L);
+		DeltaFinder finder = new DeltaFinder(meta, mockSrcClient, mockDestClient, "salt", 10L, mockChecksumsExecutor);
 		DeltaRanges ranges = finder.findDeltaRanges();
 		assertEquals(MigrationType.FILE_HANDLE, ranges.getMigrationType());
 		assertNotNull(ranges.getInsRanges());
@@ -614,43 +700,5 @@ public class DeltaFinderTest {
 		assertEquals(1039, ranges.getUpdRanges().get(1).getMaxId());
 		assertEquals(0, ranges.getDelRanges().size());
 		assertNotNull(ranges.getDelRanges());
-		verify(mockSrcClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(1039L));
-		verify(mockDestClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(1039L));
-		verify(mockSrcClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(1019L));
-		verify(mockDestClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(1019L));
-		verify(mockSrcClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1020L), eq(1039L));
-		verify(mockDestClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1020L), eq(1039L));
-		verify(mockSrcClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(1009L));
-		verify(mockDestClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1000L), eq(1009L));
-		verify(mockSrcClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1010L), eq(1019L));
-		verify(mockDestClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1010L), eq(1019L));
-		verify(mockSrcClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1020L), eq(1029L));
-		verify(mockDestClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1020L), eq(1029L));
-		verify(mockSrcClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1030L), eq(1039L));
-		verify(mockDestClient).getChecksumForIdRange(eq(MigrationType.FILE_HANDLE), eq("salt"), eq(1030L), eq(1039L));
 	}
-	
-	@Test
-	public void testGetChecksumForRangeRetryAsync() throws Exception {
-		SynapseAdminClient mockConn = Mockito.mock(SynapseAdminClient.class);
-		MigrationType t = MigrationType.values()[0];
-		SynapseException e = new SynapseServerException(503);
-		when(mockConn.getChecksumForIdRange(any(MigrationType.class), anyString(), anyLong(), anyLong())).thenThrow(e);
-		AsynchronousJobStatus expectedStatus = Mockito.mock(AsynchronousJobStatus.class);;
-		when(expectedStatus.getJobId()).thenReturn("1");
-		when(expectedStatus.getJobState()).thenReturn(AsynchJobState.COMPLETE);
-		AsyncMigrationResponse resp = Mockito.mock(AsyncMigrationResponse.class);
-		when(expectedStatus.getResponseBody()).thenReturn(resp);
-		when(mockConn.startAdminAsynchronousJob(any(AsyncMigrationRequest.class))).thenReturn(expectedStatus);
-		when(mockConn.getAdminAsynchronousJobStatus(anyString())).thenReturn(expectedStatus);
-		TypeToMigrateMetadata tm = Mockito.mock(TypeToMigrateMetadata.class);
-		
-		DeltaFinder finder = new DeltaFinder(tm, mockSrcClient, mockDestClient, "salt", batchSize);
-		// Call under test
-		finder.getChecksumForIdRange(mockConn, t, "salt", 0L, 100L);
-		
-		verify(mockConn).startAdminAsynchronousJob(any(AsyncMigrationRequest.class));
-	}
-	
-	
 }
