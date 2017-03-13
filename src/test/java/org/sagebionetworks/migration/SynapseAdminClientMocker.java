@@ -455,7 +455,7 @@ public class SynapseAdminClientMocker {
 				Long startChangeNumber = (Long) invocation.getArguments()[0];
 				Long limit = (Long) invocation.getArguments()[1];
 				
-				// Add this execute to the history
+				// Add this call to the history
 				state.replayChangeNumbersHistory.add(startChangeNumber);
 				FireMessagesResult result = new FireMessagesResult();
 				long nextChangeNumber = -1;

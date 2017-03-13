@@ -74,7 +74,7 @@ public class RangeMetadataIterator implements Iterator<RowMetadata> {
 	@Override
 	public RowMetadata next() {
 		if (this.currentIterator == null) {
-			throw new IllegalStateException("Must execute hasNext() before calling next().");
+			throw new IllegalStateException("Must call hasNext() before calling next().");
 		}
 		progress.setCurrent(progress.getCurrent()+1);
 		return this.currentIterator.next();
@@ -83,7 +83,7 @@ public class RangeMetadataIterator implements Iterator<RowMetadata> {
 	@Override
 	public boolean hasNext() {
 		if (currentIterator == null) {
-			// First execute
+			// First call
 			currentIterator = fetchNextPage();
 		}
 		if (currentIterator.hasNext()) {
