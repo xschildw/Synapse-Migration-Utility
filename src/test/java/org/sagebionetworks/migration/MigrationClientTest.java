@@ -22,11 +22,7 @@ import org.sagebionetworks.client.exceptions.SynapseServerException;
 import org.sagebionetworks.migration.utils.TypeToMigrateMetadata;
 import org.sagebionetworks.repo.model.asynch.AsynchJobState;
 import org.sagebionetworks.repo.model.asynch.AsynchronousJobStatus;
-import org.sagebionetworks.repo.model.migration.AsyncMigrationRequest;
-import org.sagebionetworks.repo.model.migration.AsyncMigrationResponse;
-import org.sagebionetworks.repo.model.migration.MigrationType;
-import org.sagebionetworks.repo.model.migration.MigrationTypeNames;
-import org.sagebionetworks.repo.model.migration.RowMetadata;
+import org.sagebionetworks.repo.model.migration.*;
 import org.sagebionetworks.repo.model.status.StackStatus;
 import org.sagebionetworks.repo.model.status.StatusEnum;
 import org.sagebionetworks.simpleHttpClient.SimpleHttpClientConfig;
@@ -46,7 +42,7 @@ public class MigrationClientTest {
 	private SynapseAdminClientMockState mockSource;
 	private SynapseAdminClient sourceSynapse;
 	
-	private SynapseClientFactory mockFactory;
+	private SynapseClientFactory mockClientFactory;
 	private MigrationClient migrationClient;
 	
 	@Before
@@ -60,10 +56,11 @@ public class MigrationClientTest {
 		mockSource.endpoint = "source";
 		sourceSynapse = SynapseAdminClientMocker.createMock(mockSource);
 		
-		mockFactory = Mockito.mock(SynapseClientFactory.class);
-		when(mockFactory.getDestinationClient()).thenReturn(destSynapse);
-		when(mockFactory.getSourceClient()).thenReturn(sourceSynapse);
-		migrationClient = new MigrationClient(mockFactory);
+		mockClientFactory = Mockito.mock(SynapseClientFactory.class);
+		when(mockClientFactory.getDestinationClient()).thenReturn(destSynapse);
+		when(mockClientFactory.getSourceClient()).thenReturn(sourceSynapse);
+
+		migrationClient = new MigrationClient(mockClientFactory, 1000);
 	}
 	
 	// Used to fail after moving to SimpleHttpClient
@@ -96,9 +93,9 @@ public class MigrationClientTest {
 	@Test
 	public void testGetCommonMigrationTypes() throws Exception {
 		MigrationTypeNames expectedSrcTypeNames = new MigrationTypeNames();
-		expectedSrcTypeNames.setList(Arrays.asList("PRINCIPAL", "GROUP_MEMBERS", "STORAGE_QUOTA", "CREDENTIAL"));
+		expectedSrcTypeNames.setList(Arrays.asList("PRINCIPAL", "GROUP_MEMBERS", "CREDENTIAL"));
 		MigrationTypeNames expectedDestTypeNames = new MigrationTypeNames();
-		expectedDestTypeNames.setList(Arrays.asList("PRINCIPAL", "CREDENTIAL", "STORAGE_QUOTA", "PRINCIPAL_ALIAS"));
+		expectedDestTypeNames.setList(Arrays.asList("PRINCIPAL", "CREDENTIAL", "PRINCIPAL_ALIAS"));
 		List<MigrationType> expectedCommonTypes = Arrays.asList(MigrationType.PRINCIPAL, MigrationType.CREDENTIAL);
 
 		SynapseAdminClient mockSrc = Mockito.mock(SynapseAdminClient.class);
@@ -110,7 +107,7 @@ public class MigrationClientTest {
 		when(mf.getSourceClient()).thenReturn(mockSrc);
 		when(mf.getDestinationClient()).thenReturn(mockDest);
 
-		MigrationClient migClient = new MigrationClient(mf);
+		MigrationClient migClient = new MigrationClient(mf, 1000);
 
 		List<MigrationType> commonTypes = migClient.getCommonMigrationTypes();
 		assertEquals(expectedCommonTypes, commonTypes);
@@ -189,7 +186,7 @@ public class MigrationClientTest {
 		
 		verify(mockConn).startAdminAsynchronousJob(any(AsyncMigrationRequest.class));
 	}
-	
+
 	/**
 	 * Helper to build up lists of metadata
 	 */

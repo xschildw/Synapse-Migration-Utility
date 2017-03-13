@@ -128,7 +128,7 @@ public class CreateUpdateWorker implements Callable<Long>, BatchWorker {
 	}
 
 	/**
-	 * Attempt to migrate a single batch.
+	 * Attempt to migrateWithRetry a single batch.
 	 * @param ids
 	 * @throws JSONObjectAdapterException
 	 * @throws SynapseException
