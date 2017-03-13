@@ -24,7 +24,7 @@ public class ConcurrentMigrationTypeChecksumsExecutor {
         this.workerFactory = workerFactory;
     }
 
-    public ConcurrentExecutionResult<String> getMigrationTypeChecksums(MigrationType migrationType) throws AsyncMigrationException {
+    public ConcurrentExecutionResult<MigrationTypeChecksum> getMigrationTypeChecksums(MigrationType migrationType) throws AsyncMigrationException {
 
         try {
             AsyncMigrationTypeChecksumWorker sourceWorker = workerFactory.getSourceWorker(migrationType);
@@ -36,9 +36,9 @@ public class ConcurrentMigrationTypeChecksumsExecutor {
             MigrationTypeChecksum sourceMigrationTypeChecksum = futureSourceMigrationTypeChecksum.get();
             MigrationTypeChecksum destinationMigrationTypeChecksum = futureDestinationMigrationTypeChecksum.get();
 
-            ConcurrentExecutionResult<String> result = new ConcurrentExecutionResult<String>();
-            result.setSourceResult(sourceMigrationTypeChecksum.getChecksum());
-            result.setDestinationResult(destinationMigrationTypeChecksum.getChecksum());
+            ConcurrentExecutionResult<MigrationTypeChecksum> result = new ConcurrentExecutionResult<MigrationTypeChecksum>();
+            result.setSourceResult(sourceMigrationTypeChecksum);
+            result.setDestinationResult(destinationMigrationTypeChecksum);
 
             return result;
         } catch (InterruptedException e) {
