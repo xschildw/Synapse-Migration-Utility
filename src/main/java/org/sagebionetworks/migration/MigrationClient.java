@@ -83,7 +83,7 @@ public class MigrationClient {
 		List<MigrationType> commonTypes = new LinkedList<MigrationType>();
 		for (String t: commonTypeNames) {
 			// Temp hack to get around PLFM-4379
-			if (! "org.sagebionetworks.evaluation.model.Submission".equals(t)) {
+			if (! MigrationType.SUBMISSION.name().equals(t)) {
 				commonTypes.add(MigrationType.valueOf(t));
 			}
 		}

@@ -93,9 +93,9 @@ public class MigrationClientTest {
 	@Test
 	public void testGetCommonMigrationTypes() throws Exception {
 		MigrationTypeNames expectedSrcTypeNames = new MigrationTypeNames();
-		expectedSrcTypeNames.setList(Arrays.asList("PRINCIPAL", "GROUP_MEMBERS", "CREDENTIAL"));
+		expectedSrcTypeNames.setList(Arrays.asList("PRINCIPAL", "GROUP_MEMBERS", "SUBMISSION", "CREDENTIAL"));
 		MigrationTypeNames expectedDestTypeNames = new MigrationTypeNames();
-		expectedDestTypeNames.setList(Arrays.asList("PRINCIPAL", "CREDENTIAL", "PRINCIPAL_ALIAS"));
+		expectedDestTypeNames.setList(Arrays.asList("PRINCIPAL", "CREDENTIAL", "SUBMISSION", "PRINCIPAL_ALIAS"));
 		List<MigrationType> expectedCommonTypes = Arrays.asList(MigrationType.PRINCIPAL, MigrationType.CREDENTIAL);
 
 		SynapseAdminClient mockSrc = Mockito.mock(SynapseAdminClient.class);
