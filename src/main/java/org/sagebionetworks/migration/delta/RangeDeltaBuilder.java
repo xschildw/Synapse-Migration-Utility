@@ -116,14 +116,8 @@ public class RangeDeltaBuilder {
 			if (sourceId == destId) {
 				// Is either null?
 				if (sourceRow != null && destRow != null) {
-					// Null etag check
-					if (sourceRow.getEtag() == null) {
-						if (destRow.getEtag() != null) {
-							toUpdate.write(sourceRow);
-							updateCount++;
-						}
-					} else {
-						// Etags are not null so are they equal?
+					if (sourceRow.getEtag() != null) {
+					    // If source row has an etag column, compare etags; otherwise skip this row.
 						if (!sourceRow.getEtag().equals(destRow.getEtag())) {
 							toUpdate.write(sourceRow);
 							updateCount++;
