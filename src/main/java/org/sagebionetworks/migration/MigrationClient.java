@@ -252,37 +252,37 @@ public class MigrationClient {
 		// Each migration uses a different salt (same for each type)
 		String salt = UUID.randomUUID().toString();
 		
+		TypeToMigrateMetadata changeMeta = null;
 		List<DeltaData> deltaList = new LinkedList<DeltaData>();
 		for (TypeToMigrateMetadata tm: primaryTypes) {
-			DeltaData dd = calculateDeltaForType(tm, salt, minRangeSize);
-			deltaList.add(dd);
-		}
-		
-		// Delete any data in reverse order
-		for(int i=deltaList.size()-1; i >= 0; i--){
-			DeltaData dd = deltaList.get(i);
-			long count =  dd.getCounts().getDelete();
-			if(count > 0){
-				deleteFromDestination(dd.getType(), dd.getDeleteTemp(), count, maxBackupBatchSize);
+			if (! tm.getType().equals(MigrationType.CHANGE)) {
+				migrateType(salt, tm, maxBackupBatchSize, minRangeSize, timeoutMS);
+			} else {
+				changeMeta = tm;
 			}
 		}
+		// Do the CHANGES
+		if (changeMeta != null) { // Should always be the case
+			migrateType(salt, changeMeta, maxBackupBatchSize, minRangeSize, timeoutMS);
+		}
+	}
 
-		// Now do all adds in the original order
-		for(int i=0; i<deltaList.size(); i++){
-			DeltaData dd = deltaList.get(i);
-			long count = dd.getCounts().getCreate();
-			if(count > 0){
-				createUpdateInDestination(dd.getType(), dd.getCreateTemp(), count, maxBackupBatchSize, timeoutMS);
-			}
+	public void migrateType(String salt, TypeToMigrateMetadata metadata, long maxBackupBatchSize, long minRangeSize, long timeoutMS) throws Exception {
+		DeltaData dd = calculateDeltaForType(metadata, salt, minRangeSize);
+		// deletes
+		long delCount =  dd.getCounts().getDelete();
+		if (delCount > 0) {
+			deleteFromDestination(dd.getType(), dd.getDeleteTemp(), delCount, maxBackupBatchSize);
 		}
-
-		// Now do all updates in the original order
-		for(int i=0; i<deltaList.size(); i++){
-			DeltaData dd = deltaList.get(i);
-			long count = dd.getCounts().getUpdate();
-			if(count > 0){
-				createUpdateInDestination(dd.getType(), dd.getUpdateTemp(), count, maxBackupBatchSize, timeoutMS);
-			}
+		// inserts
+		long insCount = dd.getCounts().getCreate();
+		if (insCount > 0) {
+			createUpdateInDestination(dd.getType(), dd.getCreateTemp(), insCount, maxBackupBatchSize, timeoutMS);
+		}
+		// updates
+		long updCount = dd.getCounts().getUpdate();
+		if (updCount > 0) {
+			createUpdateInDestination(dd.getType(), dd.getUpdateTemp(), updCount, maxBackupBatchSize, timeoutMS);
 		}
 	}
 
