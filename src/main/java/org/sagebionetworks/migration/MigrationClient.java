@@ -204,7 +204,7 @@ public class MigrationClient {
 		// Note: Destination is always in read-only during migration
 		if (clientFactory.getSourceClient().getCurrentStackStatus().getStatus() == StatusEnum.READ_ONLY) {
 			boolean foundChecksumDiff = false;
-			for (MigrationType t: typesToMigrate) {
+			for (MigrationType t: primaryTypesToMigrate) {
 				if (doConcurrentChecksumForType(timeoutMS, t)) {
 					foundChecksumDiff = true;
 				}
