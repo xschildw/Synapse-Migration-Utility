@@ -6,7 +6,7 @@
 
     <groupId>org.sagebionetworks</groupId>
     <artifactId>migration-utility</artifactId>
-    <version>1.2-199</version>
+    <version>1.2.1-199</version>
 
     <repositories>
         <repository>

@@ -272,6 +272,7 @@ public class MigrationClient {
 		while (numTry < maxRetry) {
 			try {
 				migrateType(salt, tm, maxBackupBatchSize, minRangeSize, timeoutMS);
+				break;
 			} catch (Exception e) {
 				logger.info("Exception caught while migrating " + tm.getType().name() + ".\nMessage: " + e.getMessage() + ".\nRetrying...");
 				logger.debug(e.getStackTrace());
