@@ -46,7 +46,11 @@ public class AsyncMigrationRequestExecutor {
 				throw new IllegalArgumentException("Response from job " + status.getJobId() + " should be AsyncMigrationResponse!");
 			}
 		} catch (TimeoutException | WorkerFailedException | SynapseException | IllegalArgumentException e) {
-			AsyncMigrationException e2 = new AsyncMigrationException("Exception in async migration job.", e);
+			String msg = "";
+			if (e.getMessage() != null) {
+				msg = e.getMessage();
+			}
+			AsyncMigrationException e2 = new AsyncMigrationException(msg, e);
 			throw e2;
 		}
 		return ((AsyncMigrationResponse)resp).getAdminResponse();

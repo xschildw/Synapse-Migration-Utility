@@ -6,7 +6,7 @@
 
     <groupId>org.sagebionetworks</groupId>
     <artifactId>migration-utility</artifactId>
-    <version>1.1-199</version>
+    <version>1.2-199</version>
 
     <repositories>
         <repository>
@@ -34,7 +34,7 @@
     <properties>
         <log4j.version>2.7</log4j.version>
         <commons-logging.version>1.2</commons-logging.version>
-        <synapseclient.version>199.0</synapseclient.version>
+        <synapseclient.version>199.1-4-g55ba544</synapseclient.version>
         <junit.version>4.12</junit.version>
         <mockito.version>1.10.19</mockito.version>
         <xstream.version>1.4.9</xstream.version>
