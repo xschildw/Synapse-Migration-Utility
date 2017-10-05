@@ -17,6 +17,8 @@ import static org.mockito.Matchers.anyString;
 
 import org.mockito.internal.util.reflection.Whitebox;
 import org.sagebionetworks.client.SynapseAdminClient;
+import org.sagebionetworks.client.exceptions.SynapseException;
+import org.sagebionetworks.client.exceptions.SynapseServerException;
 import org.sagebionetworks.migration.AsyncMigrationException;
 import org.sagebionetworks.migration.WorkerFailedException;
 import org.sagebionetworks.repo.model.asynch.AsynchJobState;
@@ -29,7 +31,7 @@ import org.sagebionetworks.util.Clock;
 
 import java.util.concurrent.TimeoutException;
 
-public class AsyncMigrationWorkerTest {
+public class AsyncMigrationExecutorTest {
 	
 	@Mock
 	private SynapseAdminClient mockClient;
@@ -73,6 +75,7 @@ public class AsyncMigrationWorkerTest {
 			AdminResponse resp = worker.execute();
 		} catch (AsyncMigrationException e) {
 			assertTrue(e.getCause() instanceof TimeoutException);
+			assertEquals(e.getMessage(), e.getCause().getMessage());
 		}
 
 		verify(mockClient, never()).getAsynchronousJobStatus(anyString());
@@ -85,6 +88,7 @@ public class AsyncMigrationWorkerTest {
 		AsynchronousJobStatus jobStatus1 = new AsynchronousJobStatus();
 		jobStatus1.setJobId("jobId");
 		jobStatus1.setJobState(AsynchJobState.FAILED);
+		jobStatus1.setErrorDetails("Error details");
 		when(mockClient.getAdminAsynchronousJobStatus("jobId")).thenReturn(jobStatus1);
 		
 		worker = new AsyncMigrationRequestExecutor(mockClient, request, 10000L);
@@ -95,11 +99,53 @@ public class AsyncMigrationWorkerTest {
 			AdminResponse resp = worker.execute();
 		} catch (AsyncMigrationException e) {
 			assertTrue(e.getCause() instanceof WorkerFailedException);
+			assertEquals(e.getMessage(), e.getCause().getMessage());
 		}
 
 		verify(mockClock, never()).sleep(anyLong());
 	}
-	
+
+	@Test
+	public void testSynapseException() throws Exception {
+		when(mockClock.currentTimeMillis()).thenReturn(1000L, 2500L);
+		SynapseException expectedException = new SynapseServerException(500, "msg");
+		when(mockClient.getAdminAsynchronousJobStatus(anyString())).thenThrow(expectedException);
+
+		worker = new AsyncMigrationRequestExecutor(mockClient, request, 10000L);
+		Whitebox.setInternalState(worker, "clock", mockClock);
+
+		// Call under test
+		try {
+			AdminResponse resp = worker.execute();
+		} catch (AsyncMigrationException e) {
+			assertTrue(e.getCause() instanceof SynapseException);
+			assertEquals(e.getMessage(), e.getCause().getMessage());
+		}
+
+		verify(mockClock, never()).sleep(anyLong());
+	}
+
+	@Test
+	public void testSynapseExceptionNullMsg() throws Exception {
+		when(mockClock.currentTimeMillis()).thenReturn(1000L, 2500L);
+		SynapseException expectedException = new SynapseServerException(500);
+		when(mockClient.getAdminAsynchronousJobStatus(anyString())).thenThrow(expectedException);
+
+		worker = new AsyncMigrationRequestExecutor(mockClient, request, 10000L);
+		Whitebox.setInternalState(worker, "clock", mockClock);
+
+		// Call under test
+		try {
+			AdminResponse resp = worker.execute();
+		} catch (AsyncMigrationException e) {
+			assertTrue(e.getCause() instanceof SynapseException);
+			// New synapseClient always tacks on the return code
+			assertEquals(e.getMessage(), e.getCause().getMessage());
+		}
+
+		verify(mockClock, never()).sleep(anyLong());
+	}
+
 	@Test
 	public void testComplete() throws Exception {
 		when(mockClock.currentTimeMillis()).thenReturn(1000L, 2000L);
