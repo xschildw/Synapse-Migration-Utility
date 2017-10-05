@@ -256,18 +256,34 @@ public class MigrationClient {
 		List<DeltaData> deltaList = new LinkedList<DeltaData>();
 		for (TypeToMigrateMetadata tm: primaryTypes) {
 			if (! tm.getType().equals(MigrationType.CHANGE)) {
-				migrateType(salt, tm, maxBackupBatchSize, minRangeSize, timeoutMS);
+				migrateTypeWithRetry(salt, tm, maxBackupBatchSize, minRangeSize, timeoutMS, 3);
 			} else {
 				changeMeta = tm;
 			}
 		}
 		// Do the CHANGES
 		if (changeMeta != null) { // Should always be the case
-			migrateType(salt, changeMeta, maxBackupBatchSize, minRangeSize, timeoutMS);
+			migrateTypeWithRetry(salt, changeMeta, maxBackupBatchSize, minRangeSize, timeoutMS, 3);
 		}
 	}
 
+	private void migrateTypeWithRetry(String salt, TypeToMigrateMetadata tm, long maxBackupBatchSize, long minRangeSize, long timeoutMS, int maxRetry) throws Exception {
+		int numTry = 1;
+		while (numTry < maxRetry) {
+			try {
+				migrateType(salt, tm, maxBackupBatchSize, minRangeSize, timeoutMS);
+			} catch (Exception e) {
+				logger.info("Exception caught while migrating " + tm.getType().name() + ".\nMessage: " + e.getMessage() + ".\nRetrying...");
+				logger.debug(e.getStackTrace());
+				numTry++;
+				Thread.sleep(10000L);
+			}
+		}
+	}
+
+
 	public void migrateType(String salt, TypeToMigrateMetadata metadata, long maxBackupBatchSize, long minRangeSize, long timeoutMS) throws Exception {
+
 		DeltaData dd = calculateDeltaForType(metadata, salt, minRangeSize);
 		// deletes
 		long delCount =  dd.getCounts().getDelete();
