@@ -259,7 +259,8 @@ public class MigrationClient {
 			if (! tm.getType().equals(MigrationType.CHANGE)) {
 				try {
 					migrateType(salt, tm, maxBackupBatchSize, minRangeSize, timeoutMS);
-				} catch (MigrationException e) {
+				} catch (Exception e) {
+					logger.info("Type " + tm.getType().name() + " failed to migrate. Message: " + e.getMessage());
 					failedTypeMigration = true;
 				}
 			} else {
