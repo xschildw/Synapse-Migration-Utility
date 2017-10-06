@@ -27,6 +27,7 @@ import org.sagebionetworks.repo.model.migration.AdminRequest;
 import org.sagebionetworks.repo.model.migration.AdminResponse;
 import org.sagebionetworks.repo.model.migration.AsyncMigrationRequest;
 import org.sagebionetworks.repo.model.migration.AsyncMigrationResponse;
+import org.sagebionetworks.repo.model.status.StatusEnum;
 import org.sagebionetworks.util.Clock;
 
 import java.util.concurrent.TimeoutException;
@@ -68,7 +69,7 @@ public class AsyncMigrationExecutorTest {
 		when(mockClock.currentTimeMillis()).thenReturn(1000L, 2500L);
 
 		worker = new AsyncMigrationRequestExecutor(mockClient, request, 1000L);
-		Whitebox.setInternalState(worker, "clock", mockClock);
+		worker.setClock(mockClock);
 		
 		// Call under test
 		try {
@@ -92,7 +93,7 @@ public class AsyncMigrationExecutorTest {
 		when(mockClient.getAdminAsynchronousJobStatus("jobId")).thenReturn(jobStatus1);
 		
 		worker = new AsyncMigrationRequestExecutor(mockClient, request, 10000L);
-		Whitebox.setInternalState(worker, "clock", mockClock);
+		worker.setClock(mockClock);
 		
 		// Call under test
 		try {
@@ -112,38 +113,56 @@ public class AsyncMigrationExecutorTest {
 		when(mockClient.getAdminAsynchronousJobStatus(anyString())).thenThrow(expectedException);
 
 		worker = new AsyncMigrationRequestExecutor(mockClient, request, 10000L);
-		Whitebox.setInternalState(worker, "clock", mockClock);
+		worker.setClock(mockClock);
 
 		// Call under test
 		try {
 			AdminResponse resp = worker.execute();
 		} catch (AsyncMigrationException e) {
-			assertTrue(e.getCause() instanceof SynapseException);
-			assertEquals(e.getMessage(), e.getCause().getMessage());
+			assertTrue(e.getCause() instanceof SynapseServerException);
+			assertTrue(e.getCause().getMessage().contains("Status Code: 500"));
 		}
 
-		verify(mockClock, never()).sleep(anyLong());
+		verify(mockClock, times(2)).sleep(anyLong());
 	}
 
 	@Test
-	public void testSynapseExceptionNullMsg() throws Exception {
+	public void testSynapseExceptionMaxRetry() throws Exception {
 		when(mockClock.currentTimeMillis()).thenReturn(1000L, 2500L);
 		SynapseException expectedException = new SynapseServerException(500);
 		when(mockClient.getAdminAsynchronousJobStatus(anyString())).thenThrow(expectedException);
 
 		worker = new AsyncMigrationRequestExecutor(mockClient, request, 10000L);
-		Whitebox.setInternalState(worker, "clock", mockClock);
+		worker.setClock(mockClock);
 
 		// Call under test
 		try {
 			AdminResponse resp = worker.execute();
 		} catch (AsyncMigrationException e) {
-			assertTrue(e.getCause() instanceof SynapseException);
-			// New synapseClient always tacks on the return code
-			assertEquals(e.getMessage(), e.getCause().getMessage());
+			assertTrue(e.getCause() instanceof SynapseServerException);
+			assertEquals("AsyncMigrationRequestExecutor: number of retries exceeded.", e.getMessage());
+			assertTrue(e.getCause().getMessage().contains("Status Code: 500"));
 		}
 
-		verify(mockClock, never()).sleep(anyLong());
+		verify(mockClock, times(2)).sleep(anyLong());
+	}
+
+	@Test
+	public void testSynapseExceptionRetry() throws Exception {
+		when(mockClock.currentTimeMillis()).thenReturn(1000L, 2500L);
+		SynapseException expectedException = new SynapseServerException(500);
+		AsynchronousJobStatus expectedJobStatus = new AsynchronousJobStatus();
+		expectedJobStatus.setJobState(AsynchJobState.COMPLETE);
+		expectedJobStatus.setJobId("1");
+		expectedJobStatus.setResponseBody(new AsyncMigrationResponse());
+		when(mockClient.getAdminAsynchronousJobStatus(anyString())).thenThrow(expectedException).thenReturn(expectedJobStatus);
+
+		worker = new AsyncMigrationRequestExecutor(mockClient, request, 10000L);
+		worker.setClock(mockClock);
+
+		AdminResponse resp = worker.execute();
+
+		verify(mockClock, times(1)).sleep(anyLong());
 	}
 
 	@Test
@@ -159,7 +178,7 @@ public class AsyncMigrationExecutorTest {
 		when(mockClient.getAdminAsynchronousJobStatus("jobId")).thenReturn(jobStatus1);
 
 		worker = new AsyncMigrationRequestExecutor(mockClient, request, 3000L);
-		Whitebox.setInternalState(worker, "clock", mockClock);
+		worker.setClock(mockClock);
 		
 		// Call under test
 		AdminResponse resp = worker.execute();
@@ -187,7 +206,7 @@ public class AsyncMigrationExecutorTest {
 		when(mockClient.getAdminAsynchronousJobStatus("jobId")).thenReturn(jobStatus1, jobStatus2);
 		
 		worker = new AsyncMigrationRequestExecutor(mockClient, request, 3000L);
-		Whitebox.setInternalState(worker, "clock", mockClock);
+		worker.setClock(mockClock);
 		
 		// Call under test
 		AdminResponse resp = worker.execute();

@@ -20,6 +20,7 @@ import org.sagebionetworks.util.DefaultClock;
 
 public class AsyncMigrationRequestExecutor {
 
+	public static final int MAX_RETRY = 3;
 	static private Logger logger = LogManager.getLogger(AsyncMigrationRequestExecutor.class);
 
 	private SynapseAdminClient client;
@@ -34,13 +35,17 @@ public class AsyncMigrationRequestExecutor {
 		this.clock = new DefaultClock();
 	}
 
+	public void setClock(Clock clock) {
+		this.clock = clock;
+	}
+
 	public AdminResponse execute() throws AsyncMigrationException {
 		AsynchronousResponseBody resp = null;
 		try {
 			AsyncMigrationRequest migRequest = new AsyncMigrationRequest();
 			migRequest.setAdminRequest(request);
 			AsynchronousJobStatus status = client.startAdminAsynchronousJob(migRequest);
-			status = waitForJobToComplete(status.getJobId());
+			status = waitForJobToCompleteWithRetry(status.getJobId(), MAX_RETRY);
 			resp = status.getResponseBody();
 			if (! (resp instanceof AsyncMigrationResponse)) {
 				throw new IllegalArgumentException("Response from job " + status.getJobId() + " should be AsyncMigrationResponse!");
@@ -56,6 +61,33 @@ public class AsyncMigrationRequestExecutor {
 		return ((AsyncMigrationResponse)resp).getAdminResponse();
 	}
 	
+	private AsynchronousJobStatus waitForJobToCompleteWithRetry(String jobId, int maxRetry) throws WorkerFailedException, TimeoutException {
+		int numRetry = 0;
+		AsynchronousJobStatus jobStatus;
+		while (true) {
+			numRetry++;
+			try {
+				jobStatus = waitForJobToComplete(jobId);
+				break;
+			} catch (TimeoutException e) {
+				throw(e);
+			} catch (WorkerFailedException e) {
+				throw(e);
+			} catch (SynapseException e) {
+				if (numRetry == maxRetry) {
+					logger.debug("Too many retries in waitForJobToCompleteWithRetry()");
+					throw new AsyncMigrationException("AsyncMigrationRequestExecutor: number of retries exceeded.", e);
+				}
+				try {
+					clock.sleep(1000);
+				} catch (InterruptedException e2) {
+					assert false;
+				}
+			}
+		}
+		return jobStatus;
+	}
+
 	private AsynchronousJobStatus waitForJobToComplete(String jobId) throws TimeoutException, SynapseException, WorkerFailedException {
 		long start = clock.currentTimeMillis();
 		AsynchronousJobStatus status;

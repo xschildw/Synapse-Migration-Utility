@@ -252,36 +252,25 @@ public class MigrationClient {
 		// Each migration uses a different salt (same for each type)
 		String salt = UUID.randomUUID().toString();
 		
+		boolean failedTypeMigration = false;
 		TypeToMigrateMetadata changeMeta = null;
 		List<DeltaData> deltaList = new LinkedList<DeltaData>();
 		for (TypeToMigrateMetadata tm: primaryTypes) {
 			if (! tm.getType().equals(MigrationType.CHANGE)) {
-				migrateTypeWithRetry(salt, tm, maxBackupBatchSize, minRangeSize, timeoutMS, 3);
+				try {
+					migrateType(salt, tm, maxBackupBatchSize, minRangeSize, timeoutMS);
+				} catch (MigrationException e) {
+					failedTypeMigration = true;
+				}
 			} else {
 				changeMeta = tm;
 			}
 		}
-		// Do the CHANGES
-		if (changeMeta != null) { // Should always be the case
-			migrateTypeWithRetry(salt, changeMeta, maxBackupBatchSize, minRangeSize, timeoutMS, 3);
+		// Do the CHANGES if no failedTypeMigration
+		if ((! failedTypeMigration) && (changeMeta != null)) {
+			migrateType(salt, changeMeta, maxBackupBatchSize, minRangeSize, timeoutMS);
 		}
 	}
-
-	private void migrateTypeWithRetry(String salt, TypeToMigrateMetadata tm, long maxBackupBatchSize, long minRangeSize, long timeoutMS, int maxRetry) throws Exception {
-		int numTry = 1;
-		while (numTry < maxRetry) {
-			try {
-				migrateType(salt, tm, maxBackupBatchSize, minRangeSize, timeoutMS);
-				break;
-			} catch (Exception e) {
-				logger.info("Exception caught while migrating " + tm.getType().name() + ".\nMessage: " + e.getMessage() + ".\nRetrying...");
-				logger.debug(e.getStackTrace());
-				numTry++;
-				Thread.sleep(10000L);
-			}
-		}
-	}
-
 
 	public void migrateType(String salt, TypeToMigrateMetadata metadata, long maxBackupBatchSize, long minRangeSize, long timeoutMS) throws Exception {
 
@@ -301,6 +290,7 @@ public class MigrationClient {
 		if (updCount > 0) {
 			createUpdateInDestination(dd.getType(), dd.getUpdateTemp(), updCount, maxBackupBatchSize, timeoutMS);
 		}
+
 	}
 
 	/**
@@ -356,7 +346,7 @@ public class MigrationClient {
 	 * @return
 	 * @throws Exception
 	 */
-	public DeltaData calculateDeltaForType(TypeToMigrateMetadata tm, String salt, long minRangeSize) throws Exception{
+	public DeltaData calculateDeltaForType(TypeToMigrateMetadata tm, String salt, long minRangeSize) throws Exception {
 
 		ConcurrentMigrationIdRangeChecksumsExecutor idRangeChecksumsExecutor = new ConcurrentMigrationIdRangeChecksumsExecutor(this.threadPool, this.idRangeChecksumWorkerFactory);
 		// First, we find the delta ranges
@@ -440,7 +430,7 @@ public class MigrationClient {
 	 * @throws IOException 
 	 * 
 	 */
-	private void deleteFromDestination(MigrationType type, File deleteTemp, long count, long maxbackupBatchSize) throws Exception{
+	private void deleteFromDestination(MigrationType type, File deleteTemp, long count, long maxbackupBatchSize) throws Exception {
 		BufferedRowMetadataReader reader = new BufferedRowMetadataReader(new FileReader(deleteTemp));
 		try{
 			BasicProgress progress = new BasicProgress();
@@ -457,34 +447,6 @@ public class MigrationClient {
 			reader.close();
 		}
 
-	}
-	
-	protected List<MigrationTypeCount> getTypeCounts(SynapseAdminClient conn, List<MigrationType> types) throws InterruptedException, JSONObjectAdapterException, SynapseException {
-		List<MigrationTypeCount> typeCounts = new LinkedList<MigrationTypeCount>();
-		for (MigrationType t: types) {
-			try {
-				MigrationTypeCount c = getTypeCount(conn, t);
-				typeCounts.add(c);
-			} catch (WorkerFailedException e) {
-				// Unsupported types not added to list
-			}
-		}
-		return typeCounts;
-	}
-
-	protected MigrationTypeCount getTypeCount(SynapseAdminClient conn, MigrationType type) throws SynapseException, InterruptedException, JSONObjectAdapterException {
-		MigrationTypeCount res = null;
-		try {
-			res = conn.getTypeCount(type);
-		} catch (SynapseException e) {
-			AsyncMigrationTypeCountRequest req = new AsyncMigrationTypeCountRequest();
-			req.setType(type.name());
-			BasicProgress progress = new BasicProgress();
-			AsyncMigrationRequestExecutor worker = new AsyncMigrationRequestExecutor(conn, req, 900000);
-			AdminResponse resp = worker.execute();
-			res = (MigrationTypeCount)resp;
-		}
-		return res;
 	}
 }
 
