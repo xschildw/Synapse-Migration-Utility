@@ -167,26 +167,6 @@ public class MigrationClientTest {
 		assertEquals(0, mockSource.replayChangeNumbersHistory.size());
 	}
 	
-	@Test
-	public void testGetTypeCountRetryAsync() throws Exception {
-		SynapseAdminClient mockConn = Mockito.mock(SynapseAdminClient.class);
-		MigrationType t = MigrationType.values()[0];
-		SynapseException e = new SynapseServerException(503);
-		when(mockConn.getTypeCount(any(MigrationType.class))).thenThrow(e);
-		AsynchronousJobStatus expectedStatus = Mockito.mock(AsynchronousJobStatus.class);;
-		when(expectedStatus.getJobId()).thenReturn("1");
-		when(expectedStatus.getJobState()).thenReturn(AsynchJobState.COMPLETE);
-		AsyncMigrationResponse resp = Mockito.mock(AsyncMigrationResponse.class);
-		when(expectedStatus.getResponseBody()).thenReturn(resp);
-		when(mockConn.startAdminAsynchronousJob(any(AsyncMigrationRequest.class))).thenReturn(expectedStatus);
-		when(mockConn.getAdminAsynchronousJobStatus(anyString())).thenReturn(expectedStatus);
-		
-		// Call under test
-		migrationClient.getTypeCount(mockConn, t);
-		
-		verify(mockConn).startAdminAsynchronousJob(any(AsyncMigrationRequest.class));
-	}
-
 	/**
 	 * Helper to build up lists of metadata
 	 */

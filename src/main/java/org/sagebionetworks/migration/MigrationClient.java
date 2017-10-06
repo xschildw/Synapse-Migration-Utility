@@ -252,38 +252,46 @@ public class MigrationClient {
 		// Each migration uses a different salt (same for each type)
 		String salt = UUID.randomUUID().toString();
 		
+		boolean failedTypeMigration = false;
+		TypeToMigrateMetadata changeMeta = null;
 		List<DeltaData> deltaList = new LinkedList<DeltaData>();
 		for (TypeToMigrateMetadata tm: primaryTypes) {
-			DeltaData dd = calculateDeltaForType(tm, salt, minRangeSize);
-			deltaList.add(dd);
-		}
-		
-		// Delete any data in reverse order
-		for(int i=deltaList.size()-1; i >= 0; i--){
-			DeltaData dd = deltaList.get(i);
-			long count =  dd.getCounts().getDelete();
-			if(count > 0){
-				deleteFromDestination(dd.getType(), dd.getDeleteTemp(), count, maxBackupBatchSize);
+			if (! tm.getType().equals(MigrationType.CHANGE)) {
+				try {
+					migrateType(salt, tm, maxBackupBatchSize, minRangeSize, timeoutMS);
+				} catch (Exception e) {
+					logger.info("Type " + tm.getType().name() + " failed to migrate. Message: " + e.getMessage());
+					failedTypeMigration = true;
+				}
+			} else {
+				changeMeta = tm;
 			}
+		}
+		// Do the CHANGES if no failedTypeMigration
+		if ((! failedTypeMigration) && (changeMeta != null)) {
+			migrateType(salt, changeMeta, maxBackupBatchSize, minRangeSize, timeoutMS);
+		}
+	}
+
+	public void migrateType(String salt, TypeToMigrateMetadata metadata, long maxBackupBatchSize, long minRangeSize, long timeoutMS) throws Exception {
+
+		DeltaData dd = calculateDeltaForType(metadata, salt, minRangeSize);
+		// deletes
+		long delCount =  dd.getCounts().getDelete();
+		if (delCount > 0) {
+			deleteFromDestination(dd.getType(), dd.getDeleteTemp(), delCount, maxBackupBatchSize);
+		}
+		// inserts
+		long insCount = dd.getCounts().getCreate();
+		if (insCount > 0) {
+			createUpdateInDestination(dd.getType(), dd.getCreateTemp(), insCount, maxBackupBatchSize, timeoutMS);
+		}
+		// updates
+		long updCount = dd.getCounts().getUpdate();
+		if (updCount > 0) {
+			createUpdateInDestination(dd.getType(), dd.getUpdateTemp(), updCount, maxBackupBatchSize, timeoutMS);
 		}
 
-		// Now do all adds in the original order
-		for(int i=0; i<deltaList.size(); i++){
-			DeltaData dd = deltaList.get(i);
-			long count = dd.getCounts().getCreate();
-			if(count > 0){
-				createUpdateInDestination(dd.getType(), dd.getCreateTemp(), count, maxBackupBatchSize, timeoutMS);
-			}
-		}
-
-		// Now do all updates in the original order
-		for(int i=0; i<deltaList.size(); i++){
-			DeltaData dd = deltaList.get(i);
-			long count = dd.getCounts().getUpdate();
-			if(count > 0){
-				createUpdateInDestination(dd.getType(), dd.getUpdateTemp(), count, maxBackupBatchSize, timeoutMS);
-			}
-		}
 	}
 
 	/**
@@ -339,7 +347,7 @@ public class MigrationClient {
 	 * @return
 	 * @throws Exception
 	 */
-	public DeltaData calculateDeltaForType(TypeToMigrateMetadata tm, String salt, long minRangeSize) throws Exception{
+	public DeltaData calculateDeltaForType(TypeToMigrateMetadata tm, String salt, long minRangeSize) throws Exception {
 
 		ConcurrentMigrationIdRangeChecksumsExecutor idRangeChecksumsExecutor = new ConcurrentMigrationIdRangeChecksumsExecutor(this.threadPool, this.idRangeChecksumWorkerFactory);
 		// First, we find the delta ranges
@@ -423,7 +431,7 @@ public class MigrationClient {
 	 * @throws IOException 
 	 * 
 	 */
-	private void deleteFromDestination(MigrationType type, File deleteTemp, long count, long maxbackupBatchSize) throws Exception{
+	private void deleteFromDestination(MigrationType type, File deleteTemp, long count, long maxbackupBatchSize) throws Exception {
 		BufferedRowMetadataReader reader = new BufferedRowMetadataReader(new FileReader(deleteTemp));
 		try{
 			BasicProgress progress = new BasicProgress();
@@ -440,34 +448,6 @@ public class MigrationClient {
 			reader.close();
 		}
 
-	}
-	
-	protected List<MigrationTypeCount> getTypeCounts(SynapseAdminClient conn, List<MigrationType> types) throws InterruptedException, JSONObjectAdapterException, SynapseException {
-		List<MigrationTypeCount> typeCounts = new LinkedList<MigrationTypeCount>();
-		for (MigrationType t: types) {
-			try {
-				MigrationTypeCount c = getTypeCount(conn, t);
-				typeCounts.add(c);
-			} catch (WorkerFailedException e) {
-				// Unsupported types not added to list
-			}
-		}
-		return typeCounts;
-	}
-
-	protected MigrationTypeCount getTypeCount(SynapseAdminClient conn, MigrationType type) throws SynapseException, InterruptedException, JSONObjectAdapterException {
-		MigrationTypeCount res = null;
-		try {
-			res = conn.getTypeCount(type);
-		} catch (SynapseException e) {
-			AsyncMigrationTypeCountRequest req = new AsyncMigrationTypeCountRequest();
-			req.setType(type.name());
-			BasicProgress progress = new BasicProgress();
-			AsyncMigrationRequestExecutor worker = new AsyncMigrationRequestExecutor(conn, req, 900000);
-			AdminResponse resp = worker.execute();
-			res = (MigrationTypeCount)resp;
-		}
-		return res;
 	}
 }
 
