@@ -39,7 +39,7 @@ public class AsyncMigrationRequestExecutor {
 		this.clock = clock;
 	}
 
-	public AdminResponse execute() throws AsyncMigrationException {
+	public AdminResponse execute() throws AsyncMigrationException, InterruptedException {
 		AsynchronousResponseBody resp = null;
 		try {
 			AsyncMigrationRequest migRequest = new AsyncMigrationRequest();
@@ -57,7 +57,7 @@ public class AsyncMigrationRequestExecutor {
 		return ((AsyncMigrationResponse)resp).getAdminResponse();
 	}
 	
-	private AsynchronousJobStatus waitForJobToCompleteWithRetry(String jobId, int maxRetry) throws WorkerFailedException, TimeoutException {
+	private AsynchronousJobStatus waitForJobToCompleteWithRetry(String jobId, int maxRetry) throws WorkerFailedException, TimeoutException, InterruptedException {
 		int numRetry = 0;
 		AsynchronousJobStatus jobStatus;
 		while (true) {
@@ -70,15 +70,11 @@ public class AsyncMigrationRequestExecutor {
 			} catch (WorkerFailedException e) {
 				throw(e);
 			} catch (SynapseException e) {
-				if (numRetry == maxRetry) {
+				if (numRetry >= maxRetry) {
 					logger.debug("Too many retries in waitForJobToCompleteWithRetry()");
 					throw new AsyncMigrationException("AsyncMigrationRequestExecutor: number of retries exceeded.", e);
 				}
-				try {
-					clock.sleep(1000);
-				} catch (InterruptedException e2) {
-					assert false;
-				}
+				clock.sleep(1000);
 			}
 		}
 		return jobStatus;
