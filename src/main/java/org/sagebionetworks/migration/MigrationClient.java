@@ -5,9 +5,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.*;
 
 import org.apache.logging.log4j.LogManager;
@@ -252,6 +250,7 @@ public class MigrationClient {
 		// Each migration uses a different salt (same for each type)
 		String salt = UUID.randomUUID().toString();
 		
+		Map<MigrationType, Exception> encounteredExceptions = new HashMap<MigrationType, Exception>();
 		boolean failedTypeMigration = false;
 		TypeToMigrateMetadata changeMeta = null;
 		List<DeltaData> deltaList = new LinkedList<DeltaData>();
@@ -261,15 +260,24 @@ public class MigrationClient {
 					migrateType(salt, tm, maxBackupBatchSize, minRangeSize, timeoutMS);
 				} catch (Exception e) {
 					logger.info("Type " + tm.getType().name() + " failed to migrate. Message: " + e.getMessage());
+					encounteredExceptions.put(tm.getType(), e);
 					failedTypeMigration = true;
 				}
 			} else {
 				changeMeta = tm;
 			}
 		}
+		if (changeMeta == null) {
+			throw new IllegalStateException("ChangeMeta should never be null!");
+		}
 		// Do the CHANGES if no failedTypeMigration
-		if ((! failedTypeMigration) && (changeMeta != null)) {
+		if (! failedTypeMigration) {
 			migrateType(salt, changeMeta, maxBackupBatchSize, minRangeSize, timeoutMS);
+		} else {
+			for (MigrationType t: encounteredExceptions.keySet()) {
+				logger.info("Migration type: " + t + ". Exception: " + encounteredExceptions.get(t).getMessage());
+			}
+			throw new RuntimeException("Migration failed. See list of exceptions.");
 		}
 	}
 
