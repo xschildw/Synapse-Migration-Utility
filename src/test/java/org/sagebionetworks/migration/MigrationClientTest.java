@@ -126,6 +126,10 @@ public class MigrationClientTest {
 		// Setup a second type with no values
 		list = createRowMetadataList(new Long[]{}, new String[]{}, new Long[]{});
 		mockDestination.metadata.put(MigrationType.values()[1], list);
+
+		// Setup a CHANGE to migrate (update)
+		list = createRowMetadataList(new Long[]{10L}, new String[]{"ec"}, new Long[]{null});
+		mockDestination.metadata.put(MigrationType.CHANGE, list);
 		
 		mockDestination.currentChangeNumberStack.push(11L);
 		mockDestination.currentChangeNumberStack.push(0L);
@@ -140,10 +144,14 @@ public class MigrationClientTest {
 		list = createRowMetadataList(new Long[]{5L, 6L}, new String[]{"e5","e6"}, new Long[]{null, 6L});
 		mockSource.metadata.put(MigrationType.values()[1], list);
 
+		// Setup a CHANGE to migrate (update)
+		list = createRowMetadataList(new Long[]{10L}, new String[]{"ed"}, new Long[]{null});
+		mockSource.metadata.put(MigrationType.CHANGE, list);
+
 		List<TypeToMigrateMetadata> typesToMigrateMetadata = createTypeToMigrateMetadataList(
-				Arrays.copyOfRange(MigrationType.values(), 0, 2),
-				new Long[]{2L, 5L}, new Long[]{3L, 6L}, new Long[]{2L, 2L},
-				new Long[]{1L, 0L}, new Long[]{2L, 0L}, new Long[]{1L, 0L});
+				new MigrationType[]{MigrationType.values()[0], MigrationType.values()[1], MigrationType.CHANGE},
+				new Long[]{2L, 5L, 10L}, new Long[]{3L, 6L, 10L}, new Long[]{2L, 2L, 1L},
+				new Long[]{1L, 0L, 10L}, new Long[]{2L, 0L, 10L}, new Long[]{1L, 0L, 1L});
 		
 		// Migrate the data
 		migrationClient.migrateTypes(typesToMigrateMetadata, 10L, 10L, 1000*60);
@@ -167,26 +175,6 @@ public class MigrationClientTest {
 		assertEquals(0, mockSource.replayChangeNumbersHistory.size());
 	}
 	
-	@Test
-	public void testGetTypeCountRetryAsync() throws Exception {
-		SynapseAdminClient mockConn = Mockito.mock(SynapseAdminClient.class);
-		MigrationType t = MigrationType.values()[0];
-		SynapseException e = new SynapseServerException(503);
-		when(mockConn.getTypeCount(any(MigrationType.class))).thenThrow(e);
-		AsynchronousJobStatus expectedStatus = Mockito.mock(AsynchronousJobStatus.class);;
-		when(expectedStatus.getJobId()).thenReturn("1");
-		when(expectedStatus.getJobState()).thenReturn(AsynchJobState.COMPLETE);
-		AsyncMigrationResponse resp = Mockito.mock(AsyncMigrationResponse.class);
-		when(expectedStatus.getResponseBody()).thenReturn(resp);
-		when(mockConn.startAdminAsynchronousJob(any(AsyncMigrationRequest.class))).thenReturn(expectedStatus);
-		when(mockConn.getAdminAsynchronousJobStatus(anyString())).thenReturn(expectedStatus);
-		
-		// Call under test
-		migrationClient.getTypeCount(mockConn, t);
-		
-		verify(mockConn).startAdminAsynchronousJob(any(AsyncMigrationRequest.class));
-	}
-
 	/**
 	 * Helper to build up lists of metadata
 	 */

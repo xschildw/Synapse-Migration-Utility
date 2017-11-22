@@ -22,7 +22,7 @@ public class AsyncMigrationTypeChecksumWorker implements Callable<MigrationTypeC
     }
 
     @Override
-    public MigrationTypeChecksum call() {
+    public MigrationTypeChecksum call() throws InterruptedException {
         AdminResponse response = worker.execute();
         if (! (response instanceof MigrationTypeChecksum)) {
             throw(new IllegalArgumentException("Should not happen!"));

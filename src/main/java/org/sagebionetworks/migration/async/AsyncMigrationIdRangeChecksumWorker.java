@@ -35,7 +35,7 @@ public class AsyncMigrationIdRangeChecksumWorker implements Callable<MigrationRa
 	}
 
 	@Override
-	public MigrationRangeChecksum call() {
+	public MigrationRangeChecksum call() throws InterruptedException {
 		MigrationRangeChecksum res = null;
 		try {
 			res = conn.getChecksumForIdRange(type, salt, minId, maxId);
