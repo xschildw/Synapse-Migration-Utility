@@ -249,6 +249,9 @@ public class MigrationClient {
 
 		// Each migration uses a different salt (same for each type)
 		String salt = UUID.randomUUID().toString();
+
+		List<MigrationType> PRIMARY_TO_MIGRATE = Arrays.asList(MigrationType.PRINCIPAL, MigrationType.PRINCIPAL_ALIAS, MigrationType.TEAM, MigrationType.MEMBERSHIP_INVITATION_SUBMISSION, MigrationType.MEMBERSHIP_REQUEST_SUBMISSION);
+
 		
 		Map<MigrationType, Exception> encounteredExceptions = new HashMap<MigrationType, Exception>();
 		boolean failedTypeMigration = false;
@@ -257,7 +260,9 @@ public class MigrationClient {
 		for (TypeToMigrateMetadata tm: primaryTypes) {
 			if (! tm.getType().equals(MigrationType.CHANGE)) {
 				try {
-					migrateType(salt, tm, maxBackupBatchSize, minRangeSize, timeoutMS);
+					if (PRIMARY_TO_MIGRATE.contains(tm.getType())) {
+						migrateType(salt, tm, maxBackupBatchSize, minRangeSize, timeoutMS);
+					}
 				} catch (Exception e) {
 					logger.info("Type " + tm.getType().name() + " failed to migrate. Message: " + e.getMessage());
 					encounteredExceptions.put(tm.getType(), e);
@@ -272,7 +277,7 @@ public class MigrationClient {
 		}
 		// Do the CHANGES if no failedTypeMigration
 		if (! failedTypeMigration) {
-			migrateType(salt, changeMeta, maxBackupBatchSize, minRangeSize, timeoutMS);
+			// migrateType(salt, changeMeta, maxBackupBatchSize, minRangeSize, timeoutMS);
 		} else {
 			for (MigrationType t: encounteredExceptions.keySet()) {
 				logger.info("Migration type: " + t + ". Exception: " + encounteredExceptions.get(t).getMessage());
