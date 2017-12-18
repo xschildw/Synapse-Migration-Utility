@@ -198,41 +198,9 @@ public class MigrationClient {
 		logger.info("Ending diffs in  counts:");
 		printDiffsInCounts(endSourceCounts, endDestCounts);
 
-		// If final sync (source is in read-only mode) then do a table checksum
-		// Note: Destination is always in read-only during migration
-		if (clientFactory.getSourceClient().getCurrentStackStatus().getStatus() == StatusEnum.READ_ONLY) {
-			boolean foundChecksumDiff = false;
-			for (MigrationType t: primaryTypesToMigrate) {
-				if (doConcurrentChecksumForType(timeoutMS, t)) {
-					foundChecksumDiff = true;
-				}
-			}
-			if (foundChecksumDiff) {
-				throw new RuntimeException("Table checksum differences in final sync.");
-			}
-        }
-
 		// Exit on 1st success
 		failed = false;
 		return failed;
-	}
-
-	private boolean doConcurrentChecksumForType(long timeoutMS, MigrationType t) {
-
-		ConcurrentMigrationTypeChecksumsExecutor typeChecksumExecutor = new ConcurrentMigrationTypeChecksumsExecutor(threadPool, typeChecksumWorkerFactory);
-		ConcurrentExecutionResult<MigrationTypeChecksum> typeChecksums = typeChecksumExecutor.getMigrationTypeChecksums(t);
-		StringBuilder sb = new StringBuilder();
-		sb.append("Migration type: ");
-		sb.append(t);
-		sb.append(": ");
-		boolean foundDiff = (! typeChecksums.getSourceResult().equals(typeChecksums.getDestinationResult()));
-		if (foundDiff) {
-            sb.append("\n*** Found table checksum difference. ***\n");
-        } else {
-            sb.append("Table checksums identical.");
-        }
-		logger.info(sb.toString());
-		return foundDiff;
 	}
 
 	/**
