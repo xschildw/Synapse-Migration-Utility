@@ -36,7 +36,6 @@ public class MigrationClient {
 
 	SynapseClientFactory clientFactory;
 	AsyncMigrationTypeCountsWorkerFactory typeCountsWorkerFactory;
-	AsyncMigrationTypeChecksumWorkerFactory typeChecksumWorkerFactory;
 	AsyncMigrationIdRangeChecksumWorkerFactory idRangeChecksumWorkerFactory;
 	ExecutorService threadPool;
 	long workerTimeoutMS;
@@ -49,7 +48,6 @@ public class MigrationClient {
 		if(clientFactory == null) throw new IllegalArgumentException("Factory cannot be null");
 		this.clientFactory = clientFactory;
 		this.typeCountsWorkerFactory = new AsyncMigrationTypeCountsWorkerFactoryImpl(clientFactory, workerTimeoutMS);
-		this.typeChecksumWorkerFactory = new AsyncMigrationTypeChecksumWorkerFactoryImpl(clientFactory, workerTimeoutMS);
 		this.idRangeChecksumWorkerFactory = new AsyncMigrationIdRangeChecksumWorkerFactoryImpl(clientFactory, workerTimeoutMS);
 		threadPool = Executors.newFixedThreadPool(2);
 		this.workerTimeoutMS = workerTimeoutMS;
