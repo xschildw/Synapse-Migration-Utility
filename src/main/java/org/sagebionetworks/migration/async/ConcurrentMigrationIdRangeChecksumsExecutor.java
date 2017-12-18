@@ -44,10 +44,10 @@ public class ConcurrentMigrationIdRangeChecksumsExecutor {
 			return results;
 		} catch (InterruptedException e) {
 			logger.debug("Caught InterruptedException!");
-			throw new AsyncMigrationException("Exception caught in ConcurrentMigrationTypeChecksumsExecutor.", e.getCause());
+			throw new AsyncMigrationException("Exception caught in ConcurrentMigrationRangeChecksumsExecutor.", e.getCause());
 		}  catch (ExecutionException e) {
 			logger.debug("Caught ExecutionException!");
-			throw new AsyncMigrationException("Exception caught in ConcurrentMigrationTypeChecksumsExecutor.", e.getCause());
+			throw new AsyncMigrationException("Exception caught in ConcurrentMigrationRangeChecksumsExecutor.", e.getCause());
 		}
 	}
 }
