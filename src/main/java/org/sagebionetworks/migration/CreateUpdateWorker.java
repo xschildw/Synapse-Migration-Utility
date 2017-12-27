@@ -11,6 +11,7 @@ import org.sagebionetworks.client.SynapseAdminClient;
 import org.sagebionetworks.client.exceptions.SynapseException;
 import org.sagebionetworks.repo.model.DaemonStatusUtil;
 import org.sagebionetworks.repo.model.IdList;
+import org.sagebionetworks.repo.model.daemon.BackupAliasType;
 import org.sagebionetworks.repo.model.daemon.BackupRestoreStatus;
 import org.sagebionetworks.repo.model.daemon.DaemonStatus;
 import org.sagebionetworks.repo.model.daemon.RestoreSubmission;
@@ -140,14 +141,14 @@ public class CreateUpdateWorker implements Callable<Long>, BatchWorker {
 		// Start a backup.
 		IdList request = new IdList();
 		request.setList(ids);
-		BackupRestoreStatus status = this.sourceClient.startBackup(type, request);
+		BackupRestoreStatus status = this.sourceClient.startBackup(type, request, BackupAliasType.TABLE_NAME);
 		// Wait for the backup to complete
 		status = waitForDaemon(status.getId(), this.sourceClient);
 		// Now restore this to the destination
 		String backupFileName = getFileNameFromUrl(status.getBackupUrl());
 		RestoreSubmission restoreSub = new RestoreSubmission();
 		restoreSub.setFileName(backupFileName);
-		status = this.destClient.startRestore(type, restoreSub);
+		status = this.destClient.startRestore(type, restoreSub, BackupAliasType.TABLE_NAME);
 		// Wait for the backup to complete
 		status = waitForDaemon(status.getId(), this.destClient);
 		// Update the progress
