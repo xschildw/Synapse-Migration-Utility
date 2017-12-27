@@ -1,8 +1,6 @@
 package org.sagebionetworks.migration;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -32,10 +30,7 @@ import org.sagebionetworks.client.SynapseAdminClient;
 import org.sagebionetworks.client.exceptions.SynapseClientException;
 import org.sagebionetworks.repo.model.IdList;
 import org.sagebionetworks.repo.model.asynch.AsynchronousJobStatus;
-import org.sagebionetworks.repo.model.daemon.BackupRestoreStatus;
-import org.sagebionetworks.repo.model.daemon.DaemonStatus;
-import org.sagebionetworks.repo.model.daemon.DaemonType;
-import org.sagebionetworks.repo.model.daemon.RestoreSubmission;
+import org.sagebionetworks.repo.model.daemon.*;
 import org.sagebionetworks.repo.model.message.FireMessagesResult;
 import org.sagebionetworks.repo.model.migration.AdminRequest;
 import org.sagebionetworks.repo.model.migration.AsyncMigrationRangeChecksumRequest;
@@ -350,7 +345,7 @@ public class SynapseAdminClientMocker {
 				
 			});
 		
-		when(client.startBackup(any(MigrationType.class), any(IdList.class))).thenAnswer(new Answer<BackupRestoreStatus>() {
+		when(client.startBackup(any(MigrationType.class), any(IdList.class), eq(BackupAliasType.TABLE_NAME))).thenAnswer(new Answer<BackupRestoreStatus>() {
 
 			@Override
 			public BackupRestoreStatus answer(InvocationOnMock invocation)
@@ -386,7 +381,7 @@ public class SynapseAdminClientMocker {
 			
 		});
 		
-		when(client.startRestore(any(MigrationType.class), any(RestoreSubmission.class))).thenAnswer(new Answer<BackupRestoreStatus>() {
+		when(client.startRestore(any(MigrationType.class), any(RestoreSubmission.class), eq(BackupAliasType.TABLE_NAME))).thenAnswer(new Answer<BackupRestoreStatus>() {
 
 			@Override
 			public BackupRestoreStatus answer(InvocationOnMock invocation)
