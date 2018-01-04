@@ -1,0 +1,8 @@
+logs/
+target/
+.classpath
+.settings
+.project
+.pydevproject
+.DS_Store
+*.pyc
