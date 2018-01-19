@@ -1,5 +1,7 @@
 package org.sagebionetworks.migration.config;
 
+import org.sagebionetworks.repo.model.daemon.BackupAliasType;
+
 /**
  * Provides configuration information
  * 
@@ -45,4 +47,18 @@ public interface Configuration {
 	 */
 	public int getMaxRetries();
 	
+	
+	/**
+	 * A full table migration will occur if the destination has less than this threshold percentage of rows.
+	 * 
+	 * @return percentage (float between zero and one)
+	 */
+	public float getFullTableMigrationThresholdPercentage();
+	
+	/**
+	 * The type of alias that should be used when writing and reading 
+	 * backup files.
+	 * @return
+	 */
+	public BackupAliasType getBackupAliasType();
 }

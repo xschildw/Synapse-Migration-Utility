@@ -9,6 +9,7 @@ import java.util.Properties;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.sagebionetworks.repo.model.daemon.BackupAliasType;
 
 /**
  * Provides configuration information 
@@ -149,6 +150,16 @@ public class MigrationConfigurationImpl implements Configuration {
 	@Override
 	public int getMaxRetries() {
 		return Integer.parseInt(System.getProperty("org.sagebionetworks.max.retries"));
+	}
+
+	@Override
+	public float getFullTableMigrationThresholdPercentage() {
+		return Float.parseFloat(System.getProperty("org.sagebionetworks.full.table.migration.threshold.percentage"));
+	}
+
+	@Override
+	public BackupAliasType getBackupAliasType() {
+		return BackupAliasType.valueOf(System.getProperty("org.sagebionetworks.backup.alias.type"));
 	}
 	
 }

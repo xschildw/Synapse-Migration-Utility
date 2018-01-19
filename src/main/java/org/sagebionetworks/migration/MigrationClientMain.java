@@ -10,7 +10,6 @@ import org.sagebionetworks.migration.factory.SynapseClientFactory;
 
 /**
  * The main entry point for the V3 data migration process.
- * @author jmhill
  *
  */
 public class MigrationClientMain {
@@ -29,11 +28,8 @@ public class MigrationClientMain {
 		loadConfigUsingArgs(configuration, args);		
 		// Create the client clientFactory
 		SynapseClientFactory factory = new SynapseClientFactoryImpl(configuration);
-		MigrationClient client = new MigrationClient(factory, configuration.getWorkerTimeoutMs());
-		boolean failed = client.migrateWithRetry(
-				configuration.getMaxRetries(),
-				configuration.getMaximumBackupBatchSize(),
-				configuration.getMinimumDeltaRangeSize());
+		MigrationClient client = new MigrationClient(factory, configuration);
+		boolean failed = client.migrateWithRetry();
 		if (failed) {
 			System.exit(-1);
 		} else {

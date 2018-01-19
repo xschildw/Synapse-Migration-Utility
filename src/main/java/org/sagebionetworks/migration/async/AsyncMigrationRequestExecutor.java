@@ -18,17 +18,17 @@ import org.sagebionetworks.repo.model.migration.AsyncMigrationResponse;
 import org.sagebionetworks.util.Clock;
 import org.sagebionetworks.util.DefaultClock;
 
-public class AsyncMigrationRequestExecutor {
+public class AsyncMigrationRequestExecutor<I extends AdminRequest, O extends AdminResponse> {
 
 	public static final int MAX_RETRY = 3;
 	static private Logger logger = LogManager.getLogger(AsyncMigrationRequestExecutor.class);
 
 	private SynapseAdminClient client;
-	private AdminRequest request;
+	private I request;
 	long timeoutMs;
 	private Clock clock;
 
-	public AsyncMigrationRequestExecutor(SynapseAdminClient client, AdminRequest request, long timeoutMs) {
+	public AsyncMigrationRequestExecutor(SynapseAdminClient client, I request, long timeoutMs) {
 		this.client = client;
 		this.request = request;
 		this.timeoutMs = timeoutMs;
@@ -39,7 +39,7 @@ public class AsyncMigrationRequestExecutor {
 		this.clock = clock;
 	}
 
-	public AdminResponse execute() throws AsyncMigrationException, InterruptedException {
+	public O execute() throws AsyncMigrationException, InterruptedException {
 		AsynchronousResponseBody resp = null;
 		try {
 			AsyncMigrationRequest migRequest = new AsyncMigrationRequest();
@@ -54,7 +54,7 @@ public class AsyncMigrationRequestExecutor {
 			AsyncMigrationException e2 = new AsyncMigrationException(e.getMessage(), e);
 			throw e2;
 		}
-		return ((AsyncMigrationResponse)resp).getAdminResponse();
+		return (O) ((AsyncMigrationResponse)resp).getAdminResponse();
 	}
 	
 	private AsynchronousJobStatus waitForJobToCompleteWithRetry(String jobId, int maxRetry) throws WorkerFailedException, TimeoutException, InterruptedException {
