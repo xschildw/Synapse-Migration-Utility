@@ -159,7 +159,7 @@ public class MigrationConfigurationImpl implements Configuration {
 
 	@Override
 	public BackupAliasType getBackupAliasType() {
-		return BackupAliasType.valueOf(System.getProperty("org.sagebionetworks.full.table.migration.threshold.percentage"));
+		return BackupAliasType.valueOf(System.getProperty("org.sagebionetworks.backup.alias.type"));
 	}
 	
 }
