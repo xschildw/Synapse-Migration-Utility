@@ -325,7 +325,7 @@ public class MigrationClient {
 		if(destinationCount < 1) {
 			return true;
 		}
-		float percentInDestination = sourceCount/destinationCount;
+		float percentInDestination = destinationCount/sourceCount;
 		return percentInDestination < threshold;
 	}
 
