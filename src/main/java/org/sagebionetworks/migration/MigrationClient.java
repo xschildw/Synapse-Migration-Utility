@@ -15,6 +15,7 @@ import org.sagebionetworks.client.exceptions.SynapseException;
 import org.sagebionetworks.migration.async.*;
 import org.sagebionetworks.migration.delta.*;
 import org.sagebionetworks.migration.factory.*;
+import org.sagebionetworks.repo.model.daemon.BackupAliasType;
 import org.sagebionetworks.repo.model.migration.*;
 import org.sagebionetworks.repo.model.status.StackStatus;
 import org.sagebionetworks.repo.model.status.StatusEnum;
@@ -39,6 +40,9 @@ public class MigrationClient {
 	AsyncMigrationIdRangeChecksumWorkerFactory idRangeChecksumWorkerFactory;
 	ExecutorService threadPool;
 	long workerTimeoutMS;
+	AsynchronousJobExecutorImpl jobExecutor;
+	BackupAliasType aliasType;
+	
 
 	/**
 	 * New migration client.
@@ -51,6 +55,8 @@ public class MigrationClient {
 		this.idRangeChecksumWorkerFactory = new AsyncMigrationIdRangeChecksumWorkerFactoryImpl(clientFactory, workerTimeoutMS);
 		threadPool = Executors.newFixedThreadPool(2);
 		this.workerTimeoutMS = workerTimeoutMS;
+		this.jobExecutor = new AsynchronousJobExecutorImpl(clientFactory, workerTimeoutMS);
+		this.aliasType = BackupAliasType.TABLE_NAME;
 	}
 
 	public List<MigrationType> getCommonMigrationTypes() throws SynapseException {
@@ -248,24 +254,108 @@ public class MigrationClient {
 	}
 
 	public void migrateType(String salt, TypeToMigrateMetadata metadata, long maxBackupBatchSize, long minRangeSize, long timeoutMS) throws Exception {
+		/*
+		 * When the number of in the destination server for this type are less than the threshold
+		 * the entire type is migrated without calculating deltas.
+		 * migrated without calculating deltas.
+		 */
+		float threshold = 0.5f;
+		if(useFullBackupAndRestore(metadata.getSrcCount(), metadata.getDestCount(), threshold)) {
+			// execute a full backup/restore for this type.
+			fullBackupAndRestore(metadata.getType(), maxBackupBatchSize);
+		}else {
+			// execute partial backup/restore based on calculated deltas.
+			migrateTypeUsingDeltas(salt, metadata, maxBackupBatchSize, minRangeSize);
+		}
+	}
+	
+	/**
+	 * Execute a full backup/restore for the given type.
+	 * @param type
+	 * @param maxBackupBatchSize
+	 * @param timeout
+	 * @throws Exception
+	 */
+	private void fullBackupAndRestore(MigrationType type, long maxBackupBatchSize) throws Exception {
+		BasicProgress progress = new BasicProgress();
+		long minimumId = 0L;
+		long maximumId = Long.MAX_VALUE;
+		CreateUpdateRangeWorker worker = new CreateUpdateRangeWorker(type, aliasType, progress, jobExecutor, minimumId,
+				maximumId, maxBackupBatchSize);
+		Future<Long> future = this.threadPool.submit(worker);
+		while (!future.isDone()) {
+			// Log the progress
+			String message = progress.getMessage();
+			if (message == null) {
+				message = "";
+			}
+			logger.info("Creating/updating data for type: " + type.name() + " Progress: " + progress.getCurrentStatus()
+					+ " " + message);
+			Thread.sleep(2000);
+		}
+		Long counts = future.get();
+		logger.info("Finished Creating/updating the following counts for type: " + type.name() + " Counts: " + counts);
+	}
+	
+	/**
+	 * Should a full backup/restore be used or a partial based on deltas?
+	 * 
+	 * @param sourceCount The number of rows for a given type that are in the sources server.
+	 * @param destinationCount  The number of rows for a given type that are in the destination server.
+	 * @param threshold 
+	 * @return
+	 */
+	public static boolean useFullBackupAndRestore(long sourceCount, long destinationCount, float threshold) {
+		if(destinationCount < 1) {
+			return true;
+		}
+		float percentInDestination = sourceCount/destinationCount;
+		return percentInDestination < threshold;
+	}
 
+	/**
+	 * Migrate the given type by calculating deltas between the source and destination.
+	 * @param salt
+	 * @param metadata
+	 * @param maxBackupBatchSize
+	 * @param minRangeSize
+	 * @param timeoutMS
+	 * @throws Exception
+	 */
+	private void migrateTypeUsingDeltas(String salt, TypeToMigrateMetadata metadata, long maxBackupBatchSize,
+			long minRangeSize) throws Exception {
+		// Create the files containing the backup/restore metadata.
 		DeltaData dd = calculateDeltaForType(metadata, salt, minRangeSize);
-		// deletes
-		long delCount =  dd.getCounts().getDelete();
-		if (delCount > 0) {
-			deleteFromDestination(dd.getType(), dd.getDeleteTemp(), delCount, maxBackupBatchSize);
+		try {
+			// deletes
+			long delCount =  dd.getCounts().getDelete();
+			if (delCount > 0) {
+				deleteFromDestination(dd.getType(), dd.getDeleteTemp(), delCount, maxBackupBatchSize);
+			}
+			// inserts
+			long insCount = dd.getCounts().getCreate();
+			if (insCount > 0) {
+				createUpdateInDestination(dd.getType(), dd.getCreateTemp(), maxBackupBatchSize);
+			}
+			// updates
+			long updCount = dd.getCounts().getUpdate();
+			if (updCount > 0) {
+				createUpdateInDestination(dd.getType(), dd.getUpdateTemp(), maxBackupBatchSize);
+			}
+		}finally {
+			// Cleanup the temp files
+			if(dd != null) {
+				if(dd.getDeleteTemp() != null) {
+					dd.getDeleteTemp().delete();
+				}
+				if(dd.getUpdateTemp() != null) {
+					dd.getUpdateTemp().delete();
+				}
+				if(dd.getCreateTemp() != null) {
+					dd.getCreateTemp().delete();
+				}
+			}
 		}
-		// inserts
-		long insCount = dd.getCounts().getCreate();
-		if (insCount > 0) {
-			createUpdateInDestination(dd.getType(), dd.getCreateTemp(), insCount, maxBackupBatchSize, timeoutMS);
-		}
-		// updates
-		long updCount = dd.getCounts().getUpdate();
-		if (updCount > 0) {
-			createUpdateInDestination(dd.getType(), dd.getUpdateTemp(), updCount, maxBackupBatchSize, timeoutMS);
-		}
-
 	}
 
 	/**
@@ -278,11 +368,11 @@ public class MigrationClient {
 	 * @param timeout
 	 * @throws Exception
 	 */
-	private void createUpdateInDestination(MigrationType type, File createUpdateTemp, long count, long maxBackupBatchSize, long timeout) throws Exception {
+	private void createUpdateInDestination(MigrationType type, File createUpdateTemp, long maxBackupBatchSize) throws Exception {
 		BufferedRowMetadataReader reader = new BufferedRowMetadataReader(new FileReader(createUpdateTemp));
 		try{
 			BasicProgress progress = new BasicProgress();
-			CreateUpdateWorker worker = new CreateUpdateWorker(type, count, reader,progress, clientFactory.getDestinationClient(), clientFactory.getSourceClient(), maxBackupBatchSize, timeout);
+			CreateUpdateWorker worker = new CreateUpdateWorker(type, aliasType, reader,progress, jobExecutor, maxBackupBatchSize);
 			Future<Long> future = this.threadPool.submit(worker);
 			while(!future.isDone()){
 				// Log the progress

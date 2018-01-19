@@ -12,6 +12,7 @@ import org.apache.logging.log4j.Logger;
  * @author John
  *
  */
+@Deprecated
 public class BatchUtility {
 	
 	static private Logger log = LogManager.getLogger(BatchUtility.class);
