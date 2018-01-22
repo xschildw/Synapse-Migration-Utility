@@ -276,13 +276,13 @@ public class MigrationClient {
 		 * the entire type is migrated without calculating deltas.
 		 * migrated without calculating deltas.
 		 */
-		if(useFullBackupAndRestore(metadata.getSrcCount(), metadata.getDestCount(), config.getFullTableMigrationThresholdPercentage())) {
-			// execute a full backup/restore for this type.
-			fullBackupAndRestore(metadata.getType());
-		}else {
+//		if(useFullBackupAndRestore(metadata.getSrcCount(), metadata.getDestCount(), config.getFullTableMigrationThresholdPercentage())) {
+//			// execute a full backup/restore for this type.
+//			fullBackupAndRestore(metadata.getType());
+//		}else {
 			// execute partial backup/restore based on calculated deltas.
 			migrateTypeUsingDeltas(salt, metadata);
-		}
+//		}
 	}
 	
 	/**
