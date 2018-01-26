@@ -56,6 +56,7 @@ import com.thoughtworks.xstream.XStream;
 /**
  * Helper for migration testing
  */
+@Deprecated
 public class SynapseAdminClientMocker {
 	
 	/**

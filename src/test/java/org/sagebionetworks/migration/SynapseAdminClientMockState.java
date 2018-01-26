@@ -21,6 +21,7 @@ import org.sagebionetworks.repo.model.status.StackStatus;
  * 
  * TODO Needs better comments
  */
+@Deprecated
 public class SynapseAdminClientMockState {
 	
 	public String endpoint;

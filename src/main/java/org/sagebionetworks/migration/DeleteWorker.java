@@ -4,13 +4,11 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Callable;
 
-import org.sagebionetworks.client.SynapseAdminClient;
-import org.sagebionetworks.client.exceptions.SynapseException;
-import org.sagebionetworks.repo.model.IdList;
+import org.sagebionetworks.migration.async.AsynchronousJobExecutor;
+import org.sagebionetworks.repo.model.migration.DeleteListRequest;
+import org.sagebionetworks.repo.model.migration.DeleteListResponse;
 import org.sagebionetworks.repo.model.migration.MigrationType;
-import org.sagebionetworks.repo.model.migration.MigrationTypeCount;
 import org.sagebionetworks.repo.model.migration.RowMetadata;
-import org.sagebionetworks.schema.adapter.JSONObjectAdapterException;
 import org.sagebionetworks.tool.progress.BasicProgress;
 
 /**
@@ -19,26 +17,27 @@ import org.sagebionetworks.tool.progress.BasicProgress;
  * @author John
  *
  */
-public class DeleteWorker implements Callable<Long>, BatchWorker{
+public class DeleteWorker implements Callable<Long>{
 	
 	MigrationType type;
 	long count;
 	Iterator<RowMetadata> iterator;
 	BasicProgress progress;
-	SynapseAdminClient destClient;
+	AsynchronousJobExecutor jobExecutor;
 	long batchSize;
 	
 	
 
 	public DeleteWorker(MigrationType type, long count,
 			Iterator<RowMetadata> iterator, BasicProgress progress,
-			SynapseAdminClient destClient, long batchSize) {
+			AsynchronousJobExecutor jobExecutor, long batchSize) {
 		super();
 		this.type = type;
-		this.count = count;
 		this.iterator = iterator;
+		this.progress.setCurrent(0L);
+		this.progress.setTotal(count);
 		this.progress = progress;
-		this.destClient = destClient;
+		this.jobExecutor = jobExecutor;
 		this.batchSize = batchSize;
 	}
 
@@ -58,7 +57,7 @@ public class DeleteWorker implements Callable<Long>, BatchWorker{
 			if(row != null){
 				batch.add(row.getId());
 				if(batch.size() >= batchSize){
-					Long c = this.migrateBatch(batch);
+					Long c = this.deleteBatch(batch);
 					deletedCount += c;
 					batch.clear();
 				}
@@ -66,7 +65,7 @@ public class DeleteWorker implements Callable<Long>, BatchWorker{
 		}
 		// If there is any data left in the batch send it
 		if(batch.size() > 0){
-			Long c = this.migrateBatch(batch);
+			Long c = this.deleteBatch(batch);
 			deletedCount += c;
 			batch.clear();
 		}
@@ -74,23 +73,18 @@ public class DeleteWorker implements Callable<Long>, BatchWorker{
 		return deletedCount;
 	}
 	
-	protected Long migrateBatch(List<Long> batch) throws Exception {
-		Long c = BatchUtility.attemptBatchWithRetry(this, batch);
-		return c;
-	}
-	
-	public Long attemptBatch(List<Long> batch) throws JSONObjectAdapterException, SynapseException {
-		IdList req = new IdList();
-		req.setList(batch);
-		MigrationTypeCount mtc = null;
-		// Catch exception and re-throw as DaemonFailedException (technically, it's not)
-		try {
-			mtc = destClient.deleteMigratableObject(type, req);
-		} catch (Exception e) {
-			throw new DaemonFailedException(e);
-		}
-		
-		return mtc.getCount();
+	/**
+	 * Execute a a delete job.
+	 * @param batch
+	 * @return
+	 * @throws Exception
+	 */
+	public Long deleteBatch(List<Long> batch) throws Exception {
+		DeleteListRequest deleteRequest = new DeleteListRequest();
+		deleteRequest.setIdsToDelete(batch);
+		deleteRequest.setMigrationType(type);
+		DeleteListResponse response = jobExecutor.executeDestinationJob(deleteRequest, DeleteListResponse.class);
+		return response.getDeleteCount();
 	}
 	
 }
