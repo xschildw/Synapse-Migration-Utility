@@ -10,6 +10,8 @@ import org.sagebionetworks.migration.async.AsynchronousJobExecutor;
 import org.sagebionetworks.repo.model.daemon.BackupAliasType;
 import org.sagebionetworks.repo.model.migration.BackupTypeListRequest;
 import org.sagebionetworks.repo.model.migration.BackupTypeResponse;
+import org.sagebionetworks.repo.model.migration.DeleteListRequest;
+import org.sagebionetworks.repo.model.migration.DeleteListResponse;
 import org.sagebionetworks.repo.model.migration.MigrationType;
 import org.sagebionetworks.repo.model.migration.RestoreTypeRequest;
 import org.sagebionetworks.repo.model.migration.RestoreTypeResponse;
@@ -17,36 +19,27 @@ import org.sagebionetworks.repo.model.migration.RowMetadata;
 import org.sagebionetworks.schema.adapter.JSONObjectAdapterException;
 import org.sagebionetworks.tool.progress.BasicProgress;
 
+import com.google.common.collect.Iterators;
+
 public class CreateUpdateWorker implements Callable<Long> {
 		
 	MigrationType type;
 	BackupAliasType aliasType;
-	long count;
 	Iterator<RowMetadata> iterator;
 	BasicProgress progress;
 	AsynchronousJobExecutor jobExecutor;
 	long batchSize;
 
 	/**
-	 * 
-	 * @param type - The type to be migrated.
-	 * @param iterator - Abstraction for iterating over the objects to be migrated.
-	 * @param progress - The worker will update the progress objects so its progress can be monitored externally.
-	 * @param destClient - A handle to the destination SynapseAdministration client. Data will be pushed to the destination.
-	 * @param sourceClient - A handle to the source SynapseAdministration client. Data will be pulled from the source.
-	 * @param batchSize - Data is migrated in batches.  This controls the size of the batches.
-	 * @param timeoutMS - How long should the worker wait for Daemon job to finish its task before timing out in milliseconds.
-	 * using this number as the denominator. An attempt will then be made to retry the migration of each sub-batch in an attempt to isolate the problem.
-	 * If this is set to less than 2, then no re-try will be attempted.
 	 */
-	public CreateUpdateWorker(MigrationType type, BackupAliasType aliasType, Iterator<RowMetadata> iterator, BasicProgress progress,
+	public CreateUpdateWorker(MigrationType type, long count, BackupAliasType aliasType, Iterator<RowMetadata> iterator, BasicProgress progress,
 			AsynchronousJobExecutor jobExecutor, long batchSize) {
 		super();
 		this.type = type;
 		this.aliasType = aliasType;
 		this.iterator = iterator;
 		this.progress = progress;
-		this.progress.setCurrent(0);
+		this.progress.setCurrent(0L);
 		this.progress.setTotal(count);
 		this.jobExecutor = jobExecutor;
 		this.batchSize = batchSize;
@@ -65,52 +58,52 @@ public class CreateUpdateWorker implements Callable<Long> {
 	 * @return
 	 * @throws Exception
 	 */
-	private long backupAsBatch(Iterator<RowMetadata> it) throws Exception{
+	protected long backupAsBatch(Iterator<RowMetadata> it) throws Exception{
 		// Iterate and create batches.
-		Long id = null;
-		List<Long> batch = new LinkedList<Long>();
-		Exception migrateBatchException = null;
-		long updateCount = 0;
-		while(it.hasNext()){
-			id = it.next().getId();
-			if(id != null){
-				batch.add(id);
-				if(batch.size() >= batchSize){
-					try {
-						migrateBatch(batch);
-					} catch (Exception e) {
-						migrateBatchException = e;
-					}
-					updateCount += batch.size();
-					batch.clear();
+		Exception lastBatchException = null;
+		long current = 0;
+		Iterator<List<RowMetadata>> partitionIt = Iterators.partition(it, (int)batchSize);
+		while(partitionIt.hasNext()) {
+			List<RowMetadata> batchMetadata = partitionIt.next();
+			List<Long> idBatch = new LinkedList<>();
+			for(RowMetadata row: batchMetadata) {
+				if(row.getId() != null) {
+					idBatch.add(row.getId());
 				}
 			}
-		}
-		// If there is any data left in the batch send it
-		if(batch.size() > 0){
 			try {
-				migrateBatch(batch);
-			}  catch (Exception e) {
-				migrateBatchException = e;
+				migrateBatch(idBatch);
+			} catch (Exception e) {
+				/*
+				 * If a batch fails we must continue processing the rest of the batches, since
+				 * the fix for the failure is likely to be in one of the later batches. See:
+				 * PLFM-3851
+				 */
+				lastBatchException = e;
 			}
-			updateCount += batch.size();
-			batch.clear();
+			current += idBatch.size();
+			progress.setCurrent(current);
 		}
-		if (migrateBatchException != null) {
-			throw migrateBatchException;
+
+		if (lastBatchException != null) {
+			// Throwing the exception indicates that this type must be re-migrated to resolve the failures.
+			throw lastBatchException;
 		}
-		return updateCount;
+		return current;
 	}
 	
 
 	/**
-	 * Attempt to migrateWithRetry a single batch.
+	 * Attempt to migrate a single batch.
 	 * @param ids
 	 * @throws JSONObjectAdapterException
 	 * @throws SynapseException
 	 * @throws InterruptedException
 	 */
-	public Long migrateBatch(List<Long> ids) throws JSONObjectAdapterException, SynapseException, InterruptedException {
+	protected Long migrateBatch(List<Long> ids) throws JSONObjectAdapterException, SynapseException, InterruptedException {
+		if(ids.isEmpty()) {
+			return 0L;
+		}
 		int listSize = ids.size();
 		progress.setMessage("Starting backup job for "+listSize+" objects");
 		
@@ -130,12 +123,22 @@ public class CreateUpdateWorker implements Callable<Long> {
 		restoreRequest.setBatchSize(this.batchSize);
 		restoreRequest.setMigrationType(this.type);
 		restoreRequest.setBackupFileKey(backupResponse.getBackupFileKey());
-		RestoreTypeResponse restoreResponse = jobExecutor.executeDestinationJob(restoreRequest, RestoreTypeResponse.class);
-
-		// Update the progress
-		progress.setMessage("Finished restore for "+restoreResponse.getRestoredRowCount()+" rows");
-		progress.setCurrent(progress.getCurrent()+listSize);
-		return (long) (listSize);
+		RestoreTypeResponse restoreResponse;
+		try {
+			restoreResponse = jobExecutor.executeDestinationJob(restoreRequest, RestoreTypeResponse.class);
+			// Update the progress
+			progress.setMessage("Finished restore for "+restoreResponse.getRestoredRowCount()+" rows");
+			progress.setCurrent(progress.getCurrent()+listSize);
+			return (long) (listSize);
+		} catch (AsyncMigrationException e) {
+			// See PLFM-3851. When the restore fails, delete all data associated with this batch and then throw the exception.
+			progress.setMessage("Failed: "+e.getMessage()+" deleting all data for this batch");
+			DeleteListRequest deleteRequest = new DeleteListRequest();
+			deleteRequest.setIdsToDelete(ids);
+			deleteRequest.setMigrationType(type);
+			jobExecutor.executeDestinationJob(deleteRequest, DeleteListResponse.class);
+			throw e;
+		}
 	}
 
 }

@@ -345,17 +345,17 @@ public class MigrationClient {
 			// deletes
 			long delCount =  dd.getCounts().getDelete();
 			if (delCount > 0) {
-				deleteFromDestination(dd.getType(), dd.getDeleteTemp(), delCount);
+				deleteFromDestination(dd.getType(), delCount, dd.getDeleteTemp());
 			}
 			// inserts
 			long insCount = dd.getCounts().getCreate();
 			if (insCount > 0) {
-				createUpdateInDestination(dd.getType(), dd.getCreateTemp());
+				createUpdateInDestination(dd.getType(), insCount, dd.getCreateTemp());
 			}
 			// updates
 			long updCount = dd.getCounts().getUpdate();
 			if (updCount > 0) {
-				createUpdateInDestination(dd.getType(), dd.getUpdateTemp());
+				createUpdateInDestination(dd.getType(), updCount, dd.getUpdateTemp());
 			}
 		}finally {
 			// Cleanup the temp files
@@ -383,11 +383,11 @@ public class MigrationClient {
 	 * @param timeout
 	 * @throws Exception
 	 */
-	private void createUpdateInDestination(MigrationType type, File createUpdateTemp) throws Exception {
+	private void createUpdateInDestination(MigrationType type, long count, File createUpdateTemp) throws Exception {
 		BufferedRowMetadataReader reader = new BufferedRowMetadataReader(new FileReader(createUpdateTemp));
 		try{
 			BasicProgress progress = new BasicProgress();
-			CreateUpdateWorker worker = new CreateUpdateWorker(type, config.getBackupAliasType(), reader,progress, jobExecutor, config.getMaximumBackupBatchSize());
+			CreateUpdateWorker worker = new CreateUpdateWorker(type, count, config.getBackupAliasType(), reader,progress, jobExecutor, config.getMaximumBackupBatchSize());
 			Future<Long> future = this.threadPool.submit(worker);
 			while(!future.isDone()){
 				// Log the progress
@@ -510,11 +510,11 @@ public class MigrationClient {
 	 * @throws IOException 
 	 * 
 	 */
-	private void deleteFromDestination(MigrationType type, File deleteTemp, long count) throws Exception {
+	private void deleteFromDestination(MigrationType type, long count, File deleteTemp) throws Exception {
 		BufferedRowMetadataReader reader = new BufferedRowMetadataReader(new FileReader(deleteTemp));
 		try{
 			BasicProgress progress = new BasicProgress();
-			DeleteWorker worker = new DeleteWorker(type, count, reader, progress, clientFactory.getDestinationClient(), config.getMaximumBackupBatchSize());
+			DeleteWorker worker = new DeleteWorker(type, count, reader, progress, this.jobExecutor, config.getMaximumBackupBatchSize());
 			Future<Long> future = this.threadPool.submit(worker);
 			while(!future.isDone()){
 				// Log the progress
