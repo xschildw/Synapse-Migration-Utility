@@ -19,6 +19,8 @@ import org.sagebionetworks.repo.model.migration.RowMetadata;
 import org.sagebionetworks.schema.adapter.JSONObjectAdapterException;
 import org.sagebionetworks.tool.progress.BasicProgress;
 
+import com.google.common.collect.Iterators;
+
 public class CreateUpdateWorker implements Callable<Long> {
 		
 	MigrationType type;
@@ -58,36 +60,34 @@ public class CreateUpdateWorker implements Callable<Long> {
 	 */
 	protected long backupAsBatch(Iterator<RowMetadata> it) throws Exception{
 		// Iterate and create batches.
-		Long id = null;
-		List<Long> batch = new LinkedList<Long>();
-		Exception migrateBatchException = null;
+		Exception lastBatchException = null;
 		long current = 0;
-		while(it.hasNext()){
-			current++;
-			progress.setCurrent(current);
-			id = it.next().getId();
-			if(id != null){
-				batch.add(id);
-				if(batch.size() >= batchSize){
-					try {
-						migrateBatch(batch);
-					} catch (Exception e) {
-						migrateBatchException = e;
-					}
-					batch = new LinkedList<Long>();
+		Iterator<List<RowMetadata>> partitionIt = Iterators.partition(it, (int)batchSize);
+		while(partitionIt.hasNext()) {
+			List<RowMetadata> batchMetadata = partitionIt.next();
+			List<Long> idBatch = new LinkedList<>();
+			for(RowMetadata row: batchMetadata) {
+				if(row.getId() != null) {
+					idBatch.add(row.getId());
 				}
 			}
-		}
-		// If there is any data left in the batch send it
-		if(batch.size() > 0){
 			try {
-				migrateBatch(batch);
-			}  catch (Exception e) {
-				migrateBatchException = e;
+				migrateBatch(idBatch);
+			} catch (Exception e) {
+				/*
+				 * If a batch fails we must continue processing the rest of the batches, since
+				 * the fix for the failure is likely to be in one of the later batches. See:
+				 * PLFM-3851
+				 */
+				lastBatchException = e;
 			}
+			current += idBatch.size();
+			progress.setCurrent(current);
 		}
-		if (migrateBatchException != null) {
-			throw migrateBatchException;
+
+		if (lastBatchException != null) {
+			// Throwing the exception indicates that this type must be re-migrated to resolve the failures.
+			throw lastBatchException;
 		}
 		return current;
 	}
@@ -101,6 +101,9 @@ public class CreateUpdateWorker implements Callable<Long> {
 	 * @throws InterruptedException
 	 */
 	protected Long migrateBatch(List<Long> ids) throws JSONObjectAdapterException, SynapseException, InterruptedException {
+		if(ids.isEmpty()) {
+			return 0L;
+		}
 		int listSize = ids.size();
 		progress.setMessage("Starting backup job for "+listSize+" objects");
 		

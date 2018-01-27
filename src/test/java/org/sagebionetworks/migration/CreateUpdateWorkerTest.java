@@ -102,7 +102,21 @@ public class CreateUpdateWorkerTest {
 		expectedRestore.setMigrationType(type);
 		expectedRestore.setBackupFileKey(backupFile);
 		verify(mockJobExecutor).executeDestinationJob(expectedRestore, RestoreTypeResponse.class);
+		
+		verify(mockProgress, times(3)).setMessage(anyString());
 
+	}
+	
+	@Test
+	public void testMigrateBatchEmpty() throws Exception {
+		CreateUpdateWorker worker = createNewWorker();
+		List<Long> ids = new LinkedList<>();
+		// call under test
+		long resultCount = worker.migrateBatch(ids);
+		assertEquals(0L, resultCount);
+		verify(mockJobExecutor, never()).executeSourceJob(any(BackupTypeListRequest.class), any());
+		verify(mockJobExecutor, never()).executeDestinationJob(any(BackupTypeListRequest.class), any());
+		verify(mockProgress, never()).setMessage(anyString());
 	}
 	
 	@Test
@@ -125,6 +139,7 @@ public class CreateUpdateWorkerTest {
 		expectedDelete.setIdsToDelete(ids);
 		expectedDelete.setMigrationType(type);
 		verify(mockJobExecutor).executeDestinationJob(expectedDelete, DeleteListResponse.class);
+		verify(mockProgress, times(3)).setMessage(anyString());
 	}
 	
 	@Test

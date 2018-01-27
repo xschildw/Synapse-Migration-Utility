@@ -11,6 +11,8 @@ import org.sagebionetworks.repo.model.migration.MigrationType;
 import org.sagebionetworks.repo.model.migration.RowMetadata;
 import org.sagebionetworks.tool.progress.BasicProgress;
 
+import com.google.common.collect.Iterators;
+
 /**
  * Deletes all ids on the passed list.
  * 
@@ -34,9 +36,9 @@ public class DeleteWorker implements Callable<Long>{
 		super();
 		this.type = type;
 		this.iterator = iterator;
+		this.progress = progress;
 		this.progress.setCurrent(0L);
 		this.progress.setTotal(count);
-		this.progress = progress;
 		this.jobExecutor = jobExecutor;
 		this.batchSize = batchSize;
 	}
@@ -46,31 +48,20 @@ public class DeleteWorker implements Callable<Long>{
 	@Override
 	public Long call() throws Exception {
 		// Iterate and create batches.
-		RowMetadata row = null;
-		List<Long> batch = new LinkedList<Long>();
-		long deletedCount = 0;
-		long current = 0;
-		while(iterator.hasNext()){
-			row = iterator.next();
-			current++;
-			this.progress.setCurrent(current);
-			if(row != null){
-				batch.add(row.getId());
-				if(batch.size() >= batchSize){
-					Long c = this.deleteBatch(batch);
-					deletedCount += c;
-					batch.clear();
+		long count = 0;
+		Iterator<List<RowMetadata>> partitionIt = Iterators.partition(iterator, (int) batchSize);
+		while(partitionIt.hasNext()) {
+			List<RowMetadata> metaBatch = partitionIt.next();
+			List<Long> idBatch = new LinkedList<>();
+			for(RowMetadata row: metaBatch) {
+				if(row.getId() != null) {
+					idBatch.add(row.getId());
 				}
 			}
-		}
-		// If there is any data left in the batch send it
-		if(batch.size() > 0){
-			Long c = this.deleteBatch(batch);
-			deletedCount += c;
-			batch.clear();
+			count += deleteBatch(idBatch);
 		}
 		progress.setDone();
-		return deletedCount;
+		return count;
 	}
 	
 	/**
