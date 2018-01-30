@@ -1,9 +1,12 @@
 package org.sagebionetworks.migration.async;
 
 import org.sagebionetworks.migration.AsyncMigrationException;
+import org.sagebionetworks.migration.config.Configuration;
 import org.sagebionetworks.migration.factory.SynapseClientFactory;
 import org.sagebionetworks.repo.model.migration.AdminRequest;
 import org.sagebionetworks.repo.model.migration.AdminResponse;
+
+import com.google.inject.Inject;
 
 /**
  * Simple implementation of an Asynchronous Job Executor.
@@ -22,10 +25,11 @@ public class AsynchronousJobExecutorImpl implements AsynchronousJobExecutor{
 	 * @param destClient Client pointing to the destination stack.
 	 * @param timeoutMS job timeout in MS.
 	 */
-	public AsynchronousJobExecutorImpl(SynapseClientFactory clientFactory, long timeoutMS) {
+	@Inject
+	public AsynchronousJobExecutorImpl(SynapseClientFactory clientFactory, Configuration config) {
 		super();
 		this.clientFactory = clientFactory;
-		this.timeoutMS = timeoutMS;
+		this.timeoutMS = config.getWorkerTimeoutMs();
 	}
 
 	/*
