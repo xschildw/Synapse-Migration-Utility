@@ -73,7 +73,7 @@ public class MigrationClient {
 		this.typeCountsWorkerFactory = new AsyncMigrationTypeCountsWorkerFactoryImpl(clientFactory, config.getWorkerTimeoutMs());
 		this.idRangeChecksumWorkerFactory = new AsyncMigrationIdRangeChecksumWorkerFactoryImpl(clientFactory, config.getWorkerTimeoutMs());
 		threadPool = Executors.newFixedThreadPool(2);
-		this.jobExecutor = new AsynchronousJobExecutorImpl(clientFactory, config.getWorkerTimeoutMs());
+		this.jobExecutor = new AsynchronousJobExecutorImpl(clientFactory, config);
 	}
 
 	public List<MigrationType> getCommonMigrationTypes() throws SynapseException {

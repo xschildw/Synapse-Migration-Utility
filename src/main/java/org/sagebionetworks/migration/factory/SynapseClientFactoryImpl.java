@@ -1,17 +1,15 @@
 package org.sagebionetworks.migration.factory;
 
-import org.sagebionetworks.client.SynapseAdminClient;
 import org.sagebionetworks.client.SynapseAdminClientImpl;
 import org.sagebionetworks.client.exceptions.SynapseException;
-import org.sagebionetworks.migration.factory.SynapseClientFactory;
-import org.sagebionetworks.simpleHttpClient.SimpleHttpClientConfig;
 import org.sagebionetworks.migration.config.Configuration;
 import org.sagebionetworks.migration.config.SynapseConnectionInfo;
+import org.sagebionetworks.simpleHttpClient.SimpleHttpClientConfig;
+
+import com.google.inject.Inject;
 
 /**
- * Simple implementation of the client factory
- * 
- * @author jmhill
+ * Simple implementation of the client factory.
  *
  */
 public class SynapseClientFactoryImpl implements SynapseClientFactory {
@@ -25,6 +23,7 @@ public class SynapseClientFactoryImpl implements SynapseClientFactory {
 	 * New factory with the required connection information.
 	 * @param config
 	 */
+	@Inject
 	public SynapseClientFactoryImpl(Configuration config) {
 		super();
 		this.config = config;

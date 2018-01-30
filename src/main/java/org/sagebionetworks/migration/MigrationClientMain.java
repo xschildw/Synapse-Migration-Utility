@@ -3,10 +3,13 @@ package org.sagebionetworks.migration;
 import java.io.IOException;
 
 import org.sagebionetworks.client.exceptions.SynapseException;
+import org.sagebionetworks.migration.config.Configuration;
+import org.sagebionetworks.migration.factory.SynapseClientFactory;
 import org.sagebionetworks.migration.factory.SynapseClientFactoryImpl;
 import org.sagebionetworks.schema.adapter.JSONObjectAdapterException;
-import org.sagebionetworks.migration.config.MigrationConfigurationImpl;
-import org.sagebionetworks.migration.factory.SynapseClientFactory;
+
+import com.google.inject.Guice;
+import com.google.inject.Injector;
 
 /**
  * The main entry point for the V3 data migration process.
@@ -22,10 +25,11 @@ public class MigrationClientMain {
 	 * @throws JSONObjectAdapterException 
 	 */
 	public static void main(String[] args) throws Exception {
+		
+		Injector injector = Guice.createInjector(new MigrationModule());
+		
 		// First load the configuration
-		MigrationConfigurationImpl configuration = new MigrationConfigurationImpl();
-		loadCredentials(configuration, args);
-		loadConfigUsingArgs(configuration, args);		
+		Configuration configuration = injector.getInstance(Configuration.class);	
 		// Create the client clientFactory
 		SynapseClientFactory factory = new SynapseClientFactoryImpl(configuration);
 		MigrationClient client = new MigrationClient(factory, configuration);
@@ -37,28 +41,4 @@ public class MigrationClientMain {
 		}
 	}
 	
-	/**
-	 * Load the configuration using the passed args.
-	 * @param configuration 
-	 * @param args
-	 * @throws IOException
-	 */
-	public static void loadConfigUsingArgs(MigrationConfigurationImpl configuration, String[] args) throws IOException {
-		if (args != null && args.length == 2) {
-			// Load and validate from file
-			String path = args[1];
-			configuration.loadConfigurationFile(path);
-		}
-		// Validate System properties
-		configuration.validateConfigurationProperties();
-	}
-	
-	public static void loadCredentials(MigrationConfigurationImpl configuration, String[] args) throws IOException {
-		if (args != null && args.length >= 1) {
-			String path = args[0];
-			configuration.loadApiKey(path);
-		} else {
-			throw new IllegalArgumentException("Path to API Key file must be specified as first argument.");
-		}
-	}
 }

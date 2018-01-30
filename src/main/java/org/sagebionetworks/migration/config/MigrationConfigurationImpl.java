@@ -1,165 +1,144 @@
 package org.sagebionetworks.migration.config;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Iterator;
 import java.util.Properties;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.sagebionetworks.repo.model.daemon.BackupAliasType;
 
+import com.google.inject.Inject;
+
 /**
  * Provides configuration information 
- * 
- * TODO we can probably wrap this around an instance of TemplatedConfigurationImpl for richer config loading options and support for encrypted passwords
- * 
- * @author John
- *
  */
 public class MigrationConfigurationImpl implements Configuration {
-	
-	static private Logger log = LogManager.getLogger(MigrationConfigurationImpl.class);
-	private final String CONFIGUATION_TEMPLATE_PROPERTIES = "configuation-template.properties";
-	
-	/**
-	 * The the passed configuration file and add the properties to the system properties.
-	 * @param path
-	 * @throws IOException
-	 */
-	public void loadConfigurationFile(String path) throws IOException{
-		log.debug("Using configuration file: "+path);
-		File file = new File(path);
-		if(!file.exists()){
-			throw new IllegalArgumentException("The configurartion file: "+path+" does not exist");
-		}
-		FileInputStream fis = null;
-		try{
-			fis = new FileInputStream(file);
-			loadConfiguration(fis);
-		}finally{
-			fis.close();
-		}
-	}
 
-	public void loadConfiguration(InputStream inputStream) throws IOException{
-		Properties props = new Properties();
-		props.load(inputStream);
-		// Add all of these properties to the system properties.
-		System.getProperties().putAll(props);
-	}
+	static private Logger log = LogManager.getLogger(MigrationConfigurationImpl.class);
+
+	static final String KEY_SOURCE_REPOSITORY_ENDPOINT = "org.sagebionetworks.source.repository.endpoint";
+	static final String KEY_SOURCE_AUTHENTICATION_ENDPOINT = "org.sagebionetworks.source.authentication.endpoint";
+	static final String KEY_DESTINATION_REPOSITORY_ENDPOINT = "org.sagebionetworks.destination.repository.endpoint";
+	static final String KEY_DESTINATION_AUTHENTICATION_ENDPOINT = "org.sagebionetworks.destination.authentication.endpoint";
+	static final String KEY_CONFIG_PATH = "org.sagebionetworks.config.path";
+	static final String KEY_APIKEY = "org.sagebionetworks.apikey";
+	static final String KEY_USERNAME = "org.sagebionetworks.username";
+	static final String KEY_MAX_THREADS = "org.sagebionetworks.max.threads";
+	static final String KEY_MAX_BACKUP_BATCHSIZE = "org.sagebionetworks.max.backup.batchsize";
+	static final String KEY_MIN_DELTA_RANGESIZE = "org.sagebionetworks.min.delta.rangesize";
+	static final String KEY_THREAD_TIMOUT_MS = "org.sagebionetworks.worker.thread.timout.ms";
+	static final String KEY_MAX_RETRIES = "org.sagebionetworks.max.retries";
+	static final String KEY_THRESHOLD_PERCENTAGE = "org.sagebionetworks.full.table.migration.threshold.percentage";
+	static final String KEY_BACKUP_ALIAS_TYPE = "org.sagebionetworks.backup.alias.type";
 	
-	public void loadApiKey(String path) throws IOException {
-		loadConfigurationFile(path);
-	}
+	SystemPropertiesProvider propProvider;
+	FileProvider fileProvider;
 	
-	/**
-	 * Validate the properties against the command line.
-	 * @throws IOException
-	 */
-	public void validateConfigurationProperties() throws IOException{
-		// Load the template from the classpath
-		InputStream in = MigrationConfigurationImpl.class.getClassLoader().getResourceAsStream(CONFIGUATION_TEMPLATE_PROPERTIES);
-		if(in == null) throw new IllegalArgumentException("Cannot find: "+CONFIGUATION_TEMPLATE_PROPERTIES+" on the classpath");
-		Properties template = new Properties();
-		try{
-			template.load(in);
-		}finally{
-			in.close();
-		}
-		// Compare the passed properties to the template
-		Iterator<String> keyIt = template.stringPropertyNames().iterator();
-		Properties props = System.getProperties();
-		log.debug("Loading the following properties: ");
-		while(keyIt.hasNext()){
-			String key = keyIt.next();
-			Object value = props.getProperty(key);
-			if(value == null){
-				throw new IllegalArgumentException("Cannot find property for key: " + key);
-			}
-			if(key.indexOf("password")> 1){
-				// Do not print passwords
-				log.debug(key+"="+createObfuscatedPassword((String) value));
-			}else{
-				log.debug(key+"="+value);
-			}
-		}
-	}
+	Properties systemProperties;
 	
-	/**
-	 * Used to print Obfuscated Password
-	 * @param password
-	 * @return
-	 */
-	private String createObfuscatedPassword(String password){
-		StringBuilder builder = new StringBuilder();
-		for(int i=0; i<password.length(); i++){
-			builder.append("*");
-		}
-		return builder.toString();
+	@Inject
+	public MigrationConfigurationImpl(SystemPropertiesProvider propProvider, FileProvider fileProvider) throws IOException {
+		this.propProvider = propProvider;
+		this.fileProvider = fileProvider;
+		// load the the System properties.
+		systemProperties = propProvider.getSystemProperties();
+		String path = getProperty(KEY_CONFIG_PATH);
+		Properties configFromPath = loadPropertiesFromPath(path);
+		// add the additional config properties.
+		systemProperties.putAll(configFromPath);
 	}
 	
 	@Override
 	public SynapseConnectionInfo getSourceConnectionInfo(){
 		return new SynapseConnectionInfo(
-					System.getProperty("org.sagebionetworks.source.authentication.endpoint"),
-					System.getProperty("org.sagebionetworks.source.repository.endpoint"),
-					System.getProperty("org.sagebionetworks.username"),
-					System.getProperty("org.sagebionetworks.apikey"),
-					System.getProperty("org.sagebionetworks.stack.iam.id"),
-					System.getProperty("org.sagebionetworks.stack.iam.key"),
-					System.getProperty("org.sagebionetworks.shared.s3.backup.bucket")
+					getProperty(KEY_SOURCE_AUTHENTICATION_ENDPOINT),
+					getProperty(KEY_SOURCE_REPOSITORY_ENDPOINT),
+					getProperty(KEY_USERNAME),
+					getProperty(KEY_APIKEY)
 				);
 	}
 	
 	@Override
 	public SynapseConnectionInfo getDestinationConnectionInfo(){
 		return new SynapseConnectionInfo(
-					System.getProperty("org.sagebionetworks.destination.authentication.endpoint"),
-					System.getProperty("org.sagebionetworks.destination.repository.endpoint"),
-					System.getProperty("org.sagebionetworks.username"),
-					System.getProperty("org.sagebionetworks.apikey"),
-					System.getProperty("org.sagebionetworks.stack.iam.id"),
-					System.getProperty("org.sagebionetworks.stack.iam.key"),
-					System.getProperty("org.sagebionetworks.shared.s3.backup.bucket")
+					getProperty(KEY_DESTINATION_AUTHENTICATION_ENDPOINT),
+					getProperty(KEY_DESTINATION_REPOSITORY_ENDPOINT),
+					getProperty(KEY_USERNAME),
+					getProperty(KEY_APIKEY)
 				);
 	}
 	
 	@Override
 	public int getMaximumNumberThreads() {
-		return Integer.parseInt(System.getProperty("org.sagebionetworks.max.threads"));
+		return Integer.parseInt(getProperty(KEY_MAX_THREADS));
 	}
 	
 	@Override
 	public int getMaximumBackupBatchSize(){
-		return Integer.parseInt(System.getProperty("org.sagebionetworks.max.backup.batchsize"));
+		return Integer.parseInt(getProperty(KEY_MAX_BACKUP_BATCHSIZE));
 	}
 
 	@Override
 	public int getMinimumDeltaRangeSize() {
-		return Integer.parseInt(System.getProperty("org.sagebionetworks.min.delta.rangesize"));
+		return Integer.parseInt(getProperty(KEY_MIN_DELTA_RANGESIZE));
 	}
 	
 	@Override
 	public long getWorkerTimeoutMs(){
-		return Long.parseLong(System.getProperty("org.sagebionetworks.worker.thread.timout.ms"));
+		return Long.parseLong(getProperty(KEY_THREAD_TIMOUT_MS));
 	}
 
 	@Override
 	public int getMaxRetries() {
-		return Integer.parseInt(System.getProperty("org.sagebionetworks.max.retries"));
+		return Integer.parseInt(getProperty(KEY_MAX_RETRIES));
 	}
 
 	@Override
 	public float getFullTableMigrationThresholdPercentage() {
-		return Float.parseFloat(System.getProperty("org.sagebionetworks.full.table.migration.threshold.percentage"));
+		return Float.parseFloat(getProperty(KEY_THRESHOLD_PERCENTAGE));
 	}
 
 	@Override
 	public BackupAliasType getBackupAliasType() {
-		return BackupAliasType.valueOf(System.getProperty("org.sagebionetworks.backup.alias.type"));
+		return BackupAliasType.valueOf(getProperty(KEY_BACKUP_ALIAS_TYPE));
+	}
+	
+	/**
+	 * 
+	 * @param key
+	 * @return
+	 */
+	String getProperty(String key) {
+		String value = this.systemProperties.getProperty(key);
+		if(value == null) {
+			throw new IllegalArgumentException("Missing system property: "+key);
+		}
+		log.debug(key+"="+value);
+		return value;
+	}
+	
+	/**
+	 * Load the the properties from the given file path.
+	 * @param path
+	 * @return
+	 * @throws IOException
+	 */
+	Properties loadPropertiesFromPath(String path) throws IOException {
+		File file = fileProvider.getFile(path);
+		if(!file.exists()) {
+			throw new IllegalArgumentException("The propery file does not exist:"+path);
+		}
+		InputStream fis = null;
+		try{
+			fis = fileProvider.createInputStream(file);
+			Properties props = this.propProvider.createNewProperties();
+			props.load(fis);
+			return props;
+		}finally{
+			fis.close();
+		}
 	}
 	
 }

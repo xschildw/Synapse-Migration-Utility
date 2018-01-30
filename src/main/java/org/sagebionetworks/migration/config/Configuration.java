@@ -1,5 +1,8 @@
 package org.sagebionetworks.migration.config;
 
+import java.io.IOException;
+import java.util.Properties;
+
 import org.sagebionetworks.repo.model.daemon.BackupAliasType;
 
 /**
@@ -61,4 +64,6 @@ public interface Configuration {
 	 * @return
 	 */
 	public BackupAliasType getBackupAliasType();
+
+
 }
