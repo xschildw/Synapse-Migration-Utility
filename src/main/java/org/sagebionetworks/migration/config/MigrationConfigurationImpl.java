@@ -5,8 +5,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
-import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.sagebionetworks.migration.LoggerFactory;
 import org.sagebionetworks.repo.model.daemon.BackupAliasType;
 
 import com.google.inject.Inject;
@@ -16,7 +16,7 @@ import com.google.inject.Inject;
  */
 public class MigrationConfigurationImpl implements Configuration {
 
-	static private Logger log = LogManager.getLogger(MigrationConfigurationImpl.class);
+	static final String KEY_INCLUDE_FULL_TABLE_CHECKSUM = "org.sagebionerworks.include.full.table.checksum";
 
 	static final String KEY_SOURCE_REPOSITORY_ENDPOINT = "org.sagebionetworks.source.repository.endpoint";
 	static final String KEY_SOURCE_AUTHENTICATION_ENDPOINT = "org.sagebionetworks.source.authentication.endpoint";
@@ -33,13 +33,15 @@ public class MigrationConfigurationImpl implements Configuration {
 	static final String KEY_THRESHOLD_PERCENTAGE = "org.sagebionetworks.full.table.migration.threshold.percentage";
 	static final String KEY_BACKUP_ALIAS_TYPE = "org.sagebionetworks.backup.alias.type";
 	
+	Logger logger;
 	SystemPropertiesProvider propProvider;
 	FileProvider fileProvider;
 	
 	Properties systemProperties;
 	
 	@Inject
-	public MigrationConfigurationImpl(SystemPropertiesProvider propProvider, FileProvider fileProvider) throws IOException {
+	public MigrationConfigurationImpl(LoggerFactory loggerFactory, SystemPropertiesProvider propProvider, FileProvider fileProvider) throws IOException {
+		this.logger = loggerFactory.getLogger(MigrationConfigurationImpl.class);
 		this.propProvider = propProvider;
 		this.fileProvider = fileProvider;
 		// load the the System properties.
@@ -105,6 +107,11 @@ public class MigrationConfigurationImpl implements Configuration {
 		return BackupAliasType.valueOf(getProperty(KEY_BACKUP_ALIAS_TYPE));
 	}
 	
+	@Override
+	public boolean includeFullTableChecksums() {
+		return Boolean.parseBoolean(getProperty(KEY_INCLUDE_FULL_TABLE_CHECKSUM));
+	}
+	
 	/**
 	 * 
 	 * @param key
@@ -115,7 +122,6 @@ public class MigrationConfigurationImpl implements Configuration {
 		if(value == null) {
 			throw new IllegalArgumentException("Missing system property: "+key);
 		}
-		log.debug(key+"="+value);
 		return value;
 	}
 	
@@ -128,7 +134,7 @@ public class MigrationConfigurationImpl implements Configuration {
 	Properties loadPropertiesFromPath(String path) throws IOException {
 		File file = fileProvider.getFile(path);
 		if(!file.exists()) {
-			throw new IllegalArgumentException("The propery file does not exist:"+path);
+			throw new IllegalArgumentException("The property file does not exist:"+path);
 		}
 		InputStream fis = null;
 		try{
@@ -139,6 +145,16 @@ public class MigrationConfigurationImpl implements Configuration {
 		}finally{
 			fis.close();
 		}
+	}
+
+	@Override
+	public void logConfiguration() {
+		logger.info("Source: "+getSourceConnectionInfo().toString());
+		logger.info("Destination: "+getDestinationConnectionInfo().toString());
+		logger.info("Max number of retries: "+getMaxRetries());
+		logger.info("Batch size: "+getMaximumBackupBatchSize());
+		logger.info("BackupAliasType: "+getBackupAliasType());
+		logger.info("Include full table checksums: "+includeFullTableChecksums());
 	}
 	
 }

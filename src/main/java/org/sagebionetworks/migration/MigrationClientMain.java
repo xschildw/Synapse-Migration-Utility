@@ -1,43 +1,29 @@
 package org.sagebionetworks.migration;
 
-import java.io.IOException;
-
-import org.sagebionetworks.client.exceptions.SynapseException;
-import org.sagebionetworks.migration.config.Configuration;
-import org.sagebionetworks.migration.factory.SynapseClientFactory;
-import org.sagebionetworks.migration.factory.SynapseClientFactoryImpl;
-import org.sagebionetworks.schema.adapter.JSONObjectAdapterException;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 
 /**
- * The main entry point for the V3 data migration process.
+ * The main entry point for the migration process
  *
  */
 public class MigrationClientMain {
+	
+	static private Logger logger = LogManager.getLogger(MigrationClientMain.class);
 
-	/**
-	 * The main entry for for the V3 migration client.
-	 * @param args
-	 * @throws IOException 
-	 * @throws SynapseException 
-	 * @throws JSONObjectAdapterException 
-	 */
 	public static void main(String[] args) throws Exception {
-		
+		// Start IoC
 		Injector injector = Guice.createInjector(new MigrationModule());
-		
-		// First load the configuration
-		Configuration configuration = injector.getInstance(Configuration.class);	
-		// Create the client clientFactory
-		SynapseClientFactory factory = new SynapseClientFactoryImpl(configuration);
-		MigrationClient client = new MigrationClient(factory, configuration);
-		boolean failed = client.migrateWithRetry();
-		if (failed) {
+		MigrationClient client = injector.getInstance(MigrationClient.class);
+		try {
+			client.migrate();
+		}catch(Throwable e) {
+			logger.error("Migration failed: ",e);
+			// -1 signals the failure to the caller.
 			System.exit(-1);
-		} else {
-			System.exit(0);
 		}
 	}
 	
