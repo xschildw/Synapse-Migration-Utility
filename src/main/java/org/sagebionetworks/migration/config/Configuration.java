@@ -72,6 +72,12 @@ public interface Configuration {
 	 * Log the configuration.
 	 */
 	public void logConfiguration();
+	
+	/**
+	 * Get the number of MS that will be used as a delay before starting migration.
+	 * @return
+	 */
+	public long getDelayBeforeMigrationStartMS();
 
 
 }

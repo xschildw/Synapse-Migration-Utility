@@ -16,7 +16,7 @@ import com.google.inject.Inject;
  */
 public class MigrationConfigurationImpl implements Configuration {
 
-	static final String KEY_INCLUDE_FULL_TABLE_CHECKSUM = "org.sagebionerworks.include.full.table.checksum";
+
 
 	static final String KEY_SOURCE_REPOSITORY_ENDPOINT = "org.sagebionetworks.source.repository.endpoint";
 	static final String KEY_SOURCE_AUTHENTICATION_ENDPOINT = "org.sagebionetworks.source.authentication.endpoint";
@@ -32,6 +32,8 @@ public class MigrationConfigurationImpl implements Configuration {
 	static final String KEY_MAX_RETRIES = "org.sagebionetworks.max.retries";
 	static final String KEY_THRESHOLD_PERCENTAGE = "org.sagebionetworks.full.table.migration.threshold.percentage";
 	static final String KEY_BACKUP_ALIAS_TYPE = "org.sagebionetworks.backup.alias.type";
+	static final String KEY_DELAY_BEFORE_START_MS = "org.sagebionetworks.delay.before.start.ms";
+	static final String KEY_INCLUDE_FULL_TABLE_CHECKSUM = "org.sagebionerworks.include.full.table.checksum";
 	
 	Logger logger;
 	SystemPropertiesProvider propProvider;
@@ -146,6 +148,11 @@ public class MigrationConfigurationImpl implements Configuration {
 			fis.close();
 		}
 	}
+	
+	@Override
+	public long getDelayBeforeMigrationStartMS() {
+		return Long.parseLong(getProperty(KEY_DELAY_BEFORE_START_MS));
+	}
 
 	@Override
 	public void logConfiguration() {
@@ -156,6 +163,6 @@ public class MigrationConfigurationImpl implements Configuration {
 		logger.info("BackupAliasType: "+getBackupAliasType());
 		logger.info("Include full table checksums: "+includeFullTableChecksums());
 		logger.info("Asynchrouns job timeout MS: "+getWorkerTimeoutMs());
+		logger.info("Delay before migration starts MS: "+getDelayBeforeMigrationStartMS());
 	}
-	
 }

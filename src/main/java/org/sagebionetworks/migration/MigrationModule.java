@@ -12,6 +12,8 @@ import org.sagebionetworks.migration.config.SystemPropertiesProvider;
 import org.sagebionetworks.migration.config.SystemPropertiesProviderImpl;
 import org.sagebionetworks.migration.factory.SynapseClientFactory;
 import org.sagebionetworks.migration.factory.SynapseClientFactoryImpl;
+import org.sagebionetworks.util.Clock;
+import org.sagebionetworks.util.DefaultClock;
 
 import com.google.inject.AbstractModule;
 
@@ -28,6 +30,7 @@ public class MigrationModule extends AbstractModule {
 		bind(AsynchronousJobExecutor.class).to(AsynchronousJobExecutorImpl.class);
 		bind(MigrationClient.class).to(MigrationClientImpl.class);
 		bind(FutureFactory.class).to(FutureFactoryImpl.class);
+		bind(Clock.class).to(DefaultClock.class);
 	}
 
 }

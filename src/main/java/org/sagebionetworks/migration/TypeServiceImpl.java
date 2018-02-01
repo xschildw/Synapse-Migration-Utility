@@ -27,9 +27,10 @@ public class TypeServiceImpl implements TypeService {
 	AsynchronousJobExecutor asynchronousJobExecutor;
 	
 	@Inject
-	public TypeServiceImpl(SynapseClientFactory clientFactory) {
+	public TypeServiceImpl(SynapseClientFactory clientFactory, AsynchronousJobExecutor asynchronousJobExecutor) {
 		this.sourceClient = clientFactory.getSourceClient();
 		this.destinationClient = clientFactory.getDestinationClient();
+		this.asynchronousJobExecutor = asynchronousJobExecutor;
 	}
 
 	/*
