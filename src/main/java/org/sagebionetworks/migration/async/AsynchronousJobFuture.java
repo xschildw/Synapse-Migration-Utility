@@ -93,7 +93,8 @@ public class AsynchronousJobFuture<O extends AdminResponse> implements Future<O>
 		while (!isDone()) {
 			long elapse = clock.currentTimeMillis() - start;
 			if (elapse > timeout) {
-				throw new AsyncMigrationException(TIMEOUT_MESSAGE);
+				// must be a timeout exception so callers can handle this case.
+				throw new TimeoutException(TIMEOUT_MESSAGE);
 			}
 			reporter.reportProgress(jobTarget, jobStatus);
 			// wait for the job.

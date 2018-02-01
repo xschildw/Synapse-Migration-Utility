@@ -8,7 +8,9 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -20,6 +22,7 @@ import org.sagebionetworks.client.exceptions.SynapseException;
 import org.sagebionetworks.client.exceptions.SynapseServerException;
 import org.sagebionetworks.migration.AsyncMigrationException;
 import org.sagebionetworks.migration.Reporter;
+import org.sagebionetworks.migration.config.Configuration;
 import org.sagebionetworks.repo.model.asynch.AsynchJobState;
 import org.sagebionetworks.repo.model.asynch.AsynchronousJobStatus;
 import org.sagebionetworks.repo.model.migration.AsyncMigrationResponse;
@@ -36,6 +39,8 @@ public class AsynchronousJobFutureTest {
 	Reporter mockReporter;
 	@Mock
 	Clock mockClock;
+	@Mock
+	Configuration mockConfiguration;
 	
 	String jobId;
 	AsynchronousJobStatus processingStatus;
@@ -50,6 +55,7 @@ public class AsynchronousJobFutureTest {
 	
 	long defaultTimeoutMS;
 	
+	FutureFactoryImpl futureFactory;
 	AsynchronousJobFuture<RestoreTypeResponse> future;
 	
 	@Before
@@ -83,7 +89,9 @@ public class AsynchronousJobFutureTest {
 		// complete after two tries
 		when(mockClient.getAdminAsynchronousJobStatus(jobId)).thenReturn(processingStatus, processingStatus, completeStatus);
 		
-		future = new AsynchronousJobFuture<>(mockReporter, mockClock, processingStatus, jobTarget, mockClient, defaultTimeoutMS);
+		// Using the factory to create the future also tests the factory.
+		futureFactory = new FutureFactoryImpl(mockReporter, mockClock, mockConfiguration);
+		future = (AsynchronousJobFuture<RestoreTypeResponse>) futureFactory.createFuture(processingStatus, jobTarget, mockClient, RestoreTypeResponse.class);
 	}
 	
 	@Test
@@ -146,7 +154,7 @@ public class AsynchronousJobFutureTest {
 			// call under test
 			future.get(timeout, unit);
 			fail();
-		} catch (AsyncMigrationException e) {
+		} catch (TimeoutException e) {
 			// expected
 			assertEquals(AsynchronousJobFuture.TIMEOUT_MESSAGE, e.getMessage());
 		}
@@ -167,6 +175,33 @@ public class AsynchronousJobFutureTest {
 		} catch (AsyncMigrationException e) {
 			// expected
 			assertTrue(e.getMessage().contains(errorMessage));
+		}
+	}
+	
+	@Test
+	public void testGet() throws InterruptedException, ExecutionException {
+		// timeout from the config.
+		when(mockConfiguration.getWorkerTimeoutMs()).thenReturn(100L);
+		// create a new future that uses this timeout.
+		future = (AsynchronousJobFuture<RestoreTypeResponse>) futureFactory.createFuture(processingStatus, jobTarget, mockClient, RestoreTypeResponse.class);
+		// call under test
+		RestoreTypeResponse result = future.get();
+		assertEquals(wrappedReponse, result);
+	}
+	
+	@Test
+	public void testGetTimeout() throws InterruptedException, ExecutionException {
+		// timeout from the config.
+		when(mockConfiguration.getWorkerTimeoutMs()).thenReturn(1L);
+		// create a new future that uses this timeout.
+		future = (AsynchronousJobFuture<RestoreTypeResponse>) futureFactory.createFuture(processingStatus, jobTarget, mockClient, RestoreTypeResponse.class);
+		// call under test
+		try {
+			future.get();
+			fail();
+		} catch (AsyncMigrationException e) {
+			// For this case the timeout is wrapped in AsyncMigrationException.
+			assertTrue(e.getCause() instanceof TimeoutException);
 		}
 	}
 }
