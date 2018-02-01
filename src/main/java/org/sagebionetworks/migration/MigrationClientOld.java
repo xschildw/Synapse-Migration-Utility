@@ -19,7 +19,7 @@ import org.apache.logging.log4j.Logger;
 import org.sagebionetworks.client.SynapseAdminClient;
 import org.sagebionetworks.client.exceptions.SynapseException;
 import org.sagebionetworks.migration.async.AsynchronousJobExecutorImpl;
-import org.sagebionetworks.migration.async.ConcurrentExecutionResult;
+import org.sagebionetworks.migration.async.ResultPair;
 import org.sagebionetworks.migration.async.ConcurrentMigrationIdRangeChecksumsExecutor;
 import org.sagebionetworks.migration.async.ConcurrentMigrationTypeCountsExecutor;
 import org.sagebionetworks.migration.config.Configuration;
@@ -50,6 +50,7 @@ import org.sagebionetworks.tool.progress.BasicProgress;
  * The migration client.
  *
  */
+@Deprecated
 public class MigrationClientOld {
 	
 	static private Logger logger = LogManager.getLogger(MigrationClientOld.class);
@@ -73,7 +74,7 @@ public class MigrationClientOld {
 		this.typeCountsWorkerFactory = new AsyncMigrationTypeCountsWorkerFactoryImpl(clientFactory, config.getWorkerTimeoutMs());
 		this.idRangeChecksumWorkerFactory = new AsyncMigrationIdRangeChecksumWorkerFactoryImpl(clientFactory, config.getWorkerTimeoutMs());
 		threadPool = Executors.newFixedThreadPool(2);
-		this.jobExecutor = new AsynchronousJobExecutorImpl(clientFactory, config);
+		this.jobExecutor = new AsynchronousJobExecutorImpl(clientFactory, config, null);
 	}
 
 	public List<MigrationType> getCommonMigrationTypes() throws SynapseException {
@@ -197,7 +198,7 @@ public class MigrationClientOld {
 		logger.info("Computing counts for migrating types...");
 		ConcurrentMigrationTypeCountsExecutor typeCountsExecutor = new ConcurrentMigrationTypeCountsExecutor(this.threadPool, this.typeCountsWorkerFactory);
 
-		ConcurrentExecutionResult<List<MigrationTypeCount>> migrationTypeCounts = typeCountsExecutor.getMigrationTypeCounts(typesToMigrate);
+		ResultPair<List<MigrationTypeCount>> migrationTypeCounts = typeCountsExecutor.getMigrationTypeCounts(typesToMigrate);
 		List<MigrationTypeCount> startSourceCounts = migrationTypeCounts.getSourceResult();
 		List<MigrationTypeCount> startDestinationCounts = migrationTypeCounts.getDestinationResult();
 

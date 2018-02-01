@@ -15,7 +15,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.sagebionetworks.client.SynapseAdminClient;
-import org.sagebionetworks.migration.async.ConcurrentExecutionResult;
+import org.sagebionetworks.migration.async.ResultPair;
 import org.sagebionetworks.migration.async.ConcurrentMigrationIdRangeChecksumsExecutor;
 import org.sagebionetworks.repo.model.migration.MigrationRangeChecksum;
 import org.sagebionetworks.repo.model.migration.MigrationType;
@@ -168,7 +168,7 @@ public class DeltaFinderTest {
 		checksum.setMinid(1000L);
 		checksum.setMaxid(2344L);
 		checksum.setChecksum("CRC32");
-		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		ResultPair<MigrationRangeChecksum> expectedChecksums = new ResultPair<MigrationRangeChecksum>();
 		expectedChecksums.setDestinationResult(checksum);
 		expectedChecksums.setSourceResult(checksum);
 
@@ -202,7 +202,7 @@ public class DeltaFinderTest {
 		checksum.setMinid(1000L);
 		checksum.setMaxid(2344L);
 		checksum.setChecksum("CRC32");
-		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		ResultPair<MigrationRangeChecksum> expectedChecksums = new ResultPair<MigrationRangeChecksum>();
 		expectedChecksums.setDestinationResult(checksum);
 		expectedChecksums.setSourceResult(checksum);
 
@@ -241,7 +241,7 @@ public class DeltaFinderTest {
 		checksum.setMinid(1000L);
 		checksum.setMaxid(2344L);
 		checksum.setChecksum("CRC32");
-		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		ResultPair<MigrationRangeChecksum> expectedChecksums = new ResultPair<MigrationRangeChecksum>();
 		expectedChecksums.setDestinationResult(checksum);
 		expectedChecksums.setSourceResult(checksum);
 
@@ -281,7 +281,7 @@ public class DeltaFinderTest {
 		checksum.setMinid(1000L);
 		checksum.setMaxid(2344L);
 		checksum.setChecksum("CRC32");
-		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		ResultPair<MigrationRangeChecksum> expectedChecksums = new ResultPair<MigrationRangeChecksum>();
 		expectedChecksums.setDestinationResult(checksum);
 		expectedChecksums.setSourceResult(checksum);
 
@@ -320,7 +320,7 @@ public class DeltaFinderTest {
 		checksum.setMinid(1000L);
 		checksum.setMaxid(2344L);
 		checksum.setChecksum("CRC32");
-		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		ResultPair<MigrationRangeChecksum> expectedChecksums = new ResultPair<MigrationRangeChecksum>();
 		expectedChecksums.setDestinationResult(checksum);
 		expectedChecksums.setSourceResult(checksum);
 
@@ -364,7 +364,7 @@ public class DeltaFinderTest {
 		destChecksum.setMinid(1000L);
 		destChecksum.setMaxid(2344L);
 		destChecksum.setChecksum("CRC32-2");
-		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		ResultPair<MigrationRangeChecksum> expectedChecksums = new ResultPair<MigrationRangeChecksum>();
 		expectedChecksums.setDestinationResult(destChecksum);
 		expectedChecksums.setSourceResult(srcChecksum);
 
@@ -408,7 +408,7 @@ public class DeltaFinderTest {
 		destChecksum.setMinid(1000L);
 		destChecksum.setMaxid(2344L);
 		destChecksum.setChecksum(null);
-		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		ResultPair<MigrationRangeChecksum> expectedChecksums = new ResultPair<MigrationRangeChecksum>();
 		expectedChecksums.setDestinationResult(destChecksum);
 		expectedChecksums.setSourceResult(srcChecksum);
 
@@ -451,7 +451,7 @@ public class DeltaFinderTest {
 		expectedChecksum2.setMinid(1000L);
 		expectedChecksum2.setMaxid(1019L);
 		expectedChecksum2.setChecksum("CRC32-1-2");
-		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums1 = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		ResultPair<MigrationRangeChecksum> expectedChecksums1 = new ResultPair<MigrationRangeChecksum>();
 		expectedChecksums1.setSourceResult(expectedChecksum1);
 		expectedChecksums1.setDestinationResult(expectedChecksum2);
 		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1000L, 1019L)).thenReturn(expectedChecksums1);
@@ -463,7 +463,7 @@ public class DeltaFinderTest {
 		expectedChecksum3.setMinid(1000L);
 		expectedChecksum3.setMaxid(1009L);
 		expectedChecksum3.setChecksum("CRC32-2-1");
-		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums2 = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		ResultPair<MigrationRangeChecksum> expectedChecksums2 = new ResultPair<MigrationRangeChecksum>();
 		expectedChecksums2.setSourceResult(expectedChecksum3);
 		expectedChecksums2.setDestinationResult(expectedChecksum3);
 		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1000L, 1009L)).thenReturn(expectedChecksums2);
@@ -479,7 +479,7 @@ public class DeltaFinderTest {
 		expectedChecksum5.setMinid(1010L);
 		expectedChecksum5.setMaxid(1019L);
 		expectedChecksum5.setChecksum("CRC32-2-3");
-		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums3 = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		ResultPair<MigrationRangeChecksum> expectedChecksums3 = new ResultPair<MigrationRangeChecksum>();
 		expectedChecksums3.setSourceResult(expectedChecksum4);
 		expectedChecksums3.setDestinationResult(expectedChecksum5);
 		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1010L, 1019L)).thenReturn(expectedChecksums3);
@@ -523,7 +523,7 @@ public class DeltaFinderTest {
 		expectedChecksum2.setMinid(1000L);
 		expectedChecksum2.setMaxid(1020L);
 		expectedChecksum2.setChecksum("CRC32-1-2");
-		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums1 = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		ResultPair<MigrationRangeChecksum> expectedChecksums1 = new ResultPair<MigrationRangeChecksum>();
 		expectedChecksums1.setSourceResult(expectedChecksum1);
 		expectedChecksums1.setDestinationResult(expectedChecksum2);
 		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1000L, 1020L)).thenReturn(expectedChecksums1);
@@ -535,7 +535,7 @@ public class DeltaFinderTest {
 		expectedChecksum3.setMinid(1000L);
 		expectedChecksum3.setMaxid(1010L);
 		expectedChecksum3.setChecksum("CRC32-2-1");
-		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums2 = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		ResultPair<MigrationRangeChecksum> expectedChecksums2 = new ResultPair<MigrationRangeChecksum>();
 		expectedChecksums2.setSourceResult(expectedChecksum3);
 		expectedChecksums2.setDestinationResult(expectedChecksum3);
 		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1000L, 1010L)).thenReturn(expectedChecksums2);
@@ -551,7 +551,7 @@ public class DeltaFinderTest {
 		expectedChecksum5.setMinid(1011L);
 		expectedChecksum5.setMaxid(1020L);
 		expectedChecksum5.setChecksum("CRC32-2-3");
-		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums3 = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		ResultPair<MigrationRangeChecksum> expectedChecksums3 = new ResultPair<MigrationRangeChecksum>();
 		expectedChecksums3.setSourceResult(expectedChecksum4);
 		expectedChecksums3.setDestinationResult(expectedChecksum5);
 		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1011L, 1020L)).thenReturn(expectedChecksums3);
@@ -593,7 +593,7 @@ public class DeltaFinderTest {
 		expectedChecksum2.setMinid(1000L);
 		expectedChecksum2.setMaxid(1039L);
 		expectedChecksum2.setChecksum("CRC32-1-2");
-		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums1 = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		ResultPair<MigrationRangeChecksum> expectedChecksums1 = new ResultPair<MigrationRangeChecksum>();
 		expectedChecksums1.setSourceResult(expectedChecksum1);
 		expectedChecksums1.setDestinationResult(expectedChecksum2);
 		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1000L, 1039L)).thenReturn(expectedChecksums1);
@@ -610,7 +610,7 @@ public class DeltaFinderTest {
 		expectedChecksum4.setMinid(1000L);
 		expectedChecksum4.setMaxid(1019L);
 		expectedChecksum4.setChecksum("CRC32-2-2");
-		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums2 = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		ResultPair<MigrationRangeChecksum> expectedChecksums2 = new ResultPair<MigrationRangeChecksum>();
 		expectedChecksums2.setSourceResult(expectedChecksum3);
 		expectedChecksums2.setDestinationResult(expectedChecksum4);
 		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1000L, 1019L)).thenReturn(expectedChecksums2);
@@ -626,7 +626,7 @@ public class DeltaFinderTest {
 		expectedChecksum6.setMinid(1020L);
 		expectedChecksum6.setMaxid(1039L);
 		expectedChecksum6.setChecksum("CRC32-2-4");
-		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums3 = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		ResultPair<MigrationRangeChecksum> expectedChecksums3 = new ResultPair<MigrationRangeChecksum>();
 		expectedChecksums3.setSourceResult(expectedChecksum5);
 		expectedChecksums3.setDestinationResult(expectedChecksum6);
 		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1020L, 1039L)).thenReturn(expectedChecksums3);
@@ -643,7 +643,7 @@ public class DeltaFinderTest {
 		expectedChecksum8.setMinid(1000L);
 		expectedChecksum8.setMaxid(1009L);
 		expectedChecksum8.setChecksum("CRC32-3-2");
-		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums4 = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		ResultPair<MigrationRangeChecksum> expectedChecksums4 = new ResultPair<MigrationRangeChecksum>();
 		expectedChecksums4.setSourceResult(expectedChecksum7);
 		expectedChecksums4.setDestinationResult(expectedChecksum8);
 		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1000L, 1009L)).thenReturn(expectedChecksums4);
@@ -654,7 +654,7 @@ public class DeltaFinderTest {
 		expectedChecksum9.setMinid(1010L);
 		expectedChecksum9.setMaxid(1019L);
 		expectedChecksum9.setChecksum("CRC32-3-3");
-		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums5 = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		ResultPair<MigrationRangeChecksum> expectedChecksums5 = new ResultPair<MigrationRangeChecksum>();
 		expectedChecksums5.setSourceResult(expectedChecksum9);
 		expectedChecksums5.setDestinationResult(expectedChecksum9);
 		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1010L, 1019L)).thenReturn(expectedChecksums5);
@@ -665,7 +665,7 @@ public class DeltaFinderTest {
 		expectedChecksum10.setMinid(1020L);
 		expectedChecksum10.setMaxid(1029L);
 		expectedChecksum10.setChecksum("CRC32-3-4");
-		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums6 = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		ResultPair<MigrationRangeChecksum> expectedChecksums6 = new ResultPair<MigrationRangeChecksum>();
 		expectedChecksums6.setSourceResult(expectedChecksum10);
 		expectedChecksums6.setDestinationResult(expectedChecksum10);
 		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1020L, 1029L)).thenReturn(expectedChecksums6);
@@ -681,7 +681,7 @@ public class DeltaFinderTest {
 		expectedChecksum12.setMinid(1030L);
 		expectedChecksum12.setMaxid(1039L);
 		expectedChecksum12.setChecksum("CRC32-3-6");
-		ConcurrentExecutionResult<MigrationRangeChecksum> expectedChecksums7 = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		ResultPair<MigrationRangeChecksum> expectedChecksums7 = new ResultPair<MigrationRangeChecksum>();
 		expectedChecksums7.setSourceResult(expectedChecksum11);
 		expectedChecksums7.setDestinationResult(expectedChecksum12);
 		when(mockChecksumsExecutor.getIdRangeChecksums(MigrationType.FILE_HANDLE, "salt", 1030L, 1039L)).thenReturn(expectedChecksums7);

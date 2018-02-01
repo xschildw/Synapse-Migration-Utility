@@ -31,8 +31,7 @@ public class StackStatusServiceImpl implements StackStatusService {
 			status.setStatus(StatusEnum.READ_ONLY);
 			destinationClient.updateCurrentStackStatus(status);
 		} catch (SynapseException e) {
-			// throw a runtime to terminate migration
-			throw new RuntimeException(e);
+			throw new AsyncMigrationException(e);
 		}
 	}
 
@@ -44,8 +43,7 @@ public class StackStatusServiceImpl implements StackStatusService {
 			status.setStatus(StatusEnum.READ_WRITE);
 			destinationClient.updateCurrentStackStatus(status);
 		} catch (SynapseException e) {
-			// throw a runtime to terminate migration.
-			throw new RuntimeException(e);
+			throw new AsyncMigrationException(e);
 		}
 	}
 
@@ -55,8 +53,7 @@ public class StackStatusServiceImpl implements StackStatusService {
 			StackStatus status = sourceClient.getCurrentStackStatus();
 			return StatusEnum.READ_ONLY == status.getStatus();
 		} catch (SynapseException e) {
-			// throw a runtime to terminate migration.
-			throw new RuntimeException(e);
+			throw new AsyncMigrationException(e);
 		}
 	}
 

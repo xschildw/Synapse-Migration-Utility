@@ -1,9 +1,9 @@
 package org.sagebionetworks.migration.async;
 
 /**
- * A container for a pair of results (any type)
+ * A container for a pair of results from both the source and destination.
  */
-public class ConcurrentExecutionResult<T> {
+public class ResultPair<T> {
 
 	private T srcResult;
 	private T destResult;
@@ -44,7 +44,7 @@ public class ConcurrentExecutionResult<T> {
 		if (this.getClass()!= obj.getClass()) {
 			return false;
 		}
-		ConcurrentExecutionResult<T> other = ((ConcurrentExecutionResult<T>) obj);
+		ResultPair<T> other = ((ResultPair<T>) obj);
 		if (srcResult == null) {
 			if (other.srcResult != null) {
 				return false;

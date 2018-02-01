@@ -3,7 +3,7 @@ package org.sagebionetworks.migration;
 import java.util.List;
 
 import org.apache.logging.log4j.Logger;
-import org.sagebionetworks.migration.async.ConcurrentExecutionResult;
+import org.sagebionetworks.migration.async.ResultPair;
 import org.sagebionetworks.migration.config.Configuration;
 import org.sagebionetworks.repo.model.migration.MigrationType;
 import org.sagebionetworks.repo.model.migration.MigrationTypeChecksum;
@@ -16,13 +16,13 @@ public class FullMigrationImpl implements FullMigration {
 	Logger logger;
 	StackStatusService stackStatusService;
 	TypeService typeService;
-	TypeReporter typeReporter;
+	Reporter typeReporter;
 	AsynchronousMigration asynchronousMigration;
 	Configuration config;
 
 	@Inject
 	public FullMigrationImpl(LoggerFactory loggerFactory, StackStatusService stackStatusService,
-			TypeService typeService, TypeReporter typeReporter, AsynchronousMigration asynchronousMigration,
+			TypeService typeService, Reporter typeReporter, AsynchronousMigration asynchronousMigration,
 			Configuration config) {
 		super();
 		this.logger = loggerFactory.getLogger(FullMigrationImpl.class);
@@ -43,7 +43,7 @@ public class FullMigrationImpl implements FullMigration {
 
 		// Get the counts for all types
 		logger.info("Computing counts for migrating types...");
-		ConcurrentExecutionResult<List<MigrationTypeCount>> countResults = typeService
+		ResultPair<List<MigrationTypeCount>> countResults = typeService
 				.getMigrationTypeCounts(allCommonTypes);
 
 		// print the counts to the log.
@@ -66,7 +66,7 @@ public class FullMigrationImpl implements FullMigration {
 		if (config.includeFullTableChecksums()) {
 			if (stackStatusService.isSourceReadOnly()) {
 				logger.info("Starting full table checksums...");
-				ConcurrentExecutionResult<List<MigrationTypeChecksum>> checksums = typeService
+				ResultPair<List<MigrationTypeChecksum>> checksums = typeService
 						.getFullTableChecksums(allCommonTypes);
 				typeReporter.reportChecksums(checksums);
 			} else {

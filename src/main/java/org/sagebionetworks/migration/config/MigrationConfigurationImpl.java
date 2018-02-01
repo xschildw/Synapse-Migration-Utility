@@ -155,6 +155,7 @@ public class MigrationConfigurationImpl implements Configuration {
 		logger.info("Batch size: "+getMaximumBackupBatchSize());
 		logger.info("BackupAliasType: "+getBackupAliasType());
 		logger.info("Include full table checksums: "+includeFullTableChecksums());
+		logger.info("Asynchrouns job timeout MS: "+getWorkerTimeoutMs());
 	}
 	
 }

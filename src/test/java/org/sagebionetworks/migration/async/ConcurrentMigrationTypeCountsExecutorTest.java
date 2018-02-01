@@ -79,14 +79,14 @@ public class ConcurrentMigrationTypeCountsExecutorTest {
         when(mockDestinationWorker.call()).thenReturn(expectedTypeCounts);
 
         // Expected result
-        ConcurrentExecutionResult<List<MigrationTypeCount>> expectedResult = new ConcurrentExecutionResult<List<MigrationTypeCount>>();
+        ResultPair<List<MigrationTypeCount>> expectedResult = new ResultPair<List<MigrationTypeCount>>();
         expectedResult.setSourceResult(l);
         expectedResult.setDestinationResult(l);
 
         ConcurrentMigrationTypeCountsExecutor executor = new ConcurrentMigrationTypeCountsExecutor(threadPool, mockFactory);
 
         // Call under test
-        ConcurrentExecutionResult<List<MigrationTypeCount>> concTypeCounts = executor.getMigrationTypeCounts(types);
+        ResultPair<List<MigrationTypeCount>> concTypeCounts = executor.getMigrationTypeCounts(types);
 
         assertNotNull(concTypeCounts);
         assertEquals(expectedResult, concTypeCounts);
@@ -109,7 +109,7 @@ public class ConcurrentMigrationTypeCountsExecutorTest {
         ConcurrentMigrationTypeCountsExecutor executor = new ConcurrentMigrationTypeCountsExecutor(threadPool, mockFactory);
 
         // Call under test
-        ConcurrentExecutionResult<List<MigrationTypeCount>> concTypeCounts = executor.getMigrationTypeCounts(types);
+        ResultPair<List<MigrationTypeCount>> concTypeCounts = executor.getMigrationTypeCounts(types);
     }
 
 }

@@ -18,7 +18,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
-import org.sagebionetworks.migration.async.ConcurrentExecutionResult;
+import org.sagebionetworks.migration.async.ResultPair;
 import org.sagebionetworks.migration.config.Configuration;
 import org.sagebionetworks.repo.model.migration.MigrationType;
 import org.sagebionetworks.repo.model.migration.MigrationTypeChecksum;
@@ -38,7 +38,7 @@ public class FullMigrationImplTest {
 	@Mock
 	TypeService mockTypeService;
 	@Mock
-	TypeReporter mockTypeReporter;
+	Reporter mockTypeReporter;
 	@Mock
 	AsynchronousMigration mockAsynchronousMigration;
 	@Mock
@@ -46,10 +46,10 @@ public class FullMigrationImplTest {
 	
 	List<MigrationType> allCommonTypes;
 	List<MigrationType> commonPrimaryTypes;
-	ConcurrentExecutionResult<List<MigrationTypeCount>> countResultsOne;
-	ConcurrentExecutionResult<List<MigrationTypeCount>> countResultsTwo;
+	ResultPair<List<MigrationTypeCount>> countResultsOne;
+	ResultPair<List<MigrationTypeCount>> countResultsTwo;
 	
-	ConcurrentExecutionResult<List<MigrationTypeChecksum>> checksumResutls;
+	ResultPair<List<MigrationTypeChecksum>> checksumResutls;
 
 	FullMigrationImpl fullMigration;
 
@@ -65,14 +65,14 @@ public class FullMigrationImplTest {
 		startCount.setType(MigrationType.NODE);
 		startCount.setCount(0L);
 		
-		countResultsOne = new ConcurrentExecutionResult<List<MigrationTypeCount>>();
+		countResultsOne = new ResultPair<List<MigrationTypeCount>>();
 		countResultsOne.setDestinationResult(Lists.newArrayList(startCount));
 		
 		MigrationTypeCount endCount = new MigrationTypeCount();
 		endCount.setType(MigrationType.NODE);
 		endCount.setCount(100L);
 		
-		countResultsTwo = new ConcurrentExecutionResult<List<MigrationTypeCount>>();
+		countResultsTwo = new ResultPair<List<MigrationTypeCount>>();
 		countResultsTwo.setDestinationResult(Lists.newArrayList(endCount));
 		
 		when(mockTypeService.getMigrationTypeCounts(anyListOf(MigrationType.class))).thenReturn(countResultsOne, countResultsTwo);
@@ -83,7 +83,7 @@ public class FullMigrationImplTest {
 		when(mockConfiguration.includeFullTableChecksums()).thenReturn(true);
 		when(mockStackStatusService.isSourceReadOnly()).thenReturn(true);
 		
-		checksumResutls = new ConcurrentExecutionResult<List<MigrationTypeChecksum>>();
+		checksumResutls = new ResultPair<List<MigrationTypeChecksum>>();
 		when(mockTypeService.getFullTableChecksums(allCommonTypes)).thenReturn(checksumResutls);
 	}
 	

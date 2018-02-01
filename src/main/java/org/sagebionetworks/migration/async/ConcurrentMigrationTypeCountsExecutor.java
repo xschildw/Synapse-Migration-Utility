@@ -26,7 +26,7 @@ public class ConcurrentMigrationTypeCountsExecutor {
         this.workerFactory = asyncMigrationTypeCountsFactory;
     }
 
-    public ConcurrentExecutionResult<List<MigrationTypeCount>> getMigrationTypeCounts(List<MigrationType> migrationTypes) throws AsyncMigrationException {
+    public ResultPair<List<MigrationTypeCount>> getMigrationTypeCounts(List<MigrationType> migrationTypes) throws AsyncMigrationException {
 
         try {
             AsyncMigrationTypeCountsWorker sourceWorker = this.workerFactory.getSourceWorker(migrationTypes);
@@ -38,7 +38,7 @@ public class ConcurrentMigrationTypeCountsExecutor {
             MigrationTypeCounts sourceMigrationTypeCounts = futureSourceMigrationTypeCounts.get();
             MigrationTypeCounts destinationMigrationTypeCounts = futureDestinationMigrationTypeCounts.get();
 
-            ConcurrentExecutionResult<List<MigrationTypeCount>> results = new ConcurrentExecutionResult<List<MigrationTypeCount>>();
+            ResultPair<List<MigrationTypeCount>> results = new ResultPair<List<MigrationTypeCount>>();
             results.setSourceResult(sourceMigrationTypeCounts.getList());
             results.setDestinationResult(destinationMigrationTypeCounts.getList());
             return results;

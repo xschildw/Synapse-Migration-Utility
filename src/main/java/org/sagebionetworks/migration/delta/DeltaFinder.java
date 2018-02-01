@@ -7,7 +7,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.sagebionetworks.client.SynapseAdminClient;
 import org.sagebionetworks.client.exceptions.SynapseException;
-import org.sagebionetworks.migration.async.ConcurrentExecutionResult;
+import org.sagebionetworks.migration.async.ResultPair;
 import org.sagebionetworks.migration.async.ConcurrentMigrationIdRangeChecksumsExecutor;
 import org.sagebionetworks.repo.model.migration.AdminResponse;
 import org.sagebionetworks.repo.model.migration.AsyncMigrationRangeChecksumRequest;
@@ -110,7 +110,7 @@ public class DeltaFinder {
 	
 	private List<IdRange> findUpdDeltaRanges(MigrationType type, String salt, long minId, long maxId, long batchSize) throws SynapseException, JSONObjectAdapterException, InterruptedException {
 		List<IdRange> l = new LinkedList<IdRange>();
-		ConcurrentExecutionResult<MigrationRangeChecksum> rangeChecksums = this.concurrentIdRangeChecksumExecutor.getIdRangeChecksums(type, salt, minId, maxId);
+		ResultPair<MigrationRangeChecksum> rangeChecksums = this.concurrentIdRangeChecksumExecutor.getIdRangeChecksums(type, salt, minId, maxId);
 		MigrationRangeChecksum srcCrc32 = rangeChecksums.getSourceResult();
 		MigrationRangeChecksum destCrc32 = rangeChecksums.getDestinationResult();
 		//log.info("Computed range checksums from " + minId + " to " + maxId + ": (" + srcCrc32.getChecksum() + ", " + destCrc32.getChecksum() + ").");

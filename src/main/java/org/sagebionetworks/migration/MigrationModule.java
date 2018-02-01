@@ -2,6 +2,8 @@ package org.sagebionetworks.migration;
 
 import org.sagebionetworks.migration.async.AsynchronousJobExecutor;
 import org.sagebionetworks.migration.async.AsynchronousJobExecutorImpl;
+import org.sagebionetworks.migration.async.FutureFactory;
+import org.sagebionetworks.migration.async.FutureFactoryImpl;
 import org.sagebionetworks.migration.config.Configuration;
 import org.sagebionetworks.migration.config.FileProvider;
 import org.sagebionetworks.migration.config.FileProviderImp;
@@ -25,6 +27,7 @@ public class MigrationModule extends AbstractModule {
 		bind(SynapseClientFactory.class).to(SynapseClientFactoryImpl.class);
 		bind(AsynchronousJobExecutor.class).to(AsynchronousJobExecutorImpl.class);
 		bind(MigrationClient.class).to(MigrationClientImpl.class);
+		bind(FutureFactory.class).to(FutureFactoryImpl.class);
 	}
 
 }

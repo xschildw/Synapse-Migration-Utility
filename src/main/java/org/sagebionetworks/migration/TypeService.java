@@ -2,7 +2,7 @@ package org.sagebionetworks.migration;
 
 import java.util.List;
 
-import org.sagebionetworks.migration.async.ConcurrentExecutionResult;
+import org.sagebionetworks.migration.async.ResultPair;
 import org.sagebionetworks.repo.model.migration.MigrationType;
 import org.sagebionetworks.repo.model.migration.MigrationTypeChecksum;
 import org.sagebionetworks.repo.model.migration.MigrationTypeCount;
@@ -30,7 +30,7 @@ public interface TypeService {
 	 * @return
 	 * @throws AsyncMigrationException
 	 */
-	public ConcurrentExecutionResult<List<MigrationTypeCount>> getMigrationTypeCounts(
+	public ResultPair<List<MigrationTypeCount>> getMigrationTypeCounts(
 			List<MigrationType> migrationTypes) throws AsyncMigrationException;
 
 	/**
@@ -38,6 +38,6 @@ public interface TypeService {
 	 * @param migrationTypes
 	 * @return
 	 */
-	public ConcurrentExecutionResult<List<MigrationTypeChecksum>> getFullTableChecksums(
+	public ResultPair<List<MigrationTypeChecksum>> getFullTableChecksums(
 			List<MigrationType> migrationTypes);
 }
