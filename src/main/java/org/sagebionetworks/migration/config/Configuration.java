@@ -79,5 +79,12 @@ public interface Configuration {
 	 */
 	public long getDelayBeforeMigrationStartMS();
 
+	/**
+	 * Get the maximum number of concurrent jobs that can run agaisnt the destination.
+	 * 
+	 * @return
+	 */
+	public int getMaximumNumberOfDestinationJobs();
+
 
 }

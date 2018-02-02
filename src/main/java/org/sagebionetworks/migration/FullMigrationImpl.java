@@ -3,8 +3,11 @@ package org.sagebionetworks.migration;
 import java.util.List;
 
 import org.apache.logging.log4j.Logger;
+import org.sagebionetworks.migration.async.AsynchronousMigration;
 import org.sagebionetworks.migration.async.ResultPair;
 import org.sagebionetworks.migration.config.Configuration;
+import org.sagebionetworks.migration.utils.ToolMigrationUtils;
+import org.sagebionetworks.migration.utils.TypeToMigrateMetadata;
 import org.sagebionetworks.repo.model.migration.MigrationType;
 import org.sagebionetworks.repo.model.migration.MigrationTypeChecksum;
 import org.sagebionetworks.repo.model.migration.MigrationTypeCount;
@@ -43,17 +46,19 @@ public class FullMigrationImpl implements FullMigration {
 
 		// Get the counts for all types
 		logger.info("Computing counts for migrating types...");
-		ResultPair<List<MigrationTypeCount>> countResults = typeService
-				.getMigrationTypeCounts(allCommonTypes);
+		ResultPair<List<MigrationTypeCount>> countResults = typeService.getMigrationTypeCounts(allCommonTypes);
 
 		// print the counts to the log.
 		typeReporter.reportCountDifferences(countResults);
 		// Give the caller a chance to cancel before migration starts
 		typeReporter.runCountDownBeforeStart();
 
+		// Build the metadata for each type
+		List<TypeToMigrateMetadata> typesToMigrate = ToolMigrationUtils.buildTypeToMigrateMetadata(
+				countResults.getSourceResult(), countResults.getDestinationResult(), commonPrimaryTypes);
 		// run the migration process asynchronously
 		logger.info("Starting the asynchronous of all types...");
-		asynchronousMigration.migratePrimaryTypes(commonPrimaryTypes);
+		asynchronousMigration.migratePrimaryTypes(typesToMigrate);
 
 		// Gather the final counts
 		logger.info("Computing final counts...");
@@ -66,8 +71,7 @@ public class FullMigrationImpl implements FullMigration {
 		if (config.includeFullTableChecksums()) {
 			if (stackStatusService.isSourceReadOnly()) {
 				logger.info("Starting full table checksums...");
-				ResultPair<List<MigrationTypeChecksum>> checksums = typeService
-						.getFullTableChecksums(allCommonTypes);
+				ResultPair<List<MigrationTypeChecksum>> checksums = typeService.getFullTableChecksums(allCommonTypes);
 				typeReporter.reportChecksums(checksums);
 			} else {
 				logger.info("Source is not in READ-ONLY so the full table checksum will be skipped");

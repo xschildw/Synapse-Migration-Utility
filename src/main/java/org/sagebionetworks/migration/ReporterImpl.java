@@ -81,7 +81,7 @@ public class ReporterImpl implements Reporter {
 		AdminRequest adminRequest = request.getAdminRequest();
 		long jobStratedOn = jobStatus.getStartedOn().getTime();
 		long elapse = clock.currentTimeMillis() - jobStratedOn;
-		String elapseString = formatedElapseMS(elapse);
+		String elapseString = formatElapse(elapse);
 		logger.info(String.format(WAITING_FOR_JOB_TEMPLATE, jobStatus.getJobId(), jobTarget.name(),
 				adminRequest.getClass().getSimpleName(), elapseString));
 	}
@@ -91,7 +91,7 @@ public class ReporterImpl implements Reporter {
 	 * @param elapse
 	 * @return
 	 */
-	public static String formatedElapseMS(long elapse) {
+	public static String formatElapse(long elapse) {
 		long hours = TimeUnit.MILLISECONDS.toHours(elapse);
 		long mins = TimeUnit.MILLISECONDS.toMinutes(elapse) % 60;
 		long sec = TimeUnit.MILLISECONDS.toSeconds(elapse) % 60;

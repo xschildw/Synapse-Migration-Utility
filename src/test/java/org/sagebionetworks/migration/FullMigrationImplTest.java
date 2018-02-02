@@ -1,16 +1,13 @@
 package org.sagebionetworks.migration;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.doThrow;
+import static org.mockito.Matchers.anyListOf;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.List;
-
-import static org.mockito.Mockito.*;
 
 import org.apache.logging.log4j.Logger;
 import org.junit.Before;
@@ -18,8 +15,11 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
+import org.sagebionetworks.migration.async.AsynchronousMigration;
 import org.sagebionetworks.migration.async.ResultPair;
 import org.sagebionetworks.migration.config.Configuration;
+import org.sagebionetworks.migration.utils.ToolMigrationUtils;
+import org.sagebionetworks.migration.utils.TypeToMigrateMetadata;
 import org.sagebionetworks.repo.model.migration.MigrationType;
 import org.sagebionetworks.repo.model.migration.MigrationTypeChecksum;
 import org.sagebionetworks.repo.model.migration.MigrationTypeCount;
@@ -50,6 +50,8 @@ public class FullMigrationImplTest {
 	ResultPair<List<MigrationTypeCount>> countResultsTwo;
 	
 	ResultPair<List<MigrationTypeChecksum>> checksumResutls;
+	
+	List<TypeToMigrateMetadata> typesToMigrate;
 
 	FullMigrationImpl fullMigration;
 
@@ -61,12 +63,21 @@ public class FullMigrationImplTest {
 		commonPrimaryTypes = Lists.newArrayList(MigrationType.NODE);
 		when(mockTypeService.getCommonPrimaryMigrationTypes()).thenReturn(commonPrimaryTypes);
 
-		MigrationTypeCount startCount = new MigrationTypeCount();
-		startCount.setType(MigrationType.NODE);
-		startCount.setCount(0L);
+		MigrationTypeCount sourceCount = new MigrationTypeCount();
+		sourceCount.setType(MigrationType.NODE);
+		sourceCount.setCount(0L);
+		sourceCount.setMinid(4L);
+		sourceCount.setMaxid(101L);
+		
+		MigrationTypeCount destinationCount = new MigrationTypeCount();
+		destinationCount.setType(MigrationType.NODE);
+		destinationCount.setCount(0L);
+		destinationCount.setMaxid(4L);
+		destinationCount.setMaxid(15L);
 		
 		countResultsOne = new ResultPair<List<MigrationTypeCount>>();
-		countResultsOne.setDestinationResult(Lists.newArrayList(startCount));
+		countResultsOne.setSourceResult(Lists.newArrayList(sourceCount));
+		countResultsOne.setDestinationResult(Lists.newArrayList(destinationCount));
 		
 		MigrationTypeCount endCount = new MigrationTypeCount();
 		endCount.setType(MigrationType.NODE);
@@ -76,6 +87,9 @@ public class FullMigrationImplTest {
 		countResultsTwo.setDestinationResult(Lists.newArrayList(endCount));
 		
 		when(mockTypeService.getMigrationTypeCounts(anyListOf(MigrationType.class))).thenReturn(countResultsOne, countResultsTwo);
+		
+		typesToMigrate = ToolMigrationUtils.buildTypeToMigrateMetadata(
+				countResultsOne.getSourceResult(), countResultsOne.getDestinationResult(), commonPrimaryTypes);
 		
 		fullMigration = new FullMigrationImpl(mockLoggerFactory, mockStackStatusService, mockTypeService,
 				mockTypeReporter, mockAsynchronousMigration, mockConfiguration);
@@ -93,7 +107,7 @@ public class FullMigrationImplTest {
 		fullMigration.runFullMigration();
 		verify(mockTypeService).getAllCommonMigrationTypes();
 		verify(mockTypeService).getCommonPrimaryMigrationTypes();
-		verify(mockAsynchronousMigration).migratePrimaryTypes(commonPrimaryTypes);
+		verify(mockAsynchronousMigration).migratePrimaryTypes(typesToMigrate);
 		// called at start and end.
 		verify(mockTypeService, times(2)).getMigrationTypeCounts(allCommonTypes);
 		verify(mockTypeReporter).runCountDownBeforeStart();

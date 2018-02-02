@@ -30,7 +30,6 @@ import org.sagebionetworks.repo.model.migration.RestoreTypeResponse;
 import org.sagebionetworks.util.Clock;
 
 @RunWith(MockitoJUnitRunner.class)
-
 public class AsynchronousJobFutureTest {
 
 	@Mock

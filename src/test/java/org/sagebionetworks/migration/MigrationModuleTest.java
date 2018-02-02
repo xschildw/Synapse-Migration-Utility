@@ -10,7 +10,6 @@ import com.google.inject.Injector;
 
 public class MigrationModuleTest {
 	
-	@Ignore // not ready yet
 	@Test
 	public void testInjector() {
 		// Simple test to determine if the Guice can build all of the dependencies.

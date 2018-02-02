@@ -131,26 +131,26 @@ public class ReporterImplTest {
 	}
 	
 	@Test
-	public void testFormatedElapseMS() {
+	public void testFormatElapseMS() {
 		long hoursMS = 13 *60*60*1000;
 		long minMS = 49*60*1000;
 		long secMS = 59 * 1000;
 		long ms = 456;
 		long total = hoursMS+minMS+ secMS+ms;
 		// call under test
-		String result = ReporterImpl.formatedElapseMS(total);
+		String result = ReporterImpl.formatElapse(total);
 		assertEquals("13:49:59.456", result);
 	}
 	
 	@Test
-	public void testFormatedElapseMSPadded() {
+	public void testFormatElapseMSPadded() {
 		long hoursMS = 1 *60*60*1000;
 		long minMS = 2*60*1000;
 		long secMS = 3 * 1000;
 		long ms = 4;
 		long total = hoursMS+minMS+ secMS+ms;
 		// call under test
-		String result = ReporterImpl.formatedElapseMS(total);
+		String result = ReporterImpl.formatElapse(total);
 		assertEquals("01:02:03.004", result);
 	}
 	
