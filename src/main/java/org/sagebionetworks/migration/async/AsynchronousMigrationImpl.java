@@ -20,7 +20,7 @@ import com.google.inject.Inject;
  */
 public class AsynchronousMigrationImpl implements AsynchronousMigration {
 	
-	private static final long SLEEP_TIME_MS = 2000L;
+	static final long SLEEP_TIME_MS = 2000L;
 	
 	Configuration config;
 	DestinationJobBuilder jobBuilder;
@@ -64,6 +64,12 @@ public class AsynchronousMigrationImpl implements AsynchronousMigration {
 				}
 			}
 		}
+		try {
+			// wait for any remaining jobs to complete.
+			waitForJobsToTerminate(activeDestinationJobs);
+		} catch (AsyncMigrationException e) {
+			lastException = e;
+		}
 		if(lastException != null) {
 			// throwing this exception signals another migration run is required.
 			throw lastException;
@@ -71,9 +77,28 @@ public class AsynchronousMigrationImpl implements AsynchronousMigration {
 	}
 
 	/**
+	 * Wait for all of the given jobs to terminate.
+	 * 
+	 * @param activeDestinationJobs
+	 */
+	void waitForJobsToTerminate(List<Future<?>> activeDestinationJobs) {
+		AsyncMigrationException lastException = null;
+		for(Future<?> future: activeDestinationJobs) {
+			try {
+				getJobResults(future);
+			} catch (AsyncMigrationException e) {
+				lastException = e;
+			}
+		}
+		if(lastException != null) {
+			throw lastException;
+		}
+	}
+
+	/**
 	 * Sleep for two seconds.
 	 */
-	private void sleep() {
+	void sleep() {
 		try {
 			clock.sleep(SLEEP_TIME_MS);
 		} catch (InterruptedException e1) {
@@ -89,24 +114,42 @@ public class AsynchronousMigrationImpl implements AsynchronousMigration {
 	 * @return
 	 */
 	void removeTerminatedJobs(List<Future<?>> activeDestinationJobs) {
+		AsyncMigrationException lastException = null;
 		// find an remove any completed jobs.
 		Iterator<Future<?>> futureIterator = activeDestinationJobs.iterator();
 		while(futureIterator.hasNext()) {
 			Future<?> jobFuture = futureIterator.next();
-			if(jobFuture.isDone()) {
-				// unconditionally remove this job from the list.
-				futureIterator.remove();
-				try {
-					// call get to determine if the job succeeded.
-					jobFuture.get();
-				}catch(AsyncMigrationException e) {
-					// Indicates that another migration run is required without terminating this run.
-					throw e;
-				} catch (Exception e) {
-					// any other type of exception will terminate the migration.
-					throw new RuntimeException(e);
+			try {
+				if(jobFuture.isDone()) {
+					getJobResults(jobFuture);
+					// remove complete jobs
+					futureIterator.remove();
 				}
+			} catch (AsyncMigrationException e) {
+				// removed failed jobs
+				futureIterator.remove();
+				lastException = e;
 			}
+		}
+		if(lastException != null) {
+			throw lastException;
+		}
+	}
+
+	/**
+	 * Get the job results
+	 * @param jobFuture
+	 */
+	void getJobResults(Future<?> jobFuture) {
+		try {
+			// call get to determine if the job succeeded.
+			jobFuture.get();
+		}catch(AsyncMigrationException e) {
+			// Indicates that another migration run is required without terminating this run.
+			throw e;
+		} catch (Exception e) {
+			// any other type of exception will terminate the migration.
+			throw new RuntimeException(e);
 		}
 	}
 	
