@@ -2,8 +2,14 @@ package org.sagebionetworks.migration;
 
 import org.sagebionetworks.migration.async.AsynchronousJobExecutor;
 import org.sagebionetworks.migration.async.AsynchronousJobExecutorImpl;
-import org.sagebionetworks.migration.async.AsynchronousMigration;
-import org.sagebionetworks.migration.async.AsynchronousMigrationImpl;
+import org.sagebionetworks.migration.async.DestinationJobBuilder;
+import org.sagebionetworks.migration.async.DestinationJobBuilderImpl;
+import org.sagebionetworks.migration.async.DestinationJobExecutor;
+import org.sagebionetworks.migration.async.DestinationJobExecutorImpl;
+import org.sagebionetworks.migration.async.MigrationDriver;
+import org.sagebionetworks.migration.async.MigrationDriverImpl;
+import org.sagebionetworks.migration.async.MissingFromDestinationBuilder;
+import org.sagebionetworks.migration.async.MissingFromDestinationBuilderImpl;
 import org.sagebionetworks.migration.async.FutureFactory;
 import org.sagebionetworks.migration.async.FutureFactoryImpl;
 import org.sagebionetworks.migration.config.Configuration;
@@ -36,7 +42,10 @@ public class MigrationModule extends AbstractModule {
 		bind(Clock.class).to(DefaultClock.class);
 		bind(Reporter.class).to(ReporterImpl.class);
 		bind(TypeService.class).to(TypeServiceImpl.class);
-		bind(AsynchronousMigration.class).to(AsynchronousMigrationImpl.class);
+		bind(MigrationDriver.class).to(MigrationDriverImpl.class);
+		bind(DestinationJobBuilder.class).to(DestinationJobBuilderImpl.class);
+		bind(DestinationJobExecutor.class).to(DestinationJobExecutorImpl.class);
+		bind(MissingFromDestinationBuilder.class).to(MissingFromDestinationBuilderImpl.class);
 	}
 
 }

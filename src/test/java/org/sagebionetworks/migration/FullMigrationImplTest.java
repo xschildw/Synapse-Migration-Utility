@@ -15,7 +15,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
-import org.sagebionetworks.migration.async.AsynchronousMigration;
+import org.sagebionetworks.migration.async.MigrationDriver;
 import org.sagebionetworks.migration.async.ResultPair;
 import org.sagebionetworks.migration.config.Configuration;
 import org.sagebionetworks.migration.utils.ToolMigrationUtils;
@@ -40,7 +40,7 @@ public class FullMigrationImplTest {
 	@Mock
 	Reporter mockTypeReporter;
 	@Mock
-	AsynchronousMigration mockAsynchronousMigration;
+	MigrationDriver mockAsynchronousMigration;
 	@Mock
 	Configuration mockConfiguration;
 	

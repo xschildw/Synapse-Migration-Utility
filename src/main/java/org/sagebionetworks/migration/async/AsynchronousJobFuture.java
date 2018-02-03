@@ -69,7 +69,12 @@ public class AsynchronousJobFuture<O extends AdminResponse> implements Future<O>
 				this.jobStatus = this.client.getAdminAsynchronousJobStatus(this.jobStatus.getJobId());
 			}
 			// a job is done if it is not processing.
-			return AsynchJobState.PROCESSING != this.jobStatus.getJobState();
+			boolean isDone = AsynchJobState.PROCESSING != this.jobStatus.getJobState();
+			if(!isDone) {
+				// report progress on jobs that are still running.
+				reporter.reportProgress(jobTarget, jobStatus);
+			}
+			return isDone;
 		} catch (Exception e) {
 			throw new AsyncMigrationException(e);
 		}
@@ -96,7 +101,6 @@ public class AsynchronousJobFuture<O extends AdminResponse> implements Future<O>
 				// must be a timeout exception so callers can handle this case.
 				throw new TimeoutException(TIMEOUT_MESSAGE);
 			}
-			reporter.reportProgress(jobTarget, jobStatus);
 			// wait for the job.
 			clock.sleep(SLEEP_TIME);
 		}

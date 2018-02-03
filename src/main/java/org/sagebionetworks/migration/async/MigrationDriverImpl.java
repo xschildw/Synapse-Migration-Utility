@@ -13,22 +13,22 @@ import org.sagebionetworks.util.Clock;
 import com.google.inject.Inject;
 
 /**
- * This algorithm is driven by jobs that need to be executed on the destination.
- * New destination jobs will be started as long as the maximum number of concurrent
- * destination jobs is not exceeded.  Sleep is used to wait for active jobs to terminate
- * when the  maximum number of active jobs is reached.
+ * This algorithm drives the migration process by pulling in changes to be
+ * migrated from the source and pushing them to the destination. Changes
+ * are pulled from the source in series but they are pushed to the destination in
+ * parallel.
  */
-public class AsynchronousMigrationImpl implements AsynchronousMigration {
-	
+public class MigrationDriverImpl implements MigrationDriver {
+
 	static final long SLEEP_TIME_MS = 2000L;
-	
+
 	Configuration config;
 	DestinationJobBuilder jobBuilder;
 	DestinationJobExecutor jobExecutor;
 	Clock clock;
-	
+
 	@Inject
-	public AsynchronousMigrationImpl(Configuration config, DestinationJobBuilder jobBuilder,
+	public MigrationDriverImpl(Configuration config, DestinationJobBuilder jobBuilder,
 			DestinationJobExecutor jobExecutor, Clock clock) {
 		super();
 		this.config = config;
@@ -39,7 +39,10 @@ public class AsynchronousMigrationImpl implements AsynchronousMigration {
 
 	/*
 	 * (non-Javadoc)
-	 * @see org.sagebionetworks.migration.async.AsynchronousMigration#migratePrimaryTypes(java.util.List)
+	 * 
+	 * @see
+	 * org.sagebionetworks.migration.async.AsynchronousMigration#migratePrimaryTypes
+	 * (java.util.List)
 	 */
 	@Override
 	public void migratePrimaryTypes(List<TypeToMigrateMetadata> primaryTypes) {
@@ -48,12 +51,12 @@ public class AsynchronousMigrationImpl implements AsynchronousMigration {
 		List<Future<?>> activeDestinationJobs = new LinkedList<>();
 		// Start generating jobs to push to the destination.
 		Iterator<DestinationJob> jobIterator = jobBuilder.buildDestinationJobs(primaryTypes);
-		while(jobIterator.hasNext()) {
+		while (jobIterator.hasNext()) {
 			DestinationJob nextJob = jobIterator.next();
 			// Start this job on the destination.
 			activeDestinationJobs.add(jobExecutor.startDestinationJob(nextJob));
 			// wait for the number of active destination jobs to be under the max
-			while(activeDestinationJobs.size() >= config.getMaximumNumberOfDestinationJobs()) {
+			while (activeDestinationJobs.size() >= config.getMaximumNumberOfDestinationJobs()) {
 				// give the jobs some time to complete
 				sleep();
 				try {
@@ -70,7 +73,7 @@ public class AsynchronousMigrationImpl implements AsynchronousMigration {
 		} catch (AsyncMigrationException e) {
 			lastException = e;
 		}
-		if(lastException != null) {
+		if (lastException != null) {
 			// throwing this exception signals another migration run is required.
 			throw lastException;
 		}
@@ -83,14 +86,14 @@ public class AsynchronousMigrationImpl implements AsynchronousMigration {
 	 */
 	void waitForJobsToTerminate(List<Future<?>> activeDestinationJobs) {
 		AsyncMigrationException lastException = null;
-		for(Future<?> future: activeDestinationJobs) {
+		for (Future<?> future : activeDestinationJobs) {
 			try {
 				getJobResults(future);
 			} catch (AsyncMigrationException e) {
 				lastException = e;
 			}
 		}
-		if(lastException != null) {
+		if (lastException != null) {
 			throw lastException;
 		}
 	}
@@ -109,6 +112,7 @@ public class AsynchronousMigrationImpl implements AsynchronousMigration {
 
 	/**
 	 * Remove any job that has terminated either with success or failure.
+	 * 
 	 * @param lastException
 	 * @param activeDestinationJobs
 	 * @return
@@ -117,10 +121,10 @@ public class AsynchronousMigrationImpl implements AsynchronousMigration {
 		AsyncMigrationException lastException = null;
 		// find an remove any completed jobs.
 		Iterator<Future<?>> futureIterator = activeDestinationJobs.iterator();
-		while(futureIterator.hasNext()) {
+		while (futureIterator.hasNext()) {
 			Future<?> jobFuture = futureIterator.next();
 			try {
-				if(jobFuture.isDone()) {
+				if (jobFuture.isDone()) {
 					getJobResults(jobFuture);
 					// remove complete jobs
 					futureIterator.remove();
@@ -131,26 +135,28 @@ public class AsynchronousMigrationImpl implements AsynchronousMigration {
 				lastException = e;
 			}
 		}
-		if(lastException != null) {
+		if (lastException != null) {
 			throw lastException;
 		}
 	}
 
 	/**
 	 * Get the job results
+	 * 
 	 * @param jobFuture
 	 */
 	void getJobResults(Future<?> jobFuture) {
 		try {
 			// call get to determine if the job succeeded.
 			jobFuture.get();
-		}catch(AsyncMigrationException e) {
-			// Indicates that another migration run is required without terminating this run.
+		} catch (AsyncMigrationException e) {
+			// Indicates that another migration run is required without terminating this
+			// run.
 			throw e;
 		} catch (Exception e) {
 			// any other type of exception will terminate the migration.
 			throw new RuntimeException(e);
 		}
 	}
-	
+
 }

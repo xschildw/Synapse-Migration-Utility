@@ -19,11 +19,9 @@ public interface AsynchronousJobExecutor {
 	 * @param reponseClass
 	 *            Defines the response class.
 	 * @return
-	 * @throws InterruptedException
-	 * @throws AsyncMigrationException
 	 */
 	public <I extends AdminRequest, O extends AdminResponse> O executeSourceJob(I request,
-			Class<? extends O> reponseClass) throws AsyncMigrationException, InterruptedException;
+			Class<? extends O> reponseClass);
 
 	/**
 	 * Execute an Asynchronous job using the source client.
@@ -32,11 +30,9 @@ public interface AsynchronousJobExecutor {
 	 *            The AdminRequest defines the type of request to execute.
 	 * @param reponseClass
 	 * @return
-	 * @throws InterruptedException
-	 * @throws AsyncMigrationException
 	 */
 	public <I extends AdminRequest, O extends AdminResponse> O executeDestinationJob(I request,
-			Class<? extends O> reponseClass) throws AsyncMigrationException, InterruptedException;
+			Class<? extends O> reponseClass);
 
 	/**
 	 * Run the given request on both the source and destination concurrently.

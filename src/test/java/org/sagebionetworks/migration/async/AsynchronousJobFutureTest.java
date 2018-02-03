@@ -104,7 +104,9 @@ public class AsynchronousJobFutureTest {
 		assertTrue(future.isDone());
 		// once done no more get status calls should occur
 		verify(mockClient, times(3)).getAdminAsynchronousJobStatus(jobId);
+		verify(mockReporter, times(2)).reportProgress(jobTarget, processingStatus);
 	}
+	
 	
 	@Test
 	public void testIsDoneFailed() throws SynapseException {
@@ -117,6 +119,7 @@ public class AsynchronousJobFutureTest {
 		assertTrue(future.isDone());
 		// once done no more get status calls should occur
 		verify(mockClient, times(3)).getAdminAsynchronousJobStatus(jobId);
+		verify(mockReporter, times(2)).reportProgress(jobTarget, processingStatus);
 	}
 	
 	@Test (expected=AsyncMigrationException.class)
@@ -158,7 +161,7 @@ public class AsynchronousJobFutureTest {
 			assertEquals(AsynchronousJobFuture.TIMEOUT_MESSAGE, e.getMessage());
 		}
 		verify(mockClock, times(3)).currentTimeMillis();
-		verify(mockReporter, times(1)).reportProgress(jobTarget, processingStatus);
+		verify(mockReporter, times(2)).reportProgress(jobTarget, processingStatus);
 	}
 	
 	@Test

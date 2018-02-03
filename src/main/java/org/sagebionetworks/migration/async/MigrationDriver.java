@@ -4,7 +4,7 @@ import java.util.List;
 
 import org.sagebionetworks.migration.utils.TypeToMigrateMetadata;
 
-public interface AsynchronousMigration {
+public interface MigrationDriver {
 	
 	/**
 	 * Migrate the common primary types Asynchronously.

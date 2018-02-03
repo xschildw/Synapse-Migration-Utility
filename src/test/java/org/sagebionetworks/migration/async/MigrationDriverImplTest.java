@@ -24,7 +24,7 @@ import org.sagebionetworks.util.Clock;
 import com.google.common.collect.Lists;
 
 @RunWith(MockitoJUnitRunner.class)
-public class AsynchronousMigrationImplTest {
+public class MigrationDriverImplTest {
 
 	@Mock
 	Configuration mockConfig;
@@ -47,7 +47,7 @@ public class AsynchronousMigrationImplTest {
 	RestoreDestinationJob jobThree;
 	List<DestinationJob> destinationJobs;
 
-	AsynchronousMigrationImpl asynchMigration;
+	MigrationDriverImpl migrationDriver;
 
 	@Before
 	public void before() {
@@ -72,12 +72,12 @@ public class AsynchronousMigrationImplTest {
 		when(mockJobExecutor.startDestinationJob(jobTwo)).thenReturn(mockFutureTwo);
 		when(mockJobExecutor.startDestinationJob(jobThree)).thenReturn(mockFutureThree);
 		
-		asynchMigration = new AsynchronousMigrationImpl(mockConfig, mockJobBuilder, mockJobExecutor, mockClock);
+		migrationDriver = new MigrationDriverImpl(mockConfig, mockJobBuilder, mockJobExecutor, mockClock);
 	}
 	
 	@Test
 	public void testGetJobResults() throws Exception {
-		asynchMigration.getJobResults(mockFutureOne);
+		migrationDriver.getJobResults(mockFutureOne);
 		verify(mockFutureOne).get();
 	}
 	
@@ -86,7 +86,7 @@ public class AsynchronousMigrationImplTest {
 		AsyncMigrationException exception = new AsyncMigrationException("something to retry");
 		when(mockFutureOne.get()).thenThrow(exception);
 		// call under test
-		asynchMigration.getJobResults(mockFutureOne);
+		migrationDriver.getJobResults(mockFutureOne);
 	}
 	
 	@Test (expected=RuntimeException.class)
@@ -94,7 +94,7 @@ public class AsynchronousMigrationImplTest {
 		IllegalArgumentException exception = new IllegalArgumentException("something to retry");
 		when(mockFutureOne.get()).thenThrow(exception);
 		// call under test
-		asynchMigration.getJobResults(mockFutureOne);
+		migrationDriver.getJobResults(mockFutureOne);
 	}
 
 	@Test
@@ -103,7 +103,7 @@ public class AsynchronousMigrationImplTest {
 		when(mockFutureTwo.isDone()).thenReturn(true);
 		List<Future<?>> futures = Lists.newArrayList(mockFutureOne, mockFutureTwo);
 		// call under test
-		asynchMigration.removeTerminatedJobs(futures);
+		migrationDriver.removeTerminatedJobs(futures);
 		verify(mockFutureOne, never()).get();
 		verify(mockFutureTwo).get();
 		assertEquals(1, futures.size());
@@ -123,7 +123,7 @@ public class AsynchronousMigrationImplTest {
 		List<Future<?>> futures = Lists.newArrayList(mockFutureOne, mockFutureTwo, mockFutureThree);
 		// call under test
 		try {
-			asynchMigration.removeTerminatedJobs(futures);
+			migrationDriver.removeTerminatedJobs(futures);
 			fail();
 		} catch (AsyncMigrationException e) {
 			// should match the second exception thrown
@@ -147,7 +147,7 @@ public class AsynchronousMigrationImplTest {
 		List<Future<?>> futures = Lists.newArrayList(mockFutureOne, mockFutureTwo, mockFutureThree);
 		// call under test
 		try {
-			asynchMigration.removeTerminatedJobs(futures);
+			migrationDriver.removeTerminatedJobs(futures);
 			fail();
 		} catch (AsyncMigrationException e) {
 			// should match the second exception thrown
@@ -161,8 +161,8 @@ public class AsynchronousMigrationImplTest {
 	@Test
 	public void testSleep() throws InterruptedException {
 		// call under test
-		asynchMigration.sleep();
-		verify(mockClock).sleep(AsynchronousMigrationImpl.SLEEP_TIME_MS);
+		migrationDriver.sleep();
+		verify(mockClock).sleep(MigrationDriverImpl.SLEEP_TIME_MS);
 	}
 	
 	@Test (expected=RuntimeException.class)
@@ -170,14 +170,14 @@ public class AsynchronousMigrationImplTest {
 		InterruptedException interrupted = new InterruptedException("an interrupt");
 		doThrow(interrupted).when(mockClock).sleep(any(Long.class));
 		// call under test
-		asynchMigration.sleep();
+		migrationDriver.sleep();
 	}
 	
 	@Test
 	public void testWaitForJobsToTerminate() throws Exception {
 		List<Future<?>> futures = Lists.newArrayList(mockFutureOne, mockFutureTwo, mockFutureThree);
 		// call under test
-		asynchMigration.waitForJobsToTerminate(futures);
+		migrationDriver.waitForJobsToTerminate(futures);
 		// should wait for all jobs to finish
 		verify(mockFutureOne).get();
 		verify(mockFutureTwo).get();
@@ -194,7 +194,7 @@ public class AsynchronousMigrationImplTest {
 		doThrow(exceptionTwo).when(mockFutureTwo).get();
 		// call under test
 		try {
-			asynchMigration.waitForJobsToTerminate(futures);
+			migrationDriver.waitForJobsToTerminate(futures);
 		} catch (Exception e) {
 			assertEquals(exceptionTwo, e);
 		}
@@ -209,7 +209,7 @@ public class AsynchronousMigrationImplTest {
 		// queue size larger than the number of jobs
 		when(mockConfig.getMaximumNumberOfDestinationJobs()).thenReturn(destinationJobs.size()+1);
 		// call under test
-		asynchMigration.migratePrimaryTypes(primaryTypes);
+		migrationDriver.migratePrimaryTypes(primaryTypes);
 		// should wait for all jobs to finish
 		verify(mockFutureOne).get();
 		verify(mockFutureTwo).get();
@@ -232,7 +232,7 @@ public class AsynchronousMigrationImplTest {
 		// queue size smaller than the number of jobs
 		when(mockConfig.getMaximumNumberOfDestinationJobs()).thenReturn(destinationJobs.size()-1);
 		// call under test
-		asynchMigration.migratePrimaryTypes(primaryTypes);
+		migrationDriver.migratePrimaryTypes(primaryTypes);
 		// should wait for all jobs to finish
 		verify(mockFutureOne).get();
 		verify(mockFutureTwo).get();
@@ -262,7 +262,7 @@ public class AsynchronousMigrationImplTest {
 
 		try {
 			// call under test
-			asynchMigration.migratePrimaryTypes(primaryTypes);
+			migrationDriver.migratePrimaryTypes(primaryTypes);
 			fail();
 		} catch (AsyncMigrationException e) {
 			assertEquals(exceptionTwo, e);
@@ -293,7 +293,7 @@ public class AsynchronousMigrationImplTest {
 
 		try {
 			// call under test
-			asynchMigration.migratePrimaryTypes(primaryTypes);
+			migrationDriver.migratePrimaryTypes(primaryTypes);
 			fail();
 		} catch (AsyncMigrationException e) {
 			assertEquals(exceptionTwo, e);

@@ -10,7 +10,6 @@ public class RestoreDestinationJob implements DestinationJob {
 	MigrationType migrationType;
 	String backupFileKey;
 	
-	
 	public RestoreDestinationJob(MigrationType migrationType, String backupFileKey) {
 		super();
 		this.migrationType = migrationType;

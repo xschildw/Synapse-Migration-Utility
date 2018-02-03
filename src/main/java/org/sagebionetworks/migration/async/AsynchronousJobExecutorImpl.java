@@ -46,7 +46,7 @@ public class AsynchronousJobExecutorImpl implements AsynchronousJobExecutor{
 	 */
 	@Override
 	public <I extends AdminRequest, O extends AdminResponse> O executeSourceJob(I request,
-			Class<? extends O> reponseClass) throws AsyncMigrationException, InterruptedException {
+			Class<? extends O> reponseClass) {
 		try {
 			// start the job
 			Future<O> future = startSourceJob(request, reponseClass);
@@ -63,7 +63,7 @@ public class AsynchronousJobExecutorImpl implements AsynchronousJobExecutor{
 	 */
 	@Override
 	public <I extends AdminRequest, O extends AdminResponse> O executeDestinationJob(I request,
-			Class<? extends O> reponseClass) throws AsyncMigrationException, InterruptedException {
+			Class<? extends O> reponseClass)  {
 		try {
 			// start the job
 			Future<O> future = startDestionationJob(request, reponseClass);

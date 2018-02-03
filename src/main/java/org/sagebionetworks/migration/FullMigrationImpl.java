@@ -3,7 +3,7 @@ package org.sagebionetworks.migration;
 import java.util.List;
 
 import org.apache.logging.log4j.Logger;
-import org.sagebionetworks.migration.async.AsynchronousMigration;
+import org.sagebionetworks.migration.async.MigrationDriver;
 import org.sagebionetworks.migration.async.ResultPair;
 import org.sagebionetworks.migration.config.Configuration;
 import org.sagebionetworks.migration.utils.ToolMigrationUtils;
@@ -20,19 +20,19 @@ public class FullMigrationImpl implements FullMigration {
 	StackStatusService stackStatusService;
 	TypeService typeService;
 	Reporter typeReporter;
-	AsynchronousMigration asynchronousMigration;
+	MigrationDriver migrationDriver;
 	Configuration config;
 
 	@Inject
 	public FullMigrationImpl(LoggerFactory loggerFactory, StackStatusService stackStatusService,
-			TypeService typeService, Reporter typeReporter, AsynchronousMigration asynchronousMigration,
+			TypeService typeService, Reporter typeReporter, MigrationDriver migrationDriver,
 			Configuration config) {
 		super();
 		this.logger = loggerFactory.getLogger(FullMigrationImpl.class);
 		this.stackStatusService = stackStatusService;
 		this.typeService = typeService;
 		this.typeReporter = typeReporter;
-		this.asynchronousMigration = asynchronousMigration;
+		this.migrationDriver = migrationDriver;
 		this.config = config;
 	}
 
@@ -58,7 +58,7 @@ public class FullMigrationImpl implements FullMigration {
 				countResults.getSourceResult(), countResults.getDestinationResult(), commonPrimaryTypes);
 		// run the migration process asynchronously
 		logger.info("Starting the asynchronous of all types...");
-		asynchronousMigration.migratePrimaryTypes(typesToMigrate);
+		migrationDriver.migratePrimaryTypes(typesToMigrate);
 
 		// Gather the final counts
 		logger.info("Computing final counts...");
