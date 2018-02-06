@@ -8,7 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import java.sql.Date;
+import java.util.Date;
 import java.util.List;
 
 import static org.mockito.Mockito.*;
@@ -22,11 +22,15 @@ import org.mockito.runners.MockitoJUnitRunner;
 import org.sagebionetworks.migration.async.JobTarget;
 import org.sagebionetworks.migration.async.ResultPair;
 import org.sagebionetworks.migration.config.Configuration;
+import org.sagebionetworks.repo.model.asynch.AsynchJobState;
 import org.sagebionetworks.repo.model.asynch.AsynchronousJobStatus;
 import org.sagebionetworks.repo.model.migration.AsyncMigrationRequest;
+import org.sagebionetworks.repo.model.migration.AsyncMigrationTypeCountsRequest;
 import org.sagebionetworks.repo.model.migration.DeleteListRequest;
 import org.sagebionetworks.repo.model.migration.MigrationType;
 import org.sagebionetworks.repo.model.migration.MigrationTypeCount;
+import org.sagebionetworks.schema.adapter.JSONObjectAdapterException;
+import org.sagebionetworks.schema.adapter.org.json.EntityFactory;
 import org.sagebionetworks.util.Clock;
 
 import com.google.common.collect.Lists;
@@ -54,6 +58,8 @@ public class ReporterImplTest {
 	AsynchronousJobStatus jobStatus;
 	
 	ReporterImpl reporter;
+	
+	MigrationType type;
 
 	@Before
 	public void before() {
@@ -86,14 +92,18 @@ public class ReporterImplTest {
 		typeCounts.setSourceResult(sourceCounts);
 		typeCounts.setDestinationResult(destinationCounts);
 		
+		DeleteListRequest deleteRequest = new DeleteListRequest();
+		deleteRequest.setMigrationType(MigrationType.NODE);
+		
 		asyncMigrationRequest = new AsyncMigrationRequest();
-		asyncMigrationRequest.setAdminRequest(new DeleteListRequest());
+		asyncMigrationRequest.setAdminRequest(deleteRequest);
 		jobTarget = JobTarget.SOURCE;
 		jobStatus = new AsynchronousJobStatus();
 		jobStatus.setJobId("123");
-		jobStatus.setStartedOn(new Date(49L));
+		jobStatus.setStartedOn(new Date(1517688868123L));
 		jobStatus.setRequestBody(asyncMigrationRequest);
-		
+		jobStatus.setJobState(AsynchJobState.PROCESSING);
+		type = MigrationType.NODE;
 		reporter = new ReporterImpl(mockConfig, mockLoggerFactory, mockClock);
 	}
 	
@@ -154,15 +164,47 @@ public class ReporterImplTest {
 		assertEquals("01:02:03.004", result);
 	}
 	
-	
+	@Test
+	public void testFormatElapseMSLow() {
+		// call under test
+		String result = ReporterImpl.formatElapse(8000L);
+		assertEquals("00:00:08.000", result);
+	}
 	
 	@Test
-	public void testReportProgress() {
+	public void testJson() throws JSONObjectAdapterException {
+		String json = EntityFactory.createJSONStringForEntity(jobStatus);
+		System.out.println(json);
+		AsynchronousJobStatus clone = EntityFactory.createEntityFromJSONString(json, AsynchronousJobStatus.class);
+		assertEquals(clone, jobStatus);
+	}
+	
+	@Test
+	public void testReportProgressHasMigrationType() {
+		// request with a type.
+		DeleteListRequest deleteRequest = new DeleteListRequest();
+		deleteRequest.setMigrationType(MigrationType.NODE);
+		asyncMigrationRequest = new AsyncMigrationRequest();
+		asyncMigrationRequest.setAdminRequest(deleteRequest);
+		
+		jobStatus.setStartedOn(new Date(1517773464652L));
 		long elapseMS = 2545L;
 		when(mockClock.currentTimeMillis()).thenReturn(jobStatus.getStartedOn().getTime()+elapseMS);
 		// call under test
 		reporter.reportProgress(jobTarget, jobStatus);
-		verify(mockLogger).info("Waiting for jobId 123 on SOURCE of type 'DeleteListRequest' elapse: 00:00:02.545");
+		verify(mockLogger).info("NODE job: 123 state: PROCESSING on: SOURCE type: 'DeleteListRequest' elapse: 00:00:02.545");
+	}
+	
+	@Test
+	public void testReportProgress() {
+		// request without a type
+		asyncMigrationRequest.setAdminRequest(new AsyncMigrationTypeCountsRequest());
+		jobStatus.setStartedOn(new Date(1517773464652L));
+		long elapseMS = 51234;
+		when(mockClock.currentTimeMillis()).thenReturn(jobStatus.getStartedOn().getTime()+elapseMS);
+		// call under test
+		reporter.reportProgress(jobTarget, jobStatus);
+		verify(mockLogger).info(" job: 123 state: PROCESSING on: SOURCE type: 'AsyncMigrationTypeCountsRequest' elapse: 00:00:51.234");
 	}
 	
 }

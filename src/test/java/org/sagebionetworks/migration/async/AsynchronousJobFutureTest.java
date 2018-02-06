@@ -26,6 +26,7 @@ import org.sagebionetworks.migration.config.Configuration;
 import org.sagebionetworks.repo.model.asynch.AsynchJobState;
 import org.sagebionetworks.repo.model.asynch.AsynchronousJobStatus;
 import org.sagebionetworks.repo.model.migration.AsyncMigrationResponse;
+import org.sagebionetworks.repo.model.migration.MigrationType;
 import org.sagebionetworks.repo.model.migration.RestoreTypeResponse;
 import org.sagebionetworks.util.Clock;
 
@@ -57,6 +58,8 @@ public class AsynchronousJobFutureTest {
 	FutureFactoryImpl futureFactory;
 	AsynchronousJobFuture<RestoreTypeResponse> future;
 	
+	MigrationType type;
+	
 	@Before
 	public void before() throws SynapseException {
 		jobId = "123";
@@ -87,10 +90,12 @@ public class AsynchronousJobFutureTest {
 		when(mockClock.currentTimeMillis()).thenReturn(0L,1L,2L,3L,4L,5L,6L,7L,8L,9L);
 		// complete after two tries
 		when(mockClient.getAdminAsynchronousJobStatus(jobId)).thenReturn(processingStatus, processingStatus, completeStatus);
-		
+		type = MigrationType.NODE;
 		// Using the factory to create the future also tests the factory.
 		futureFactory = new FutureFactoryImpl(mockReporter, mockClock, mockConfiguration);
-		future = (AsynchronousJobFuture<RestoreTypeResponse>) futureFactory.createFuture(processingStatus, jobTarget, mockClient, RestoreTypeResponse.class);
+		future = (AsynchronousJobFuture<RestoreTypeResponse>) futureFactory.createFuture(processingStatus, jobTarget,  mockClient, RestoreTypeResponse.class);
+		
+
 	}
 	
 	@Test

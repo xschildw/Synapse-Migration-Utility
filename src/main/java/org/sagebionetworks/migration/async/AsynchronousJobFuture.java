@@ -12,6 +12,7 @@ import org.sagebionetworks.repo.model.asynch.AsynchJobState;
 import org.sagebionetworks.repo.model.asynch.AsynchronousJobStatus;
 import org.sagebionetworks.repo.model.migration.AdminResponse;
 import org.sagebionetworks.repo.model.migration.AsyncMigrationResponse;
+import org.sagebionetworks.repo.model.migration.MigrationType;
 import org.sagebionetworks.util.Clock;
 
 /**
@@ -69,12 +70,8 @@ public class AsynchronousJobFuture<O extends AdminResponse> implements Future<O>
 				this.jobStatus = this.client.getAdminAsynchronousJobStatus(this.jobStatus.getJobId());
 			}
 			// a job is done if it is not processing.
-			boolean isDone = AsynchJobState.PROCESSING != this.jobStatus.getJobState();
-			if(!isDone) {
-				// report progress on jobs that are still running.
-				reporter.reportProgress(jobTarget, jobStatus);
-			}
-			return isDone;
+			reporter.reportProgress(jobTarget, jobStatus);
+			return AsynchJobState.PROCESSING != this.jobStatus.getJobState();
 		} catch (Exception e) {
 			throw new AsyncMigrationException(e);
 		}

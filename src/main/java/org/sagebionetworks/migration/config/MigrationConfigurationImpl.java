@@ -16,6 +16,7 @@ import com.google.inject.Inject;
  */
 public class MigrationConfigurationImpl implements Configuration {
 
+	static final String KEY_DESTINATION_ROW_COUNT_TO_IGNORE = "org.sagebiontworks.destination.row.count.to.ignore";
 	static final String KEY_MAX_NUMBER_DESTINATION_JOBS = "org.sagebionetworks.max.number.destination.jobs";
 	static final String KEY_SOURCE_REPOSITORY_ENDPOINT = "org.sagebionetworks.source.repository.endpoint";
 	static final String KEY_SOURCE_AUTHENTICATION_ENDPOINT = "org.sagebionetworks.source.authentication.endpoint";
@@ -157,6 +158,11 @@ public class MigrationConfigurationImpl implements Configuration {
 	public long getDelayBeforeMigrationStartMS() {
 		return Long.parseLong(getProperty(KEY_DELAY_BEFORE_START_MS));
 	}
+	
+	@Override
+	public long getDestinationRowCountToIgnore() {
+		return Long.parseLong(getProperty(KEY_DESTINATION_ROW_COUNT_TO_IGNORE));
+	}
 
 	@Override
 	public void logConfiguration() {
@@ -169,5 +175,6 @@ public class MigrationConfigurationImpl implements Configuration {
 		logger.info("Asynchronous job timeout MS: "+getWorkerTimeoutMs());
 		logger.info("Delay before migration starts MS: "+getDelayBeforeMigrationStartMS());
 		logger.info("Maximum number of destination jobs: "+getMaximumNumberOfDestinationJobs());
+		logger.info("Destination row count to ignore: "+getDestinationRowCountToIgnore());
 	}
 }

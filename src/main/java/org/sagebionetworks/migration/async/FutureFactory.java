@@ -5,6 +5,7 @@ import java.util.concurrent.Future;
 import org.sagebionetworks.client.SynapseAdminClient;
 import org.sagebionetworks.repo.model.asynch.AsynchronousJobStatus;
 import org.sagebionetworks.repo.model.migration.AdminResponse;
+import org.sagebionetworks.repo.model.migration.MigrationType;
 
 /**
  * 

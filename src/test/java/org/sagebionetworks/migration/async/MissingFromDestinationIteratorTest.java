@@ -37,11 +37,13 @@ public class MissingFromDestinationIteratorTest {
 	BackupTypeResponse responseThree;
 	String backupFileKey;
 	BackupAliasType aliasType;
+	long destinationRowCountToIgnore;
 	
 	@Before
 	public void before() {
 		type = MigrationType.NODE;
 		batchSize = 3;
+		destinationRowCountToIgnore = 1;
 		when(mockConfig.getMaximumBackupBatchSize()).thenReturn(batchSize);
 		aliasType = BackupAliasType.TABLE_NAME;
 		when(mockConfig.getBackupAliasType()).thenReturn(aliasType);
@@ -65,7 +67,8 @@ public class MissingFromDestinationIteratorTest {
 		// null max/min indicates there is no data in the destination.
 		typeToMigrate.setDestMinId(null);
 		typeToMigrate.setDestMaxId(null);
-		List<BackupTypeRangeRequest> request = MissingFromDestinationIterator.createBackupRequests(typeToMigrate, aliasType, batchSize);
+		typeToMigrate.setDestCount(null);
+		List<BackupTypeRangeRequest> request = MissingFromDestinationIterator.createBackupRequests(typeToMigrate, aliasType, batchSize, destinationRowCountToIgnore);
 		assertEquals(3, request.size());
 		// one
 		BackupTypeRangeRequest rangeRequest = request.get(0);
@@ -101,7 +104,8 @@ public class MissingFromDestinationIteratorTest {
 		// null max/min indicates there is no data in the destination.
 		typeToMigrate.setDestMinId(1L);
 		typeToMigrate.setDestMaxId(2L);
-		List<BackupTypeRangeRequest> request = MissingFromDestinationIterator.createBackupRequests(typeToMigrate, aliasType, batchSize);
+		typeToMigrate.setDestCount(2L);
+		List<BackupTypeRangeRequest> request = MissingFromDestinationIterator.createBackupRequests(typeToMigrate, aliasType, batchSize, destinationRowCountToIgnore);
 		assertEquals(3, request.size());
 		// one
 		BackupTypeRangeRequest rangeRequest = request.get(0);
@@ -126,8 +130,45 @@ public class MissingFromDestinationIteratorTest {
 		typeToMigrate.setSrcMaxId(9L);
 		typeToMigrate.setDestMinId(1L);
 		typeToMigrate.setDestMaxId(9L);
-		List<BackupTypeRangeRequest> request = MissingFromDestinationIterator.createBackupRequests(typeToMigrate, aliasType, batchSize);
+		typeToMigrate.setDestCount(8L);
+		List<BackupTypeRangeRequest> request = MissingFromDestinationIterator.createBackupRequests(typeToMigrate, aliasType, batchSize, destinationRowCountToIgnore);
 		assertEquals(0, request.size());
+	}
+	
+	/**
+	 * Even though the max ID of the destination is the same as the source,
+	 * the number of rows in the destination is less than the count to ignore
+	 * so a full backup/restore should occur.
+	 */
+	@Test
+	public void testCreateBackupRequestsWithDestinationCountLow() {
+		this.destinationRowCountToIgnore = 2;
+		this.batchSize = 3;
+		TypeToMigrateMetadata typeToMigrate = new TypeToMigrateMetadata();
+		typeToMigrate.setType(type);
+		typeToMigrate.setSrcMinId(1L);
+		typeToMigrate.setSrcMaxId(9L);
+		typeToMigrate.setDestMinId(1L);
+		typeToMigrate.setDestMaxId(9L);
+		typeToMigrate.setDestCount(destinationRowCountToIgnore-1);
+		List<BackupTypeRangeRequest> request = MissingFromDestinationIterator.createBackupRequests(typeToMigrate, aliasType, batchSize, destinationRowCountToIgnore);
+		assertEquals(3, request.size());
+	}
+	
+	@Test
+	public void testCreateBackupRequestsWithDestinationCountNull() {
+		this.destinationRowCountToIgnore = 2;
+		this.batchSize = 3;
+		TypeToMigrateMetadata typeToMigrate = new TypeToMigrateMetadata();
+		typeToMigrate.setType(type);
+		typeToMigrate.setSrcMinId(1L);
+		typeToMigrate.setSrcMaxId(9L);
+		typeToMigrate.setDestMinId(1L);
+		typeToMigrate.setDestMaxId(9L);
+		// full table migration should occur if the destination count is null
+		typeToMigrate.setDestCount(null);
+		List<BackupTypeRangeRequest> request = MissingFromDestinationIterator.createBackupRequests(typeToMigrate, aliasType, batchSize, destinationRowCountToIgnore);
+		assertEquals(3, request.size());
 	}
 	
 	
