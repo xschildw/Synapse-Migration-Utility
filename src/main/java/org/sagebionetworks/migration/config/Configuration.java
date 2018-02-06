@@ -85,6 +85,12 @@ public interface Configuration {
 	 * @return
 	 */
 	public int getMaximumNumberOfDestinationJobs();
-
-
+	
+	/**
+	 * If the destination row count is less than this number, the destination table will be treated
+	 * as empty and a full backup/restore for that type will occur.
+	 * @return
+	 */
+	public long getDestinationRowCountToIgnore();
+	
 }

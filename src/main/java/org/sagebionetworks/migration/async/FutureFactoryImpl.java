@@ -7,6 +7,7 @@ import org.sagebionetworks.migration.Reporter;
 import org.sagebionetworks.migration.config.Configuration;
 import org.sagebionetworks.repo.model.asynch.AsynchronousJobStatus;
 import org.sagebionetworks.repo.model.migration.AdminResponse;
+import org.sagebionetworks.repo.model.migration.MigrationType;
 import org.sagebionetworks.util.Clock;
 
 import com.google.inject.Inject;

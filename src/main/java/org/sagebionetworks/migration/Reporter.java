@@ -2,8 +2,8 @@ package org.sagebionetworks.migration;
 
 import java.util.List;
 
-import org.sagebionetworks.migration.async.ResultPair;
 import org.sagebionetworks.migration.async.JobTarget;
+import org.sagebionetworks.migration.async.ResultPair;
 import org.sagebionetworks.repo.model.asynch.AsynchronousJobStatus;
 import org.sagebionetworks.repo.model.migration.MigrationTypeChecksum;
 import org.sagebionetworks.repo.model.migration.MigrationTypeCount;
@@ -33,5 +33,5 @@ public interface Reporter {
 	 * @param jobTarget Where the job is run.
 	 * @param jobStatus Status of the job.
 	 */
-	public void reportProgress(JobTarget jobTarget, AsynchronousJobStatus jobStatus);
+	public void reportProgress(JobTarget jobTarget,  AsynchronousJobStatus jobStatus);
 }

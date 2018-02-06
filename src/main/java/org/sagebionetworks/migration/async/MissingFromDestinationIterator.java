@@ -27,7 +27,7 @@ public class MissingFromDestinationIterator implements Iterator<DestinationJob> 
 		super();
 		this.asynchronousJobExecutor = asynchronousJobExecutor;
 		List<BackupTypeRangeRequest> request = createBackupRequests(typeToMigrate, config.getBackupAliasType(),
-				config.getMaximumBackupBatchSize());
+				config.getMaximumBackupBatchSize(), config.getDestinationRowCountToIgnore());
 		this.requestIterator = request.iterator();
 	}
 
@@ -54,13 +54,17 @@ public class MissingFromDestinationIterator implements Iterator<DestinationJob> 
 	 * @return
 	 */
 	static List<BackupTypeRangeRequest> createBackupRequests(TypeToMigrateMetadata typeToMigrate,
-			BackupAliasType backupAliasType, long maxBatchSize) {
+			BackupAliasType backupAliasType, long maxBatchSize, long destinationRowCountToIgnore) {
 		List<BackupTypeRangeRequest> requests = new LinkedList<>();
 		// start with the full range
 		long startId = typeToMigrate.getSrcMinId();
 		if (typeToMigrate.getDestMaxId() != null) {
-			// there are rows in the destination so start there.
-			startId = typeToMigrate.getDestMaxId() + 1;
+			if(typeToMigrate.getDestCount() != null) {
+				if(typeToMigrate.getDestCount() > destinationRowCountToIgnore) {
+					// there are rows in the destination so start there.
+					startId = typeToMigrate.getDestMaxId() + 1;
+				}
+			}
 		}
 		// Max is exclusive so the end includes + one.
 		long endId = typeToMigrate.getSrcMaxId()+1;
