@@ -2,6 +2,7 @@ package org.sagebionetworks.migration;
 
 import static org.junit.Assert.assertNotNull;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.google.inject.Guice;

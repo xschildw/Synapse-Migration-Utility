@@ -1,8 +1,5 @@
 package org.sagebionetworks.migration.config;
 
-import java.io.IOException;
-import java.util.Properties;
-
 import org.sagebionetworks.repo.model.daemon.BackupAliasType;
 
 /**
@@ -64,6 +61,30 @@ public interface Configuration {
 	 * @return
 	 */
 	public BackupAliasType getBackupAliasType();
+
+	/**
+	 * Should full table check-sums be run?
+	 * @return
+	 */
+	public boolean includeFullTableChecksums();
+
+	/**
+	 * Log the configuration.
+	 */
+	public void logConfiguration();
+	
+	/**
+	 * Get the number of MS that will be used as a delay before starting migration.
+	 * @return
+	 */
+	public long getDelayBeforeMigrationStartMS();
+
+	/**
+	 * Get the maximum number of concurrent jobs that can run agaisnt the destination.
+	 * 
+	 * @return
+	 */
+	public int getMaximumNumberOfDestinationJobs();
 
 
 }

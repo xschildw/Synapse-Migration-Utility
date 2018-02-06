@@ -38,7 +38,7 @@ public class MigrationClientTest {
 	private SynapseAdminClient sourceSynapse;
 	
 	private SynapseClientFactory mockClientFactory;
-	private MigrationClient migrationClient;
+	private MigrationClientOld migrationClient;
 	private Configuration mockConfiguration;
 	
 	@Before
@@ -56,7 +56,7 @@ public class MigrationClientTest {
 		when(mockClientFactory.getDestinationClient()).thenReturn(destSynapse);
 		when(mockClientFactory.getSourceClient()).thenReturn(sourceSynapse);
 
-		migrationClient = new MigrationClient(mockClientFactory, mockConfiguration);
+		migrationClient = new MigrationClientOld(mockClientFactory, mockConfiguration);
 	}
 	
 	// Used to fail after moving to SimpleHttpClient
@@ -103,7 +103,7 @@ public class MigrationClientTest {
 		when(mf.getSourceClient()).thenReturn(mockSrc);
 		when(mf.getDestinationClient()).thenReturn(mockDest);
 
-		MigrationClient migClient = new MigrationClient(mf, mockConfiguration);
+		MigrationClientOld migClient = new MigrationClientOld(mf, mockConfiguration);
 
 		List<MigrationType> commonTypes = migClient.getCommonMigrationTypes();
 		assertEquals(expectedCommonTypes, commonTypes);

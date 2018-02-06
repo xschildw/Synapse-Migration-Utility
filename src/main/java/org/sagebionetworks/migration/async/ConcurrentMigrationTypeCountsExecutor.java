@@ -1,18 +1,18 @@
 package org.sagebionetworks.migration.async;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.sagebionetworks.migration.AsyncMigrationException;
-import org.sagebionetworks.migration.factory.AsyncMigrationTypeCountsWorkerFactory;
-import org.sagebionetworks.migration.factory.SynapseClientFactory;
-import org.sagebionetworks.repo.model.migration.MigrationType;
-import org.sagebionetworks.repo.model.migration.MigrationTypeCount;
-import org.sagebionetworks.repo.model.migration.MigrationTypeCounts;
-
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.sagebionetworks.migration.AsyncMigrationException;
+import org.sagebionetworks.migration.TypeService;
+import org.sagebionetworks.migration.factory.AsyncMigrationTypeCountsWorkerFactory;
+import org.sagebionetworks.repo.model.migration.MigrationType;
+import org.sagebionetworks.repo.model.migration.MigrationTypeCount;
+import org.sagebionetworks.repo.model.migration.MigrationTypeCounts;
 
 public class ConcurrentMigrationTypeCountsExecutor {
     static private Logger logger = LogManager.getLogger(ConcurrentMigrationTypeCountsExecutor.class);
@@ -26,7 +26,7 @@ public class ConcurrentMigrationTypeCountsExecutor {
         this.workerFactory = asyncMigrationTypeCountsFactory;
     }
 
-    public ConcurrentExecutionResult<List<MigrationTypeCount>> getMigrationTypeCounts(List<MigrationType> migrationTypes) throws AsyncMigrationException {
+    public ResultPair<List<MigrationTypeCount>> getMigrationTypeCounts(List<MigrationType> migrationTypes) throws AsyncMigrationException {
 
         try {
             AsyncMigrationTypeCountsWorker sourceWorker = this.workerFactory.getSourceWorker(migrationTypes);
@@ -38,7 +38,7 @@ public class ConcurrentMigrationTypeCountsExecutor {
             MigrationTypeCounts sourceMigrationTypeCounts = futureSourceMigrationTypeCounts.get();
             MigrationTypeCounts destinationMigrationTypeCounts = futureDestinationMigrationTypeCounts.get();
 
-            ConcurrentExecutionResult<List<MigrationTypeCount>> results = new ConcurrentExecutionResult<List<MigrationTypeCount>>();
+            ResultPair<List<MigrationTypeCount>> results = new ResultPair<List<MigrationTypeCount>>();
             results.setSourceResult(sourceMigrationTypeCounts.getList());
             results.setDestinationResult(destinationMigrationTypeCounts.getList());
             return results;

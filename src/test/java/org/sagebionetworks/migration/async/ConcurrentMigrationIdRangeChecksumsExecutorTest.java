@@ -53,14 +53,14 @@ public class ConcurrentMigrationIdRangeChecksumsExecutorTest {
 		when(mockDestinationWorker.call()).thenReturn(expectedChecksum);
 
 		// Expected results
-		ConcurrentExecutionResult<MigrationRangeChecksum> expectedResults = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+		ResultPair<MigrationRangeChecksum> expectedResults = new ResultPair<MigrationRangeChecksum>();
 		expectedResults.setSourceResult(expectedChecksum);
 		expectedResults.setDestinationResult(expectedChecksum);
 
 		ConcurrentMigrationIdRangeChecksumsExecutor executor = new ConcurrentMigrationIdRangeChecksumsExecutor(threadPool, mockWorkerFactory);
 
 		// Call under test
-		ConcurrentExecutionResult<MigrationRangeChecksum> results = executor.getIdRangeChecksums(MigrationType.ACL, "salt", 0, 100);
+		ResultPair<MigrationRangeChecksum> results = executor.getIdRangeChecksums(MigrationType.ACL, "salt", 0, 100);
 
 		assertEquals(expectedResults, results);
 
@@ -77,7 +77,7 @@ public class ConcurrentMigrationIdRangeChecksumsExecutorTest {
 		ConcurrentMigrationIdRangeChecksumsExecutor executor = new ConcurrentMigrationIdRangeChecksumsExecutor(threadPool, mockWorkerFactory);
 
 		// Call under test
-		ConcurrentExecutionResult<MigrationRangeChecksum> results = executor.getIdRangeChecksums(MigrationType.ACL, "salt", 0, 100);
+		ResultPair<MigrationRangeChecksum> results = executor.getIdRangeChecksums(MigrationType.ACL, "salt", 0, 100);
 
 	}
 

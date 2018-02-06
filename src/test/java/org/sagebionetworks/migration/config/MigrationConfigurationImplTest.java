@@ -13,11 +13,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
+import org.apache.logging.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
+import org.sagebionetworks.migration.LoggerFactory;
+import org.sagebionetworks.repo.model.daemon.BackupAliasType;
 
 @RunWith(MockitoJUnitRunner.class)
 public class MigrationConfigurationImplTest {
@@ -32,6 +35,10 @@ public class MigrationConfigurationImplTest {
 	InputStream mockInputStream;
 	@Mock
 	Properties mockProperties;
+	@Mock
+	LoggerFactory mockLoggerFactory;
+	@Mock
+	Logger mockLogger;
 	
 	String filePath;
 	
@@ -68,6 +75,13 @@ public class MigrationConfigurationImplTest {
 		props.put(MigrationConfigurationImpl.KEY_DESTINATION_REPOSITORY_ENDPOINT, destinationRepoEndPoint);
 		props.put(MigrationConfigurationImpl.KEY_USERNAME, userName);
 		props.put(MigrationConfigurationImpl.KEY_APIKEY, apiKey);
+		props.put(MigrationConfigurationImpl.KEY_MAX_BACKUP_BATCHSIZE, "2");
+		props.put(MigrationConfigurationImpl.KEY_MAX_RETRIES, "3");
+		props.put(MigrationConfigurationImpl.KEY_BACKUP_ALIAS_TYPE, BackupAliasType.TABLE_NAME.name());
+		props.put(MigrationConfigurationImpl.KEY_INCLUDE_FULL_TABLE_CHECKSUM, "true");
+		props.put(MigrationConfigurationImpl.KEY_DELAY_BEFORE_START_MS, "30000");
+		props.put(MigrationConfigurationImpl.KEY_THREAD_TIMOUT_MS, "100000000");
+		props.put(MigrationConfigurationImpl.KEY_MAX_NUMBER_DESTINATION_JOBS, "4");
 		
 		when(mockPropertyProvider.getSystemProperties()).thenReturn(props);
 		when(mockPropertyProvider.createNewProperties()).thenReturn(mockProperties);
@@ -75,8 +89,9 @@ public class MigrationConfigurationImplTest {
 		when(mockFileProvider.getFile(anyString())).thenReturn(mockFile);
 		when(mockFileProvider.createInputStream(any(File.class))).thenReturn(mockInputStream);
 		when(mockFile.exists()).thenReturn(true);
+		when(mockLoggerFactory.getLogger(any())).thenReturn(mockLogger);
 		
-		config = new MigrationConfigurationImpl(mockPropertyProvider, mockFileProvider);
+		config = new MigrationConfigurationImpl(mockLoggerFactory, mockPropertyProvider, mockFileProvider);
 		verify(mockProperties).load(mockInputStream);
 		verify(mockInputStream).close();
 	}
@@ -132,5 +147,12 @@ public class MigrationConfigurationImplTest {
 		assertEquals(destinationRepoEndPoint, info.getRepositoryEndPoint());
 		assertEquals(userName, info.getUserName());
 		assertEquals(apiKey, info.getApiKey());
+	}
+	
+	@Test
+	public void testLogConfiguration() {
+		// call under test
+		config.logConfiguration();
+		verify(mockLogger, times(9)).info(anyString());
 	}
 }

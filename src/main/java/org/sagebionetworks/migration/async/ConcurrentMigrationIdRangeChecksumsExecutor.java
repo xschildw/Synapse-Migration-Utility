@@ -23,7 +23,7 @@ public class ConcurrentMigrationIdRangeChecksumsExecutor {
 		this.workerFactory = workerFactory;
 	}
 
-	public ConcurrentExecutionResult<MigrationRangeChecksum> getIdRangeChecksums(MigrationType type,
+	public ResultPair<MigrationRangeChecksum> getIdRangeChecksums(MigrationType type,
 																 String salt,
 																 long minId,
 																 long maxId) {
@@ -37,7 +37,7 @@ public class ConcurrentMigrationIdRangeChecksumsExecutor {
 			MigrationRangeChecksum sourceChecksum = futureSourceChecksum.get();
 			MigrationRangeChecksum destinationChecksum = futureDestinationChecksum.get();
 
-			ConcurrentExecutionResult<MigrationRangeChecksum> results = new ConcurrentExecutionResult<MigrationRangeChecksum>();
+			ResultPair<MigrationRangeChecksum> results = new ResultPair<MigrationRangeChecksum>();
 			results.setSourceResult(sourceChecksum);
 			results.setDestinationResult(destinationChecksum);
 
