@@ -32,8 +32,8 @@ public class TypeChecksumDeltaIterator implements Iterator<DestinationJob> {
 	 */
 	public TypeChecksumDeltaIterator(Configuration configuration, AsynchronousJobExecutor asynchronousJobExecutor,
 			BackupJobExecutor backupJobExecutor, TypeToMigrateMetadata primaryType, String salt) {
-		this(configuration.getMaximumBackupBatchSize(), asynchronousJobExecutor, backupJobExecutor, primaryType.getType(),
-				primaryType.getSrcMinId(), primaryType.getSrcMaxId(), salt);
+		this(configuration.getMaximumBackupBatchSize(), asynchronousJobExecutor, backupJobExecutor,
+				primaryType.getType(), primaryType.getSrcMinId(), primaryType.getSrcMaxId(), salt);
 	}
 
 	/**
@@ -64,17 +64,17 @@ public class TypeChecksumDeltaIterator implements Iterator<DestinationJob> {
 		if (nextLevel != null) {
 			return nextLevel.hasNext();
 		} else {
-			// if the range size is less than batch size then run the backup
-			long rangeSize = this.maximumId - this.minimumId;
-			if (rangeSize < this.batchSize) {
-				// backup this range with as many jobs as needed.
-				this.nextLevel = backupJobExecutor.executeBackupJob(type, minimumId, maximumId + 1);
+			// run the checksum on both the source and destination
+			ResultPair<MigrationRangeChecksum> result = executeChecksumRequests();
+			if (result.getSourceResult().getChecksum().equals(result.getDestinationResult().getChecksum())) {
+				// checksum matches
+				return false;
 			} else {
-				// run the checksum on both the source and destination
-				ResultPair<MigrationRangeChecksum> result = executeChecksumRequests();
-				if (result.getSourceResult().getChecksum().equals(result.getDestinationResult().getChecksum())) {
-					// checksum matches
-					return false;
+				// if the range size is less than batch size then run the backup
+				long rangeSize = this.maximumId - this.minimumId;
+				if (rangeSize < this.batchSize) {
+					// backup this range with as many jobs as needed.
+					this.nextLevel = backupJobExecutor.executeBackupJob(type, minimumId, maximumId + 1);
 				} else {
 					// divide and conquer
 					this.nextLevel = divideAndConquer();
@@ -115,7 +115,7 @@ public class TypeChecksumDeltaIterator implements Iterator<DestinationJob> {
 	Iterator<DestinationJob> divideAndConquer() {
 		long range = this.maximumId - this.minimumId;
 		// divide and conquer
-		long middleId = this.minimumId + range / 2;
+		long middleId = this.minimumId + (range / 2);
 		// left
 		long leftMinimum = this.minimumId;
 		long leftMaximum = middleId;
