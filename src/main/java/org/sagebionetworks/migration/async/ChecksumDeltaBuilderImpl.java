@@ -26,8 +26,6 @@ public class ChecksumDeltaBuilderImpl implements ChecksumDeltaBuilder {
 		this.backupJobExecutor = backupJobExecutor;
 	}
 
-
-
 	@Override
 	public Iterator<DestinationJob> buildChecksumJobs(List<TypeToMigrateMetadata> primaryTypes) {
 		// The same salt is used for all types.

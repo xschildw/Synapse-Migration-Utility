@@ -16,8 +16,8 @@ public class TypeChecksumDeltaIterator implements Iterator<DestinationJob> {
 	BackupJobExecutor backupJobExecutor;
 	int batchSize;
 	MigrationType type;
-	long minimumId;
-	long maximumId;
+	Long minimumId;
+	Long maximumId;
 	String salt;
 	Iterator<DestinationJob> nextLevel;
 
@@ -47,7 +47,7 @@ public class TypeChecksumDeltaIterator implements Iterator<DestinationJob> {
 	 * @param salt
 	 */
 	public TypeChecksumDeltaIterator(int batchSize, AsynchronousJobExecutor asynchronousJobExecutor,
-			BackupJobExecutor backupJobExecutor, MigrationType type, long minimumId, long maximumId, String salt) {
+			BackupJobExecutor backupJobExecutor, MigrationType type, Long minimumId, Long maximumId, String salt) {
 		super();
 		this.batchSize = batchSize;
 		this.asynchronousJobExecutor = asynchronousJobExecutor;
@@ -60,6 +60,10 @@ public class TypeChecksumDeltaIterator implements Iterator<DestinationJob> {
 
 	@Override
 	public boolean hasNext() {
+		if(minimumId == null || maximumId == null) {
+			// nothing to do
+			return false;
+		}
 		// If nextLevel exists we have already checked this level.
 		if (nextLevel != null) {
 			return nextLevel.hasNext();

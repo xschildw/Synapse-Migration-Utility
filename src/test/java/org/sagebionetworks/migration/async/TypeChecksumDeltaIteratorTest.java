@@ -1,9 +1,6 @@
 package org.sagebionetworks.migration.async;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 
@@ -209,6 +206,16 @@ public class TypeChecksumDeltaIteratorTest {
 		verify(mockBackupJobExecutor, times(3)).executeBackupJob(any(MigrationType.class), anyLong(), anyLong());
 
 		// done
+		assertFalse(iterator.hasNext());
+	}
+	
+	@Test
+	public void testEmptySource() {
+		primaryType = new TypeToMigrateMetadata();
+		primaryType.setType(type);
+		primaryType.setSrcMinId(null);
+		primaryType.setSrcMaxId(null);
+		iterator = new TypeChecksumDeltaIterator(mockConfiguration, mockAsynchronousJobExecutor, mockBackupJobExecutor, primaryType, salt);
 		assertFalse(iterator.hasNext());
 	}
 
