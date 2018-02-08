@@ -1,8 +1,10 @@
 package org.sagebionetworks.migration.async;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.when;
 
 import java.util.Iterator;
@@ -17,8 +19,6 @@ import org.mockito.runners.MockitoJUnitRunner;
 import org.sagebionetworks.migration.config.Configuration;
 import org.sagebionetworks.migration.utils.TypeToMigrateMetadata;
 import org.sagebionetworks.repo.model.daemon.BackupAliasType;
-import org.sagebionetworks.repo.model.migration.AdminRequest;
-import org.sagebionetworks.repo.model.migration.BackupTypeResponse;
 import org.sagebionetworks.repo.model.migration.MigrationType;
 
 import com.google.common.collect.Lists;
@@ -29,15 +29,12 @@ public class MissingFromDestinationBuilderImplTest {
 	@Mock
 	Configuration mockConfig;
 	@Mock
-	AsynchronousJobExecutor mockAsynchronousJobExecutor;
+	BackupJobExecutor mockBackupJobExecutor;
 	
 	MissingFromDestinationBuilderImpl builder;
 	
 	MigrationType type;
 	int batchSize;
-	BackupTypeResponse responseOne;
-	BackupTypeResponse responseTwo;
-	BackupTypeResponse responseThree;
 	String backupFileKey;
 	BackupAliasType aliasType;
 	
@@ -49,14 +46,18 @@ public class MissingFromDestinationBuilderImplTest {
 		aliasType = BackupAliasType.TABLE_NAME;
 		when(mockConfig.getBackupAliasType()).thenReturn(aliasType);
 
-		responseOne = new BackupTypeResponse();
-		responseOne.setBackupFileKey("one");
-		responseTwo = new BackupTypeResponse();
-		responseTwo.setBackupFileKey("two");
-		responseThree = new BackupTypeResponse();
-		responseThree.setBackupFileKey("three");
-		when(mockAsynchronousJobExecutor.executeSourceJob(any(AdminRequest.class), any())).thenReturn(responseOne, responseTwo, responseThree);
-		builder = new MissingFromDestinationBuilderImpl(mockConfig, mockAsynchronousJobExecutor);
+		List<DestinationJob> batchOne = Lists.newArrayList(
+				new RestoreDestinationJob(MigrationType.NODE, "one"),
+				new RestoreDestinationJob(MigrationType.NODE, "two")
+		);
+		List<DestinationJob> batchTwo = Lists.newArrayList(
+				new RestoreDestinationJob(MigrationType.ACTIVITY, "three")
+		);
+		when(mockBackupJobExecutor.executeBackupJob(any(MigrationType.class), anyLong(), anyLong())).thenReturn(
+				batchOne.iterator(),
+				batchTwo.iterator()
+		);
+		builder = new MissingFromDestinationBuilderImpl(mockConfig, mockBackupJobExecutor);
 	}
 	
 	@Test
@@ -78,22 +79,28 @@ public class MissingFromDestinationBuilderImplTest {
 		List<TypeToMigrateMetadata> primaryTypes = Lists.newArrayList(one, two);
 		
 		Iterator<DestinationJob> iterator = builder.buildDestinationJobs(primaryTypes);
-		List<DestinationJob> jobs = new LinkedList<>();
-		while(iterator.hasNext()) {
-			jobs.add(iterator.next());
-		}
-		assertEquals(2, jobs.size());
-		
-		DestinationJob job = jobs.get(0);
+		assertTrue(iterator.hasNext());
+		DestinationJob job = iterator.next();
 		assertTrue(job instanceof RestoreDestinationJob);
 		RestoreDestinationJob restoreJob = (RestoreDestinationJob) job;
 		assertEquals(MigrationType.NODE, restoreJob.getMigrationType());
 		assertEquals("one", restoreJob.getBackupFileKey());
 		
-		job = jobs.get(1);
+		assertTrue(iterator.hasNext());
+		job = iterator.next();
+		assertTrue(job instanceof RestoreDestinationJob);
+		restoreJob = (RestoreDestinationJob) job;
+		assertEquals(MigrationType.NODE, restoreJob.getMigrationType());
+		assertEquals("two", restoreJob.getBackupFileKey());
+		
+		assertTrue(iterator.hasNext());
+		job = iterator.next();
 		assertTrue(job instanceof RestoreDestinationJob);
 		restoreJob = (RestoreDestinationJob) job;
 		assertEquals(MigrationType.ACTIVITY, restoreJob.getMigrationType());
-		assertEquals("two", restoreJob.getBackupFileKey());
+		assertEquals("three", restoreJob.getBackupFileKey());
+		
+		// done
+		assertFalse(iterator.hasNext());
 	}
 }

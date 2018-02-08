@@ -2,6 +2,10 @@ package org.sagebionetworks.migration;
 
 import org.sagebionetworks.migration.async.AsynchronousJobExecutor;
 import org.sagebionetworks.migration.async.AsynchronousJobExecutorImpl;
+import org.sagebionetworks.migration.async.BackupJobExecutor;
+import org.sagebionetworks.migration.async.BackupJobExecutorImpl;
+import org.sagebionetworks.migration.async.ChecksumDeltaBuilder;
+import org.sagebionetworks.migration.async.ChecksumDeltaBuilderImpl;
 import org.sagebionetworks.migration.async.DestinationJobBuilder;
 import org.sagebionetworks.migration.async.DestinationJobBuilderImpl;
 import org.sagebionetworks.migration.async.DestinationJobExecutor;
@@ -46,6 +50,8 @@ public class MigrationModule extends AbstractModule {
 		bind(DestinationJobBuilder.class).to(DestinationJobBuilderImpl.class);
 		bind(DestinationJobExecutor.class).to(DestinationJobExecutorImpl.class);
 		bind(MissingFromDestinationBuilder.class).to(MissingFromDestinationBuilderImpl.class);
+		bind(BackupJobExecutor.class).to(BackupJobExecutorImpl.class);
+		bind(ChecksumDeltaBuilder.class).to(ChecksumDeltaBuilderImpl.class);
 	}
 
 }

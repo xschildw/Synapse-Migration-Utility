@@ -11,13 +11,13 @@ import com.google.inject.Inject;
 public class DestinationJobBuilderImpl implements DestinationJobBuilder {
 	
 	MissingFromDestinationBuilder missingFromDestinationBuilder;
-	
 	ChecksumDeltaBuilder checksumChangeBuilder;
 	
 	@Inject
-	public DestinationJobBuilderImpl(MissingFromDestinationBuilder missingFromDestinationBuilder) {
+	public DestinationJobBuilderImpl(MissingFromDestinationBuilder missingFromDestinationBuilder, ChecksumDeltaBuilder checksumChangeBuilder) {
 		super();
 		this.missingFromDestinationBuilder = missingFromDestinationBuilder;
+		this.checksumChangeBuilder = checksumChangeBuilder;
 	}
 
 	@Override
