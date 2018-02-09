@@ -30,6 +30,8 @@ public class DestinationJobExecutorImpl implements DestinationJobExecutor {
 			restoreRequest.setBatchSize((long) config.getMaximumBackupBatchSize());
 			restoreRequest.setMigrationType(restoreJob.getMigrationType());
 			restoreRequest.setBackupFileKey(restoreJob.getBackupFileKey());
+			restoreRequest.setMinimumRowId(restoreJob.getMinimumId());
+			restoreRequest.setMaximumRowId(restoreJob.getMaximumId());
 			return asynchronousJobExecutor.startDestionationJob(restoreRequest, RestoreTypeResponse.class);
 		}else {
 			throw new IllegalArgumentException("Unknown job type: "+job.getClass().getName());

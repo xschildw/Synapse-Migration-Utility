@@ -8,7 +8,6 @@ import org.sagebionetworks.migration.config.Configuration;
 import org.sagebionetworks.migration.utils.TypeToMigrateMetadata;
 import org.sagebionetworks.repo.model.daemon.BackupAliasType;
 import org.sagebionetworks.repo.model.migration.BackupTypeRangeRequest;
-import org.sagebionetworks.repo.model.migration.BackupTypeResponse;
 
 /**
  * Creates n number of backups batches for rows in the source that do not exist in the destination.
@@ -18,14 +17,15 @@ import org.sagebionetworks.repo.model.migration.BackupTypeResponse;
  */
 public class MissingFromDestinationIterator implements Iterator<DestinationJob> {
 
-	AsynchronousJobExecutor asynchronousJobExecutor;
+	BackupJobExecutor backupJobExecutor;
 
 	Iterator<BackupTypeRangeRequest> requestIterator;
+	Iterator<DestinationJob> currentBatch;
 
-	public MissingFromDestinationIterator(Configuration config, AsynchronousJobExecutor asynchronousJobExecutor,
+	public MissingFromDestinationIterator(Configuration config, BackupJobExecutor backupJobExecutor,
 			TypeToMigrateMetadata typeToMigrate) {
 		super();
-		this.asynchronousJobExecutor = asynchronousJobExecutor;
+		this.backupJobExecutor = backupJobExecutor;
 		List<BackupTypeRangeRequest> request = createBackupRequests(typeToMigrate, config.getBackupAliasType(),
 				config.getMaximumBackupBatchSize(), config.getDestinationRowCountToIgnore());
 		this.requestIterator = request.iterator();
@@ -33,15 +33,22 @@ public class MissingFromDestinationIterator implements Iterator<DestinationJob> 
 
 	@Override
 	public boolean hasNext() {
-		return this.requestIterator.hasNext();
+		if(currentBatch != null) {
+			if(currentBatch.hasNext()) {
+				return true;
+			}
+		}
+		if(this.requestIterator.hasNext()) {
+			BackupTypeRangeRequest nextRequest = this.requestIterator.next();
+			currentBatch = backupJobExecutor.executeBackupJob(nextRequest.getMigrationType(), nextRequest.getMinimumId(), nextRequest.getMaximumId());
+			return currentBatch.hasNext();
+		}
+		return false;
 	}
 
 	@Override
 	public DestinationJob next() {
-		BackupTypeRangeRequest nextRequest = this.requestIterator.next();
-		// create a backup for this request and wait for the results.
-		BackupTypeResponse response = asynchronousJobExecutor.executeSourceJob(nextRequest, BackupTypeResponse.class);
-		return new RestoreDestinationJob(nextRequest.getMigrationType(), response.getBackupFileKey());
+		return currentBatch.next();
 	}
 
 	/**

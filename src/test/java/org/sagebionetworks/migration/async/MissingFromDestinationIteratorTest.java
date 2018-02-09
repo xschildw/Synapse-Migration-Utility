@@ -1,11 +1,14 @@
 package org.sagebionetworks.migration.async;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Matchers.anyLong;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.List;
 
@@ -17,10 +20,10 @@ import org.mockito.runners.MockitoJUnitRunner;
 import org.sagebionetworks.migration.config.Configuration;
 import org.sagebionetworks.migration.utils.TypeToMigrateMetadata;
 import org.sagebionetworks.repo.model.daemon.BackupAliasType;
-import org.sagebionetworks.repo.model.migration.AdminRequest;
 import org.sagebionetworks.repo.model.migration.BackupTypeRangeRequest;
-import org.sagebionetworks.repo.model.migration.BackupTypeResponse;
 import org.sagebionetworks.repo.model.migration.MigrationType;
+
+import com.google.common.collect.Lists;
 
 @RunWith(MockitoJUnitRunner.class)
 public class MissingFromDestinationIteratorTest {
@@ -28,13 +31,10 @@ public class MissingFromDestinationIteratorTest {
 	@Mock
 	Configuration mockConfig;
 	@Mock
-	AsynchronousJobExecutor mockAsynchronousJobExecutor;
+	BackupJobExecutor mockBackupJobExecutor;
 	
 	MigrationType type;
 	int batchSize;
-	BackupTypeResponse responseOne;
-	BackupTypeResponse responseTwo;
-	BackupTypeResponse responseThree;
 	String backupFileKey;
 	BackupAliasType aliasType;
 	long destinationRowCountToIgnore;
@@ -48,13 +48,21 @@ public class MissingFromDestinationIteratorTest {
 		aliasType = BackupAliasType.TABLE_NAME;
 		when(mockConfig.getBackupAliasType()).thenReturn(aliasType);
 
-		responseOne = new BackupTypeResponse();
-		responseOne.setBackupFileKey("one");
-		responseTwo = new BackupTypeResponse();
-		responseTwo.setBackupFileKey("two");
-		responseThree = new BackupTypeResponse();
-		responseThree.setBackupFileKey("three");
-		when(mockAsynchronousJobExecutor.executeSourceJob(any(AdminRequest.class), any())).thenReturn(responseOne, responseTwo, responseThree);
+		List<DestinationJob> batchOne = Lists.newArrayList(
+				new RestoreDestinationJob(type, "one"),
+				new RestoreDestinationJob(type, "two")
+		);
+		List<DestinationJob> batchTwo = Lists.newArrayList(
+				new RestoreDestinationJob(type, "three")
+		);
+		List<DestinationJob> batchthree = Lists.newArrayList(
+				new RestoreDestinationJob(type, "four")
+		);
+		when(mockBackupJobExecutor.executeBackupJob(any(MigrationType.class), anyLong(), anyLong())).thenReturn(
+				batchOne.iterator(),
+				batchTwo.iterator(),
+				batchthree.iterator()
+		);
 	}
 	
 	@Test
@@ -182,7 +190,7 @@ public class MissingFromDestinationIteratorTest {
 		typeToMigrate.setDestMaxId(null);
 		
 		// call under test
-		MissingFromDestinationIterator iterator = new MissingFromDestinationIterator(mockConfig, mockAsynchronousJobExecutor, typeToMigrate);
+		MissingFromDestinationIterator iterator = new MissingFromDestinationIterator(mockConfig, mockBackupJobExecutor, typeToMigrate);
 		// one
 		assertTrue(iterator.hasNext());
 		DestinationJob job = iterator.next();
@@ -190,7 +198,7 @@ public class MissingFromDestinationIteratorTest {
 		assertTrue(job instanceof RestoreDestinationJob);
 		RestoreDestinationJob restoreJob = (RestoreDestinationJob) job;
 		assertEquals(type, job.getMigrationType());
-		assertEquals(responseOne.getBackupFileKey(), restoreJob.getBackupFileKey());
+		assertEquals("one", restoreJob.getBackupFileKey());
 		// two
 		assertTrue(iterator.hasNext());
 		job = iterator.next();
@@ -198,7 +206,7 @@ public class MissingFromDestinationIteratorTest {
 		assertTrue(job instanceof RestoreDestinationJob);
 		restoreJob = (RestoreDestinationJob) job;
 		assertEquals(type, job.getMigrationType());
-		assertEquals(responseTwo.getBackupFileKey(), restoreJob.getBackupFileKey());
+		assertEquals("two", restoreJob.getBackupFileKey());
 		// three
 		assertTrue(iterator.hasNext());
 		job = iterator.next();
@@ -206,10 +214,18 @@ public class MissingFromDestinationIteratorTest {
 		assertTrue(job instanceof RestoreDestinationJob);
 		restoreJob = (RestoreDestinationJob) job;
 		assertEquals(type, job.getMigrationType());
-		assertEquals(responseThree.getBackupFileKey(), restoreJob.getBackupFileKey());
+		assertEquals("three", restoreJob.getBackupFileKey());
+		// four
+		assertTrue(iterator.hasNext());
+		job = iterator.next();
+		assertNotNull(job);
+		assertTrue(job instanceof RestoreDestinationJob);
+		restoreJob = (RestoreDestinationJob) job;
+		assertEquals(type, job.getMigrationType());
+		assertEquals("four", restoreJob.getBackupFileKey());
 		// done
 		assertFalse(iterator.hasNext());
 		// three source jobs should be run
-		verify(mockAsynchronousJobExecutor, times(3)).executeSourceJob(any(AdminRequest.class), any());
+		verify(mockBackupJobExecutor, times(3)).executeBackupJob(any(MigrationType.class), anyLong(), anyLong());
 	}
 }

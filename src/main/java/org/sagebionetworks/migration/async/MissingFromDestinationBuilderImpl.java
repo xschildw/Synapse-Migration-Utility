@@ -13,13 +13,13 @@ import com.google.inject.Inject;
 public class MissingFromDestinationBuilderImpl implements MissingFromDestinationBuilder {
 	
 	Configuration config;
-	AsynchronousJobExecutor asynchronousJobExecutor;
+	BackupJobExecutor backupJobExecutor;
 
 	@Inject
-	public MissingFromDestinationBuilderImpl(Configuration config, AsynchronousJobExecutor asynchronousJobExecutor) {
+	public MissingFromDestinationBuilderImpl(Configuration config, 	BackupJobExecutor backupJobExecutor) {
 		super();
 		this.config = config;
-		this.asynchronousJobExecutor = asynchronousJobExecutor;
+		this.backupJobExecutor = backupJobExecutor;
 	}
 
 	@Override
@@ -28,7 +28,7 @@ public class MissingFromDestinationBuilderImpl implements MissingFromDestination
 		Iterator<DestinationJob> iterator = new LinkedList<DestinationJob>().iterator();
 		// Concatenate an iterator for each type.
 		for(TypeToMigrateMetadata typeToMigrate: primaryTypes) {
-			MissingFromDestinationIterator typeIterator = new MissingFromDestinationIterator(config, asynchronousJobExecutor, typeToMigrate);
+			MissingFromDestinationIterator typeIterator = new MissingFromDestinationIterator(config, backupJobExecutor, typeToMigrate);
 			iterator = Iterators.concat(iterator, typeIterator);
 		}
 		return iterator;

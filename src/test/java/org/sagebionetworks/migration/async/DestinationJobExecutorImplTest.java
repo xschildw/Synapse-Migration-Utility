@@ -35,6 +35,8 @@ public class DestinationJobExecutorImplTest {
 	int batchSize;
 	BackupAliasType aliasType;
 	
+	Long minimumId;
+	Long maximumId;
 	RestoreDestinationJob restoreJob;
 	
 	@Before
@@ -45,7 +47,11 @@ public class DestinationJobExecutorImplTest {
 		when(mockConfig.getBackupAliasType()).thenReturn(aliasType);
 		type = MigrationType.NODE;
 		backupFileKey = "backup file key";
-		restoreJob = new RestoreDestinationJob(type, backupFileKey);
+		
+		minimumId = 1L;
+		maximumId = 2L;
+		
+		restoreJob = new RestoreDestinationJob(type, backupFileKey, minimumId, maximumId);
 		
 		when(mockAsynchronousJobExecutor.startDestionationJob(any(AdminRequest.class), any())).thenReturn(mockFuture);
 		
@@ -59,6 +65,8 @@ public class DestinationJobExecutorImplTest {
 		expectedRequest.setBatchSize((long) batchSize);
 		expectedRequest.setMigrationType(restoreJob.getMigrationType());
 		expectedRequest.setBackupFileKey(restoreJob.getBackupFileKey());
+		expectedRequest.setMinimumRowId(minimumId);
+		expectedRequest.setMaximumRowId(maximumId);
 		// call under test
 		Future future = destinationExecutor.startDestinationJob(restoreJob);
 		assertEquals(mockFuture, future);
