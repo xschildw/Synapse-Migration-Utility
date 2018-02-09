@@ -69,8 +69,7 @@ public class TypeChecksumDeltaIterator implements Iterator<DestinationJob> {
 			return nextLevel.hasNext();
 		} else {
 			// run the checksum on both the source and destination
-			ResultPair<MigrationRangeChecksum> result = executeChecksumRequests();
-			if (result.getSourceResult().getChecksum().equals(result.getDestinationResult().getChecksum())) {
+			if (doChecksumsMatch()) {
 				// checksum matches
 				return false;
 			} else {
@@ -88,6 +87,12 @@ public class TypeChecksumDeltaIterator implements Iterator<DestinationJob> {
 			return this.nextLevel.hasNext();
 		}
 	}
+	
+	/**
+	 * Calculate the checksum for this range on both source and destination and determine if there is a match.
+	 * @return
+	 */
+
 
 	@Override
 	public DestinationJob next() {
@@ -99,7 +104,7 @@ public class TypeChecksumDeltaIterator implements Iterator<DestinationJob> {
 	 * 
 	 * @return
 	 */
-	ResultPair<MigrationRangeChecksum> executeChecksumRequests() {
+	boolean doChecksumsMatch() {
 		// Get the check sum
 		AsyncMigrationRangeChecksumRequest request = new AsyncMigrationRangeChecksumRequest();
 		// Max is inclusive in checksums
@@ -108,7 +113,28 @@ public class TypeChecksumDeltaIterator implements Iterator<DestinationJob> {
 		request.setSalt(salt);
 		request.setType(type.name());
 		// run the checksum on both the source and destination
-		return asynchronousJobExecutor.executeSourceAndDestinationJob(request, MigrationRangeChecksum.class);
+		ResultPair<MigrationRangeChecksum> results = asynchronousJobExecutor.executeSourceAndDestinationJob(request, MigrationRangeChecksum.class);
+		return doChecksumsMatch(results);
+	}
+	
+	/**
+	 * Given the results of the checksums for both the source and destination, do the checksums match?
+	 * @param results
+	 * @return
+	 */
+	public static boolean doChecksumsMatch(ResultPair<MigrationRangeChecksum> results) {
+		if(results != null) {
+			MigrationRangeChecksum sourceResults = results.getSourceResult();
+			MigrationRangeChecksum destResults = results.getDestinationResult();
+			if(sourceResults != null && destResults != null) {
+				String sourceChecksum = sourceResults.getChecksum();
+				String destChecksum = destResults.getChecksum();
+				if(sourceChecksum != null && destChecksum != null) {
+					return sourceChecksum.equals(destChecksum);
+				}
+			}
+		}
+		return false;
 	}
 
 	/**

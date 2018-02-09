@@ -39,8 +39,7 @@ public class TypeChecksumDeltaIteratorTest {
 	MigrationType type;
 	long batchSize;
 	TypeToMigrateMetadata primaryType;
-	String salt;
-
+	String salt;	
 	List<DestinationJob> restoreJobs;
 
 	TypeChecksumDeltaIterator iterator;
@@ -72,6 +71,7 @@ public class TypeChecksumDeltaIteratorTest {
 
 		iterator = new TypeChecksumDeltaIterator(mockConfiguration, mockAsynchronousJobExecutor, mockBackupJobExecutor,
 				primaryType, salt);
+		
 		// the constructor should not trigger any jobs or calls
 		verifyZeroInteractions(mockAsynchronousJobExecutor);
 		verifyZeroInteractions(mockBackupJobExecutor);
@@ -81,9 +81,9 @@ public class TypeChecksumDeltaIteratorTest {
 	public void testTypeChecksumDeltaIteratorChecksumsMatch() {
 		// setup a match
 		boolean isMatch = true;
-		ResultPair<AdminResponse> checksumResult = createChecksumPair(isMatch);
+		ResultPair<MigrationRangeChecksum> checksumResult = createChecksumPair(isMatch);
 		when(mockAsynchronousJobExecutor.executeSourceAndDestinationJob(any(AsyncMigrationRangeChecksumRequest.class),
-				any())).thenReturn(checksumResult);
+				eq(MigrationRangeChecksum.class))).thenReturn(checksumResult);
 		// when the checksums match there is no work
 		assertFalse(iterator.hasNext());
 		// single checksum of the entire range.
@@ -124,9 +124,9 @@ public class TypeChecksumDeltaIteratorTest {
 	public void testTypeChecksumDeltaIteratorChecksumsNoMatch() {
 		// There are no matches
 		boolean isMatch = false;
-		ResultPair<AdminResponse> checksumResult = createChecksumPair(isMatch);
+		ResultPair<MigrationRangeChecksum> checksumResult = createChecksumPair(isMatch);
 		when(mockAsynchronousJobExecutor.executeSourceAndDestinationJob(any(AsyncMigrationRangeChecksumRequest.class),
-				any())).thenReturn(checksumResult);
+				eq(MigrationRangeChecksum.class))).thenReturn(checksumResult);
 		// 1st hasNext()
 		assertTrue(iterator.hasNext());
 		// 1.
@@ -218,7 +218,66 @@ public class TypeChecksumDeltaIteratorTest {
 		iterator = new TypeChecksumDeltaIterator(mockConfiguration, mockAsynchronousJobExecutor, mockBackupJobExecutor, primaryType, salt);
 		assertFalse(iterator.hasNext());
 	}
+	
+	@Test
+	public void testDoChecksumsMatchTrue() {
+		boolean isMatch = true;
+		ResultPair<MigrationRangeChecksum> resutls = createChecksumPair(isMatch);
+		// call under test
+		assertTrue(TypeChecksumDeltaIterator.doChecksumsMatch(resutls));
+	}
 
+	@Test
+	public void testDoChecksumsMatchFalse() {
+		boolean isMatch = false;
+		ResultPair<MigrationRangeChecksum> resutls = createChecksumPair(isMatch);
+		// call under test
+		assertFalse(TypeChecksumDeltaIterator.doChecksumsMatch(resutls));
+	}
+	
+	@Test
+	public void testDoChecksumsMatchNull() {
+		boolean isMatch = false;
+		ResultPair<MigrationRangeChecksum> resutls = null;
+		// call under test
+		assertFalse(TypeChecksumDeltaIterator.doChecksumsMatch(resutls));
+	}
+	
+	@Test
+	public void testDoChecksumsMatchNullSouce() {
+		boolean isMatch = true;
+		ResultPair<MigrationRangeChecksum> resutls = createChecksumPair(isMatch);
+		resutls.setSourceResult(null);
+		// call under test
+		assertFalse(TypeChecksumDeltaIterator.doChecksumsMatch(resutls));
+	}
+	
+	@Test
+	public void testDoChecksumsMatchNullDestination() {
+		boolean isMatch = true;
+		ResultPair<MigrationRangeChecksum> resutls = createChecksumPair(isMatch);
+		resutls.setDestinationResult(null);
+		// call under test
+		assertFalse(TypeChecksumDeltaIterator.doChecksumsMatch(resutls));
+	}
+	
+	@Test
+	public void testDoChecksumsMatchNullSouceChecksum() {
+		boolean isMatch = true;
+		ResultPair<MigrationRangeChecksum> resutls = createChecksumPair(isMatch);
+		resutls.getSourceResult().setChecksum(null);
+		// call under test
+		assertFalse(TypeChecksumDeltaIterator.doChecksumsMatch(resutls));
+	}
+	
+	@Test
+	public void testDoChecksumsMatchNullDestChecksum() {
+		boolean isMatch = true;
+		ResultPair<MigrationRangeChecksum> resutls = createChecksumPair(isMatch);
+		resutls.getDestinationResult().setChecksum(null);
+		// call under test
+		assertFalse(TypeChecksumDeltaIterator.doChecksumsMatch(resutls));
+	}
 
 	/**
 	 * Helper to create a checksum results from both the source and destination.
@@ -227,8 +286,8 @@ public class TypeChecksumDeltaIteratorTest {
 	 *            Should the checksums match?
 	 * @return
 	 */
-	public ResultPair<AdminResponse> createChecksumPair(boolean isMatch) {
-		ResultPair<AdminResponse> result = new ResultPair<>();
+	public ResultPair<MigrationRangeChecksum> createChecksumPair(boolean isMatch) {
+		ResultPair<MigrationRangeChecksum> result = new ResultPair<>();
 		String checksum = "checksum";
 		MigrationRangeChecksum sourceChecksum = new MigrationRangeChecksum();
 		sourceChecksum.setChecksum(checksum);
