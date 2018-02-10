@@ -129,6 +129,10 @@ public class TypeChecksumDeltaIterator implements Iterator<DestinationJob> {
 			if(sourceResults != null && destResults != null) {
 				String sourceChecksum = sourceResults.getChecksum();
 				String destChecksum = destResults.getChecksum();
+				// null at both the source and destination means no data for that range.
+				if(sourceChecksum == null && destChecksum == null) {
+					return true;
+				}
 				if(sourceChecksum != null && destChecksum != null) {
 					return sourceChecksum.equals(destChecksum);
 				}

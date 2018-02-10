@@ -278,6 +278,16 @@ public class TypeChecksumDeltaIteratorTest {
 		// call under test
 		assertFalse(TypeChecksumDeltaIterator.doChecksumsMatch(resutls));
 	}
+	
+	@Test
+	public void testDoChecksumsMatchNullSouceAndDestChecksum() {
+		boolean isMatch = true;
+		ResultPair<MigrationRangeChecksum> resutls = createChecksumPair(isMatch);
+		resutls.getSourceResult().setChecksum(null);
+		resutls.getDestinationResult().setChecksum(null);
+		// call under test
+		assertTrue(TypeChecksumDeltaIterator.doChecksumsMatch(resutls));
+	}
 
 	/**
 	 * Helper to create a checksum results from both the source and destination.
