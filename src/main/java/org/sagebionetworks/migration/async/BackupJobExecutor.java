@@ -11,10 +11,7 @@ import org.sagebionetworks.repo.model.migration.MigrationType;
 public interface BackupJobExecutor {
 
 	/**
-	 * Typically, a backup job can be executed as a single call. However, for cases
-	 * where the number of secondary rows for a given type is high, multiple backup
-	 * jobs are needed to to cover a range. Therefore, this method will result in
-	 * one or more DestinationJobs.
+	 * Create as many backup requests as is needed to backup the given range.
 	 * 
 	 * @param type
 	 * @param minimumId

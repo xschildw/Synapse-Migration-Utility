@@ -111,7 +111,9 @@ public class TypeChecksumDeltaIterator implements Iterator<DestinationJob> {
 		request.setMaxId(this.maximumId);
 		request.setMinId(this.minimumId);
 		request.setSalt(salt);
+		// this will be removed after prod-215 goes live.
 		request.setType(type.name());
+		request.setMigrationType(type);
 		// run the checksum on both the source and destination
 		ResultPair<MigrationRangeChecksum> results = asynchronousJobExecutor.executeSourceAndDestinationJob(request, MigrationRangeChecksum.class);
 		return doChecksumsMatch(results);

@@ -33,7 +33,7 @@
 	<properties>
 		<log4j.version>2.7</log4j.version>
 		<commons-logging.version>1.2</commons-logging.version>
-		<synapseclient.version>215.0-4-g86cd76c782</synapseclient.version>
+		<synapseclient.version>develop-SNAPSHOT</synapseclient.version>
 		<junit.version>4.12</junit.version>
 		<mockito.version>1.10.19</mockito.version>
 		<xstream.version>1.4.9</xstream.version>
