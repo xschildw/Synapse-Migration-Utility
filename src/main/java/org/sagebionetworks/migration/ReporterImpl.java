@@ -73,7 +73,7 @@ public class ReporterImpl implements Reporter {
 	}
 
 	@Override
-	public void reportChecksums(ResultPair<List<MigrationTypeChecksum>> checksums) {
+	public void reportChecksums(ResultPair<MigrationTypeChecksum> checksums) {
 		throw new UnsupportedOperationException("Need to add support");
 	}
 

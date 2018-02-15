@@ -10,6 +10,7 @@ import org.sagebionetworks.client.exceptions.SynapseException;
 import org.sagebionetworks.migration.async.AsynchronousJobExecutor;
 import org.sagebionetworks.migration.async.ResultPair;
 import org.sagebionetworks.migration.factory.SynapseClientFactory;
+import org.sagebionetworks.repo.model.migration.AsyncMigrationTypeChecksumRequest;
 import org.sagebionetworks.repo.model.migration.AsyncMigrationTypeCountsRequest;
 import org.sagebionetworks.repo.model.migration.MigrationType;
 import org.sagebionetworks.repo.model.migration.MigrationTypeChecksum;
@@ -112,7 +113,11 @@ public class TypeServiceImpl implements TypeService {
 	}
 
 	@Override
-	public ResultPair<List<MigrationTypeChecksum>> getFullTableChecksums(List<MigrationType> migrationTypes) {
-		throw new UnsupportedOperationException("Need to add support for this");
+	public ResultPair<MigrationTypeChecksum> getFullTableChecksums(MigrationType migrationType) {
+		AsyncMigrationTypeChecksumRequest request = new AsyncMigrationTypeChecksumRequest();
+		request.setMigrationType(migrationType);
+		request.setType(migrationType.name());
+		return asynchronousJobExecutor.executeSourceAndDestinationJob(request, MigrationTypeChecksum.class);
 	}
+
 }

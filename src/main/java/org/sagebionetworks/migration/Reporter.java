@@ -26,7 +26,7 @@ public interface Reporter {
 	 * Report the final checksums for all types.
 	 * @param checksums
 	 */
-	public void reportChecksums(ResultPair<List<MigrationTypeChecksum>> checksums);
+	public void reportChecksums(ResultPair<MigrationTypeChecksum> checksums);
 	
 	/**
 	 * Report the progress of an AsynchronousJobStatus.
