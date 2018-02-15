@@ -45,6 +45,8 @@ public class BackupJobExecutorImplTest {
 	CalculateOptimalRangeResponse rangeResponse;
 	
 	BackupTypeResponse backupTypeResponse;
+	
+	String backupFile;
 
 	@Before
 	public void before() {
@@ -59,7 +61,8 @@ public class BackupJobExecutorImplTest {
 		rangeResponse.setRanges(Lists.newArrayList(createIdRange(3L, 4L)));
 		
 		backupTypeResponse = new BackupTypeResponse();
-		backupTypeResponse.setBackupFileKey("backupFile");
+		backupFile = "backupFile";
+		backupTypeResponse.setBackupFileKey(backupFile);
 		
 		when(mockAsynchronousJobExecutor.executeSourceJob(any(AdminRequest.class), any())).thenReturn(rangeResponse, backupTypeResponse);
 
@@ -177,6 +180,11 @@ public class BackupJobExecutorImplTest {
 		assertTrue(iterator.hasNext());
 		DestinationJob job = iterator.next();
 		assertTrue(job instanceof RestoreDestinationJob);
+		RestoreDestinationJob restoreJob = (RestoreDestinationJob) job;
+		assertEquals(backupFile, restoreJob.getBackupFileKey());
+		assertEquals(new Long(minimumId), restoreJob.getMinimumId());
+		assertEquals(new Long(maximumId), restoreJob.getMaximumId());
+		assertEquals(migrationType, restoreJob.getMigrationType());
 		assertFalse(iterator.hasNext());
 	}
 
