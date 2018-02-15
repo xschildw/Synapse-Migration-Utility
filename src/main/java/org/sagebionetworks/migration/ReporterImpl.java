@@ -9,21 +9,20 @@ import org.sagebionetworks.migration.async.ResultPair;
 import org.sagebionetworks.migration.config.Configuration;
 import org.sagebionetworks.migration.utils.MigrationTypeCountDiff;
 import org.sagebionetworks.migration.utils.ToolMigrationUtils;
-import org.sagebionetworks.repo.model.asynch.AsynchJobState;
 import org.sagebionetworks.repo.model.asynch.AsynchronousJobStatus;
 import org.sagebionetworks.repo.model.migration.AdminRequest;
 import org.sagebionetworks.repo.model.migration.AsyncMigrationRequest;
 import org.sagebionetworks.repo.model.migration.HasMigrationType;
-import org.sagebionetworks.repo.model.migration.MigrationType;
 import org.sagebionetworks.repo.model.migration.MigrationTypeChecksum;
 import org.sagebionetworks.repo.model.migration.MigrationTypeCount;
 import org.sagebionetworks.util.Clock;
 
-import com.amazonaws.services.sqs.model.UnsupportedOperationException;
 import com.google.inject.Inject;
 
 public class ReporterImpl implements Reporter {
 
+	private static final String CHECKSUMS_DO_NOT_MATCH = "CHECKSUMS DO NOT MATCH FOR: ";
+	private static final String CHECKSUMS_MATCH = "Checksums match for: ";
 	private static final String ELASE_MS_TEMPLATE = "%02d:%02d:%02d.%03d";
 	private static final String WAITING_FOR_JOB_TEMPLATE = "%s job: %s state: %s on: %s type: '%s' elapse: %s";
 	static final long ONE_SECOND_MS = 1000L;
@@ -73,8 +72,14 @@ public class ReporterImpl implements Reporter {
 	}
 
 	@Override
-	public void reportChecksums(ResultPair<List<MigrationTypeChecksum>> checksums) {
-		throw new UnsupportedOperationException("Need to add support");
+	public void reportChecksums(ResultPair<MigrationTypeChecksum> checksums) {
+		MigrationTypeChecksum source = checksums.getSourceResult();
+		MigrationTypeChecksum destination = checksums.getDestinationResult();
+		if(source.getChecksum().equals(destination.getChecksum())) {
+			logger.info(CHECKSUMS_MATCH+destination.getMigrationType().name());
+		}else {
+			logger.warn(CHECKSUMS_DO_NOT_MATCH+destination.getMigrationType().name());
+		}
 	}
 
 	@Override

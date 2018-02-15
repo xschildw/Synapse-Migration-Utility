@@ -38,6 +38,6 @@ public interface TypeService {
 	 * @param migrationTypes
 	 * @return
 	 */
-	public ResultPair<List<MigrationTypeChecksum>> getFullTableChecksums(
-			List<MigrationType> migrationTypes);
+	public ResultPair<MigrationTypeChecksum> getFullTableChecksums(
+			MigrationType migrationType);
 }

@@ -1,10 +1,16 @@
 package org.sagebionetworks.migration.async;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Matchers.anyLong;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.when;
 
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -15,12 +21,8 @@ import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 import org.sagebionetworks.migration.config.Configuration;
 import org.sagebionetworks.migration.utils.TypeToMigrateMetadata;
-import org.sagebionetworks.repo.model.daemon.BackupAliasType;
 import org.sagebionetworks.repo.model.migration.AdminRequest;
-import org.sagebionetworks.repo.model.migration.AdminResponse;
 import org.sagebionetworks.repo.model.migration.AsyncMigrationRangeChecksumRequest;
-import org.sagebionetworks.repo.model.migration.BackupTypeRangeRequest;
-import org.sagebionetworks.repo.model.migration.BackupTypeResponse;
 import org.sagebionetworks.repo.model.migration.MigrationRangeChecksum;
 import org.sagebionetworks.repo.model.migration.MigrationType;
 
@@ -92,6 +94,7 @@ public class TypeChecksumDeltaIteratorTest {
 		expectedChecksumRequest.setMaxId(primaryType.getSrcMaxId());
 		expectedChecksumRequest.setSalt(salt);
 		expectedChecksumRequest.setType(type.name());
+		expectedChecksumRequest.setMigrationType(type);
 		verify(mockAsynchronousJobExecutor).executeSourceAndDestinationJob(expectedChecksumRequest,
 				MigrationRangeChecksum.class);
 		verify(mockAsynchronousJobExecutor, times(1))
@@ -135,6 +138,7 @@ public class TypeChecksumDeltaIteratorTest {
 		expectedChecksumRequest.setMaxId(primaryType.getSrcMaxId());
 		expectedChecksumRequest.setSalt(salt);
 		expectedChecksumRequest.setType(type.name());
+		expectedChecksumRequest.setMigrationType(type);
 		verify(mockAsynchronousJobExecutor).executeSourceAndDestinationJob(expectedChecksumRequest,
 				MigrationRangeChecksum.class);
 		// 3.
@@ -143,6 +147,7 @@ public class TypeChecksumDeltaIteratorTest {
 		expectedChecksumRequest.setMaxId(6L);
 		expectedChecksumRequest.setSalt(salt);
 		expectedChecksumRequest.setType(type.name());
+		expectedChecksumRequest.setMigrationType(type);
 		verify(mockAsynchronousJobExecutor).executeSourceAndDestinationJob(expectedChecksumRequest,
 				MigrationRangeChecksum.class);
 		// 5.
@@ -151,6 +156,7 @@ public class TypeChecksumDeltaIteratorTest {
 		expectedChecksumRequest.setMaxId(4L);
 		expectedChecksumRequest.setSalt(salt);
 		expectedChecksumRequest.setType(type.name());
+		expectedChecksumRequest.setMigrationType(type);
 		verify(mockAsynchronousJobExecutor).executeSourceAndDestinationJob(expectedChecksumRequest,
 				MigrationRangeChecksum.class);
 		// 6.
@@ -179,6 +185,7 @@ public class TypeChecksumDeltaIteratorTest {
 		expectedChecksumRequest.setMaxId(6L);
 		expectedChecksumRequest.setSalt(salt);
 		expectedChecksumRequest.setType(type.name());
+		expectedChecksumRequest.setMigrationType(type);
 		verify(mockAsynchronousJobExecutor).executeSourceAndDestinationJob(expectedChecksumRequest,
 				MigrationRangeChecksum.class);
 		// 8.
@@ -197,6 +204,7 @@ public class TypeChecksumDeltaIteratorTest {
 		expectedChecksumRequest.setMaxId(9L);
 		expectedChecksumRequest.setSalt(salt);
 		expectedChecksumRequest.setType(type.name());
+		expectedChecksumRequest.setMigrationType(type);
 		verify(mockAsynchronousJobExecutor).executeSourceAndDestinationJob(expectedChecksumRequest,
 				MigrationRangeChecksum.class);
 		// 10.
