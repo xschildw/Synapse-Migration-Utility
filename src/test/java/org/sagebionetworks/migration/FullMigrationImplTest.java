@@ -49,7 +49,7 @@ public class FullMigrationImplTest {
 	ResultPair<List<MigrationTypeCount>> countResultsOne;
 	ResultPair<List<MigrationTypeCount>> countResultsTwo;
 	
-	ResultPair<List<MigrationTypeChecksum>> checksumResutls;
+	ResultPair<MigrationTypeChecksum> checksumResutls;
 	
 	List<TypeToMigrateMetadata> typesToMigrate;
 
@@ -97,8 +97,8 @@ public class FullMigrationImplTest {
 		when(mockConfiguration.includeFullTableChecksums()).thenReturn(true);
 		when(mockStackStatusService.isSourceReadOnly()).thenReturn(true);
 		
-		checksumResutls = new ResultPair<List<MigrationTypeChecksum>>();
-		when(mockTypeService.getFullTableChecksums(allCommonTypes)).thenReturn(checksumResutls);
+		checksumResutls = new ResultPair<MigrationTypeChecksum>();
+		when(mockTypeService.getFullTableChecksums(any(MigrationType.class))).thenReturn(checksumResutls);
 	}
 	
 	@Test
@@ -115,8 +115,8 @@ public class FullMigrationImplTest {
 		verify(mockTypeReporter).reportCountDifferences(countResultsOne);
 		// end
 		verify(mockTypeReporter).reportCountDifferences(countResultsTwo);
-		verify(mockTypeService).getFullTableChecksums(allCommonTypes);
-		verify(mockTypeReporter).reportChecksums(checksumResutls);
+		verify(mockTypeService, times(allCommonTypes.size())).getFullTableChecksums(any(MigrationType.class));
+		verify(mockTypeReporter, times(allCommonTypes.size())).reportChecksums(checksumResutls);
 	}
 	
 	@Test
@@ -126,7 +126,7 @@ public class FullMigrationImplTest {
 		fullMigration.runFullMigration();
 		verify(mockTypeService).getAllCommonMigrationTypes();
 		verify(mockTypeService).getCommonPrimaryMigrationTypes();
-		verify(mockTypeService, never()).getFullTableChecksums(allCommonTypes);
+		verify(mockTypeService, never()).getFullTableChecksums(any(MigrationType.class));
 		verify(mockTypeReporter, never()).reportChecksums(checksumResutls);
 	}
 	
@@ -138,7 +138,7 @@ public class FullMigrationImplTest {
 		fullMigration.runFullMigration();
 		verify(mockTypeService).getAllCommonMigrationTypes();
 		verify(mockTypeService).getCommonPrimaryMigrationTypes();
-		verify(mockTypeService, never()).getFullTableChecksums(allCommonTypes);
+		verify(mockTypeService, never()).getFullTableChecksums(any(MigrationType.class));
 		verify(mockTypeReporter, never()).reportChecksums(checksumResutls);
 	}
 }

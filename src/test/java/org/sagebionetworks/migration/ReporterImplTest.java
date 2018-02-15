@@ -28,6 +28,7 @@ import org.sagebionetworks.repo.model.migration.AsyncMigrationRequest;
 import org.sagebionetworks.repo.model.migration.AsyncMigrationTypeCountsRequest;
 import org.sagebionetworks.repo.model.migration.DeleteListRequest;
 import org.sagebionetworks.repo.model.migration.MigrationType;
+import org.sagebionetworks.repo.model.migration.MigrationTypeChecksum;
 import org.sagebionetworks.repo.model.migration.MigrationTypeCount;
 import org.sagebionetworks.schema.adapter.JSONObjectAdapterException;
 import org.sagebionetworks.schema.adapter.org.json.EntityFactory;
@@ -52,6 +53,7 @@ public class ReporterImplTest {
 	List<MigrationTypeCount> sourceCounts;
 	List<MigrationTypeCount> destinationCounts;
 	ResultPair<List<MigrationTypeCount>> typeCounts;
+	ResultPair<MigrationTypeChecksum> checksums;
 	
 	AsyncMigrationRequest asyncMigrationRequest;
 	JobTarget jobTarget;
@@ -104,6 +106,20 @@ public class ReporterImplTest {
 		jobStatus.setRequestBody(asyncMigrationRequest);
 		jobStatus.setJobState(AsynchJobState.PROCESSING);
 		type = MigrationType.NODE;
+		
+
+		MigrationTypeChecksum sourceChecksum = new MigrationTypeChecksum();
+		sourceChecksum.setType(type);
+		sourceChecksum.setChecksum("checksumvalue");
+
+		MigrationTypeChecksum destinationChecksum = new MigrationTypeChecksum();
+		destinationChecksum.setMigrationType(type);
+		destinationChecksum.setChecksum("checksumvalue");
+		
+		checksums = new ResultPair<>();
+		checksums.setSourceResult(sourceChecksum);
+		checksums.setDestinationResult(destinationChecksum);
+		
 		reporter = new ReporterImpl(mockConfig, mockLoggerFactory, mockClock);
 	}
 	
@@ -205,6 +221,21 @@ public class ReporterImplTest {
 		// call under test
 		reporter.reportProgress(jobTarget, jobStatus);
 		verify(mockLogger).info(" job: 123 state: PROCESSING on: SOURCE type: 'AsyncMigrationTypeCountsRequest' elapse: 00:00:51.234");
+	}
+	
+	@Test
+	public void testReportChecksumMatch() {
+		// call under test
+		reporter.reportChecksums(checksums);
+		verify(mockLogger).info("Checksums match for: NODE");
+	}
+	
+	@Test
+	public void testReportChecksumNoMatch() {
+		checksums.getDestinationResult().setChecksum("no match");
+		// call under test
+		reporter.reportChecksums(checksums);
+		verify(mockLogger).warn("CHECKSUMS DO NOT MATCH FOR: NODE");
 	}
 	
 }

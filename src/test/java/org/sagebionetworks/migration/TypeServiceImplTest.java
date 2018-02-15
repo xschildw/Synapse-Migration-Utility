@@ -1,7 +1,7 @@
 package org.sagebionetworks.migration;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import java.util.List;
 
@@ -15,8 +15,10 @@ import org.sagebionetworks.client.exceptions.SynapseException;
 import org.sagebionetworks.migration.async.AsynchronousJobExecutor;
 import org.sagebionetworks.migration.async.ResultPair;
 import org.sagebionetworks.migration.factory.SynapseClientFactory;
+import org.sagebionetworks.repo.model.migration.AsyncMigrationTypeChecksumRequest;
 import org.sagebionetworks.repo.model.migration.AsyncMigrationTypeCountsRequest;
 import org.sagebionetworks.repo.model.migration.MigrationType;
+import org.sagebionetworks.repo.model.migration.MigrationTypeChecksum;
 import org.sagebionetworks.repo.model.migration.MigrationTypeCount;
 import org.sagebionetworks.repo.model.migration.MigrationTypeCounts;
 import org.sagebionetworks.repo.model.migration.MigrationTypeNames;
@@ -168,6 +170,19 @@ public class TypeServiceImplTest {
 		// call under test
 		ResultPair<List<MigrationTypeCount>> results = typeService.getMigrationTypeCounts(primaryTypes);
 		assertEquals(expected, results);
+	}
+	
+	@Test
+	public void testGetFullTableChecksums() {
+		MigrationType type = MigrationType.NODE;
+		AsyncMigrationTypeChecksumRequest request = new AsyncMigrationTypeChecksumRequest();
+		request.setMigrationType(type);
+		request.setType(type.name());
+		ResultPair<MigrationTypeChecksum> expectedResults = new ResultPair<>();
+		when(mockAsynchronousJobExecutor.executeSourceAndDestinationJob(request, MigrationTypeChecksum.class)).thenReturn(expectedResults);
+		// call under test
+		ResultPair<MigrationTypeChecksum> results = typeService.getFullTableChecksums(MigrationType.NODE);
+		assertEquals(expectedResults, results);
 	}
 
 }
