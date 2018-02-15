@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 
 import org.junit.Before;
@@ -134,6 +135,26 @@ public class BackupJobExecutorImplTest {
 		long minimumId = 1L;
 		long maximumId = 8L;
 		List<IdRange> range = Lists.newArrayList(createIdRange(1L, 8L));
+		// call under test
+		List<BackupTypeRangeRequest> results = BackupJobExecutorImpl.createContiguousBackupRangeRequests(
+				backupAliasType, batchSize, migrationType, minimumId, maximumId, range);
+		assertNotNull(results);
+		assertEquals(1, results.size());
+		// one
+		BackupTypeRangeRequest request = results.get(0);
+		assertEquals(backupAliasType, request.getAliasType());
+		assertEquals(new Long(batchSize), request.getBatchSize());
+		assertEquals(migrationType, request.getMigrationType());
+		assertEquals(new Long(1), request.getMinimumId());
+		assertEquals(new Long(8), request.getMaximumId());
+	}
+	
+	@Test
+	public void testCreateContiguousBackupRangeRequestsEmptyRange() {
+		long minimumId = 1L;
+		long maximumId = 8L;
+		// range is empty if there is no data for this range on the source.
+		List<IdRange> range = new LinkedList<>();
 		// call under test
 		List<BackupTypeRangeRequest> results = BackupJobExecutorImpl.createContiguousBackupRangeRequests(
 				backupAliasType, batchSize, migrationType, minimumId, maximumId, range);

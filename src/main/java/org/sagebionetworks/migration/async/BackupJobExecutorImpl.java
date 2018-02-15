@@ -44,8 +44,8 @@ public class BackupJobExecutorImpl implements BackupJobExecutor {
 	}
 
 	/**
-	 * Given a list of sparse ID ranges create a list of contiguous ranges that start with the given minimum
-	 * and end with the given maximum 
+	 * Given a list of sparse ID ranges create a list of contiguous ranges that
+	 * start with the given minimum and end with the given maximum
 	 * 
 	 * @param minimumId
 	 * @param maximumId
@@ -55,28 +55,52 @@ public class BackupJobExecutorImpl implements BackupJobExecutor {
 	public static List<BackupTypeRangeRequest> createContiguousBackupRangeRequests(final BackupAliasType backupAlisType,
 			final long batchSize, final MigrationType migrationType, final long minimumId, final long maximumId,
 			List<IdRange> sparseRange) {
-		ValidateArgument.required(sparseRange, "sparseRange");
-		ValidateArgument.required(!sparseRange.isEmpty(), "sparseRange is empty");
 		List<BackupTypeRangeRequest> backupRequests = new LinkedList<>();
+		if (sparseRange.isEmpty()) {
+			/*
+			 * When the sparse range is empty then there is no data for this range in the
+			 * source. However, we still must backup the full range to ensure any data in
+			 * this range is deleted from the destination.
+			 */
+			BackupTypeRangeRequest request = createRequest(backupAlisType, batchSize, migrationType);
+			request.setMinimumId(minimumId);
+			request.setMaximumId(maximumId);
+			backupRequests.add(request);
+			return backupRequests;
+		}
 		BackupTypeRangeRequest last = null;
 		// input minimum is start of the local minimum
 		long localMin = minimumId;
 		for (IdRange range : sparseRange) {
-			BackupTypeRangeRequest request = new BackupTypeRangeRequest();
-			request.setAliasType(backupAlisType);
-			request.setBatchSize(batchSize);
-			request.setMigrationType(migrationType);
+			BackupTypeRangeRequest request = createRequest(backupAlisType, batchSize, migrationType);
 			// min of the mins to convert from sparse to contiguous.
 			request.setMinimumId(Math.min(localMin, range.getMinimumId()));
 			request.setMaximumId(range.getMaximumId());
 			backupRequests.add(request);
 			// setup next
-			localMin = request.getMaximumId()+1;
+			localMin = request.getMaximumId() + 1;
 			last = request;
 		}
 		// The last request must use the provided maximum ID
 		last.setMaximumId(maximumId);
 		return backupRequests;
+	}
+
+	/**
+	 * Start the request with the common parameters.
+	 * 
+	 * @param backupAlisType
+	 * @param batchSize
+	 * @param migrationType
+	 * @return
+	 */
+	private static BackupTypeRangeRequest createRequest(final BackupAliasType backupAlisType, final long batchSize,
+			final MigrationType migrationType) {
+		BackupTypeRangeRequest request = new BackupTypeRangeRequest();
+		request.setAliasType(backupAlisType);
+		request.setBatchSize(batchSize);
+		request.setMigrationType(migrationType);
+		return request;
 	}
 
 }
