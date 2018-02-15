@@ -12,8 +12,8 @@ import org.sagebionetworks.migration.utils.TypeToMigrateMetadata;
 public interface MissingFromDestinationBuilder {
 
 	/**
-	 * Will create restore jobs for all rows where the maximum ID of the sources is larger 
-	 * than the maximum ID at the destination.
+	 * Will backup all data that is outside the box that is common to both the source and destination
+	 * for each type.
 	 * @param primaryTypes
 	 * @return
 	 */

@@ -5,11 +5,14 @@ import java.util.LinkedList;
 
 import org.sagebionetworks.migration.config.Configuration;
 import org.sagebionetworks.migration.utils.TypeToMigrateMetadata;
+import org.sagebionetworks.repo.model.migration.MigrationType;
+import org.sagebionetworks.util.ValidateArgument;
+
+import com.google.common.collect.Iterators;
 
 /**
- * Creates n number of backups batches for rows in the source that do not exist
- * in the destination. The number of backups required is determined by the
- * maximum batch size.
+ * Will backup all data that is outside the box that is common to both the
+ * source and destination for each type.
  * 
  * Note: Each backup is created on the next() call so the caller drives the
  * backup processed.
@@ -20,32 +23,73 @@ public class MissingFromDestinationIterator implements Iterator<DestinationJob> 
 
 	Configuration config;
 	Iterator<DestinationJob> jobIterator;
-	TypeToMigrateMetadata typeToMigrate;
+
+	MigrationType migrationType;
+	long minCommonId;
+	long absoluteMinId;
+	long maxCommonId;
+	long absoluteMaxId;
+	long srcMinId;
+	long srcMaxId;
 
 	public MissingFromDestinationIterator(Configuration config, BackupJobExecutor backupJobExecutor,
 			TypeToMigrateMetadata typeToMigrate) {
 		super();
+		ValidateArgument.required(typeToMigrate.getSrcMinId(), "typeToMigrate.SrcMinId()");
+		ValidateArgument.required(typeToMigrate.getSrcMaxId(), "typeToMigrate.SrcMaxId()");
 		this.config = config;
 		this.backupJobExecutor = backupJobExecutor;
-		this.typeToMigrate = typeToMigrate;
+		this.migrationType = typeToMigrate.getType();
+		srcMinId = typeToMigrate.getSrcMinId();
+		srcMaxId = typeToMigrate.getSrcMaxId();
+		// Destination values are null when the destination is empty
+		long desMinId = (typeToMigrate.getDestMinId() != null) ? typeToMigrate.getDestMinId() : 0L;
+		long desMaxId = (typeToMigrate.getDestMaxId() != null) ? typeToMigrate.getDestMaxId() : 0L;
+		long desCount = (typeToMigrate.getDestCount() != null) ? typeToMigrate.getDestCount() : 0L;
+
+		if (desCount < config.getDestinationRowCountToIgnore()) {
+			// treat the destination as empty
+			desMaxId = desMinId;
+		}
+		// Find the ID ranges common to both source and destination.
+		minCommonId = Math.max(srcMinId, desMinId);
+		maxCommonId = Math.min(srcMaxId, desMaxId);
+		// Find the absolute mins and maxs
+		absoluteMinId = Math.min(srcMinId, desMinId);
+		absoluteMaxId = Math.max(srcMaxId, desMaxId);
+
 	}
 
 	@Override
 	public boolean hasNext() {
 		if (jobIterator == null) {
-			// the first call
-			long startId = typeToMigrate.getSrcMinId();
-			if (typeToMigrate.getDestMaxId() != null) {
-				if (typeToMigrate.getDestCount() != null) {
-					if (typeToMigrate.getDestCount() > config.getDestinationRowCountToIgnore()) {
-						// there are rows in the destination so start there.
-						startId = typeToMigrate.getDestMaxId() + 1;
-					}
+			jobIterator = new LinkedList<DestinationJob>().iterator();
+			if (maxCommonId <= minCommonId) {
+				// no rows common between the source and destination so a full backup of the source is required.
+				long minimumId = srcMinId;
+				long maximumId = srcMaxId + 1;
+				Iterator<DestinationJob> iterator = backupJobExecutor.executeBackupJob(migrationType, minimumId,
+						maximumId);
+				jobIterator = Iterators.concat(jobIterator, iterator);
+			} else {
+				if (absoluteMinId < minCommonId) {
+					// backup the lower range outside of the common box.
+					long minimumId = absoluteMinId;
+					long maximumId = minCommonId + 1;
+					Iterator<DestinationJob> iterator = backupJobExecutor.executeBackupJob(migrationType, minimumId,
+							maximumId);
+					jobIterator = Iterators.concat(jobIterator, iterator);
+				}
+				if (absoluteMaxId > maxCommonId) {
+					// backup the upper range outside of the common box.
+					long minimumId = maxCommonId;
+					long maximumId = absoluteMaxId + 1;
+					Iterator<DestinationJob> iterator = backupJobExecutor.executeBackupJob(migrationType, minimumId,
+							maximumId);
+					jobIterator = Iterators.concat(jobIterator, iterator);
 				}
 			}
-			// Max is exclusive so the end includes + one.
-			long endId = typeToMigrate.getSrcMaxId() + 1;
-			jobIterator = backupJobExecutor.executeBackupJob(this.typeToMigrate.getType(), startId, endId);
+
 		}
 		return jobIterator.hasNext();
 	}
