@@ -7,12 +7,10 @@ import java.util.List;
 import org.sagebionetworks.migration.config.Configuration;
 import org.sagebionetworks.repo.model.daemon.BackupAliasType;
 import org.sagebionetworks.repo.model.migration.BackupTypeRangeRequest;
-import org.sagebionetworks.repo.model.migration.BackupTypeResponse;
 import org.sagebionetworks.repo.model.migration.CalculateOptimalRangeRequest;
 import org.sagebionetworks.repo.model.migration.CalculateOptimalRangeResponse;
 import org.sagebionetworks.repo.model.migration.IdRange;
 import org.sagebionetworks.repo.model.migration.MigrationType;
-import org.sagebionetworks.util.ValidateArgument;
 
 import com.google.inject.Inject;
 
@@ -30,34 +28,18 @@ public class BackupJobExecutorImpl implements BackupJobExecutor {
 
 	@Override
 	public Iterator<DestinationJob> executeBackupJob(MigrationType type, long minimumId, long maximumId) {
-		
-		// TODO: Temporary change to support backup from prod-212 to prod-215
-		BackupTypeRangeRequest request = new BackupTypeRangeRequest();
-		request.setAliasType(configuration.getBackupAliasType());
-		request.setBatchSize((long) configuration.getMaximumBackupBatchSize());
-		request.setMigrationType(type);
-		request.setMinimumId(minimumId);
-		request.setMaximumId(maximumId);
-		
-		BackupTypeResponse response = asynchronousJobExecutor.executeSourceJob(request, BackupTypeResponse.class);
-		
-		DestinationJob job = new RestoreDestinationJob(type, response.getBackupFileKey(), minimumId, maximumId);
-		List<DestinationJob> list = new LinkedList<>();
-		list.add(job);
-		return list.iterator();
-		
-//		// Request the optimal ranges for this range from the source.
-//		CalculateOptimalRangeRequest rangeRequest = new CalculateOptimalRangeRequest();
-//		rangeRequest.setMigrationType(type);
-//		rangeRequest.setMinimumId(minimumId);
-//		rangeRequest.setMaximumId(maximumId);
-//		rangeRequest.setOptimalRowsPerRange((long) configuration.getMaximumBackupBatchSize());
-//		CalculateOptimalRangeResponse rangeResponse = asynchronousJobExecutor.executeSourceJob(rangeRequest,
-//				CalculateOptimalRangeResponse.class);
-//		// Create contiguous backup requests based on the optimal ranges.
-//		List<BackupTypeRangeRequest> requests = createContiguousBackupRangeRequests(configuration.getBackupAliasType(),
-//				configuration.getMaximumBackupBatchSize(), type, minimumId, maximumId, rangeResponse.getRanges());
-//		return new BackupRangeIterator(asynchronousJobExecutor, requests);
+		// Request the optimal ranges for this range from the source.
+		CalculateOptimalRangeRequest rangeRequest = new CalculateOptimalRangeRequest();
+		rangeRequest.setMigrationType(type);
+		rangeRequest.setMinimumId(minimumId);
+		rangeRequest.setMaximumId(maximumId);
+		rangeRequest.setOptimalRowsPerRange((long) configuration.getMaximumBackupBatchSize());
+		CalculateOptimalRangeResponse rangeResponse = asynchronousJobExecutor.executeSourceJob(rangeRequest,
+				CalculateOptimalRangeResponse.class);
+		// Create contiguous backup requests based on the optimal ranges.
+		List<BackupTypeRangeRequest> requests = createContiguousBackupRangeRequests(configuration.getBackupAliasType(),
+				configuration.getMaximumBackupBatchSize(), type, minimumId, maximumId, rangeResponse.getRanges());
+		return new BackupRangeIterator(asynchronousJobExecutor, requests);
 	}
 
 	/**
