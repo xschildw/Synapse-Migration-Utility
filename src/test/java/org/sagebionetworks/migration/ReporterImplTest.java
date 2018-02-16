@@ -109,11 +109,9 @@ public class ReporterImplTest {
 		
 
 		MigrationTypeChecksum sourceChecksum = new MigrationTypeChecksum();
-		sourceChecksum.setType(type);
 		sourceChecksum.setChecksum("checksumvalue");
 
 		MigrationTypeChecksum destinationChecksum = new MigrationTypeChecksum();
-		destinationChecksum.setMigrationType(type);
 		destinationChecksum.setChecksum("checksumvalue");
 		
 		checksums = new ResultPair<>();
@@ -226,7 +224,7 @@ public class ReporterImplTest {
 	@Test
 	public void testReportChecksumMatch() {
 		// call under test
-		reporter.reportChecksums(checksums);
+		reporter.reportChecksums(type, checksums);
 		verify(mockLogger).info("Checksums match for: NODE");
 	}
 	
@@ -234,7 +232,7 @@ public class ReporterImplTest {
 	public void testReportChecksumNoMatch() {
 		checksums.getDestinationResult().setChecksum("no match");
 		// call under test
-		reporter.reportChecksums(checksums);
+		reporter.reportChecksums(type, checksums);
 		verify(mockLogger).warn("CHECKSUMS DO NOT MATCH FOR: NODE");
 	}
 	

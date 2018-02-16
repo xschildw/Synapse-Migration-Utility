@@ -13,6 +13,7 @@ import org.sagebionetworks.repo.model.asynch.AsynchronousJobStatus;
 import org.sagebionetworks.repo.model.migration.AdminRequest;
 import org.sagebionetworks.repo.model.migration.AsyncMigrationRequest;
 import org.sagebionetworks.repo.model.migration.HasMigrationType;
+import org.sagebionetworks.repo.model.migration.MigrationType;
 import org.sagebionetworks.repo.model.migration.MigrationTypeChecksum;
 import org.sagebionetworks.repo.model.migration.MigrationTypeCount;
 import org.sagebionetworks.util.Clock;
@@ -72,13 +73,13 @@ public class ReporterImpl implements Reporter {
 	}
 
 	@Override
-	public void reportChecksums(ResultPair<MigrationTypeChecksum> checksums) {
+	public void reportChecksums(MigrationType type,ResultPair<MigrationTypeChecksum> checksums) {
 		MigrationTypeChecksum source = checksums.getSourceResult();
 		MigrationTypeChecksum destination = checksums.getDestinationResult();
 		if(source.getChecksum().equals(destination.getChecksum())) {
-			logger.info(CHECKSUMS_MATCH+destination.getMigrationType().name());
+			logger.info(CHECKSUMS_MATCH+type.name());
 		}else {
-			logger.warn(CHECKSUMS_DO_NOT_MATCH+destination.getMigrationType().name());
+			logger.warn(CHECKSUMS_DO_NOT_MATCH+type.name());
 		}
 	}
 
