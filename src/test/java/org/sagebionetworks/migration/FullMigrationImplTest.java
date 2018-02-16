@@ -1,6 +1,6 @@
 package org.sagebionetworks.migration;
 
-import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.*;
 import static org.mockito.Matchers.anyListOf;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -116,7 +116,7 @@ public class FullMigrationImplTest {
 		// end
 		verify(mockTypeReporter).reportCountDifferences(countResultsTwo);
 		verify(mockTypeService, times(allCommonTypes.size())).getFullTableChecksums(any(MigrationType.class));
-		verify(mockTypeReporter, times(allCommonTypes.size())).reportChecksums(checksumResutls);
+		verify(mockTypeReporter, times(allCommonTypes.size())).reportChecksums(any(MigrationType.class), eq(checksumResutls));
 	}
 	
 	@Test
@@ -127,7 +127,7 @@ public class FullMigrationImplTest {
 		verify(mockTypeService).getAllCommonMigrationTypes();
 		verify(mockTypeService).getCommonPrimaryMigrationTypes();
 		verify(mockTypeService, never()).getFullTableChecksums(any(MigrationType.class));
-		verify(mockTypeReporter, never()).reportChecksums(checksumResutls);
+		verify(mockTypeReporter, never()).reportChecksums(any(MigrationType.class), eq(checksumResutls));
 	}
 	
 	@Test
@@ -139,6 +139,6 @@ public class FullMigrationImplTest {
 		verify(mockTypeService).getAllCommonMigrationTypes();
 		verify(mockTypeService).getCommonPrimaryMigrationTypes();
 		verify(mockTypeService, never()).getFullTableChecksums(any(MigrationType.class));
-		verify(mockTypeReporter, never()).reportChecksums(checksumResutls);
+		verify(mockTypeReporter, never()).reportChecksums(any(MigrationType.class), eq(checksumResutls));
 	}
 }
