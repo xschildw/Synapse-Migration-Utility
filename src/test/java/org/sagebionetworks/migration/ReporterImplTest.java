@@ -1,17 +1,16 @@
 package org.sagebionetworks.migration;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyLong;
+import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.Date;
 import java.util.List;
-
-import static org.mockito.Mockito.*;
 
 import org.apache.logging.log4j.Logger;
 import org.junit.Before;
@@ -24,9 +23,9 @@ import org.sagebionetworks.migration.async.ResultPair;
 import org.sagebionetworks.migration.config.Configuration;
 import org.sagebionetworks.repo.model.asynch.AsynchJobState;
 import org.sagebionetworks.repo.model.asynch.AsynchronousJobStatus;
+import org.sagebionetworks.repo.model.migration.AsyncMigrationRangeChecksumRequest;
 import org.sagebionetworks.repo.model.migration.AsyncMigrationRequest;
 import org.sagebionetworks.repo.model.migration.AsyncMigrationTypeCountsRequest;
-import org.sagebionetworks.repo.model.migration.DeleteListRequest;
 import org.sagebionetworks.repo.model.migration.MigrationType;
 import org.sagebionetworks.repo.model.migration.MigrationTypeChecksum;
 import org.sagebionetworks.repo.model.migration.MigrationTypeCount;
@@ -94,11 +93,11 @@ public class ReporterImplTest {
 		typeCounts.setSourceResult(sourceCounts);
 		typeCounts.setDestinationResult(destinationCounts);
 		
-		DeleteListRequest deleteRequest = new DeleteListRequest();
-		deleteRequest.setMigrationType(MigrationType.NODE);
+		AsyncMigrationRangeChecksumRequest request = new AsyncMigrationRangeChecksumRequest();
+		request.setMigrationType(MigrationType.NODE);
 		
 		asyncMigrationRequest = new AsyncMigrationRequest();
-		asyncMigrationRequest.setAdminRequest(deleteRequest);
+		asyncMigrationRequest.setAdminRequest(request);
 		jobTarget = JobTarget.SOURCE;
 		jobStatus = new AsynchronousJobStatus();
 		jobStatus.setJobId("123");
@@ -196,17 +195,17 @@ public class ReporterImplTest {
 	@Test
 	public void testReportProgressHasMigrationType() {
 		// request with a type.
-		DeleteListRequest deleteRequest = new DeleteListRequest();
-		deleteRequest.setMigrationType(MigrationType.NODE);
+		AsyncMigrationRangeChecksumRequest request = new AsyncMigrationRangeChecksumRequest();
+		request.setMigrationType(MigrationType.NODE);
 		asyncMigrationRequest = new AsyncMigrationRequest();
-		asyncMigrationRequest.setAdminRequest(deleteRequest);
+		asyncMigrationRequest.setAdminRequest(request);
 		
 		jobStatus.setStartedOn(new Date(1517773464652L));
 		long elapseMS = 2545L;
 		when(mockClock.currentTimeMillis()).thenReturn(jobStatus.getStartedOn().getTime()+elapseMS);
 		// call under test
 		reporter.reportProgress(jobTarget, jobStatus);
-		verify(mockLogger).info("NODE job: 123 state: PROCESSING on: SOURCE type: 'DeleteListRequest' elapse: 00:00:02.545");
+		verify(mockLogger).info("NODE job: 123 state: PROCESSING on: SOURCE type: 'AsyncMigrationRangeChecksumRequest' elapse: 00:00:02.545");
 	}
 	
 	@Test
