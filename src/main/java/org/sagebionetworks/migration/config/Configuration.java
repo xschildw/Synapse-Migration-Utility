@@ -85,6 +85,11 @@ public interface Configuration {
 	 * @return
 	 */
 	public int getMaximumNumberOfDestinationJobs();
+
+	/**
+	 * Set the maximum number of concurrent jobs that can run against the destination
+	 */
+	public void setMaximumNumberOfDestinationJobs(int numberOfJobs);
 	
 	/**
 	 * If the destination row count is less than this number, the destination table will be treated

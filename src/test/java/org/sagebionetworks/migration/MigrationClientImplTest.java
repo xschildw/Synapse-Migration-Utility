@@ -47,6 +47,7 @@ public class MigrationClientImplTest {
 		// call under test
 		client.migrate();
 		verify(mockConfig).logConfiguration();
+		verify(mockConfig, never()).setMaximumNumberOfDestinationJobs(anyInt());
 		verify(mockStackStatus).setDestinationReadOnly();
 		verify(mockFullMigration).runFullMigration();
 		verify(mockStackStatus).setDestinationReadWrite();
@@ -71,6 +72,7 @@ public class MigrationClientImplTest {
 		// the destination must not be set back to READ-WRITE
 		verify(mockStackStatus, never()).setDestinationReadWrite();
 		verify(mockLogger, never()).error(anyString(), any(Throwable.class));
+		verify(mockConfig, never()).setMaximumNumberOfDestinationJobs(anyInt());
 	}
 	
 	
@@ -92,6 +94,7 @@ public class MigrationClientImplTest {
 		// the destination must not be set back to READ-WRITE
 		verify(mockStackStatus, never()).setDestinationReadWrite();
 		verify(mockLogger, times(maxNumberRetries)).error(anyString(), any(Throwable.class));
+		verify(mockConfig).setMaximumNumberOfDestinationJobs(1);
 	}
 	
 	@Test
@@ -110,5 +113,6 @@ public class MigrationClientImplTest {
 		// the destination can be set back to READ-WRITE sine the last run was successful.
 		verify(mockStackStatus).setDestinationReadWrite();
 		verify(mockLogger, times(1)).error(anyString(), any(Throwable.class));
+		verify(mockConfig, never()).setMaximumNumberOfDestinationJobs(anyInt());
 	}
 }

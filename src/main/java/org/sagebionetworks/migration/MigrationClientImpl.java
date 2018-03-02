@@ -42,6 +42,10 @@ public class MigrationClientImpl implements MigrationClient {
 		for (int tryCount = 0; tryCount < config.getMaxRetries(); tryCount++) {
 			try {
 				logger.info("Attempting migration try number: " + tryCount + "...");
+				// On last attempt, set the max number of destination jobs to 1
+				if (tryCount == config.getMaxRetries()-1) {
+					config.setMaximumNumberOfDestinationJobs(1);
+				}
 				fullMigration.runFullMigration();
 				logger.info("migration successful");
 				return;

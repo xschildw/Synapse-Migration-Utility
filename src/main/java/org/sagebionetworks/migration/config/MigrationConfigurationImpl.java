@@ -118,6 +118,11 @@ public class MigrationConfigurationImpl implements Configuration {
 	public int getMaximumNumberOfDestinationJobs() {
 		return Integer.parseInt(getProperty(KEY_MAX_NUMBER_DESTINATION_JOBS));
 	}
+
+	@Override
+	public void setMaximumNumberOfDestinationJobs(int numberOfJobs)	{
+		this.systemProperties.setProperty(KEY_MAX_NUMBER_DESTINATION_JOBS, Integer.toString(numberOfJobs));
+	}
 	
 	/**
 	 * 
@@ -130,6 +135,15 @@ public class MigrationConfigurationImpl implements Configuration {
 			throw new IllegalArgumentException("Missing system property: "+key);
 		}
 		return value;
+	}
+
+	/**
+	 *
+	 * @param key
+	 * @param value
+	 */
+	void setProperty(String key, String value) {
+		this.systemProperties.setProperty(key, value);
 	}
 	
 	/**

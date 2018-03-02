@@ -156,4 +156,12 @@ public class MigrationConfigurationImplTest {
 		config.logConfiguration();
 		verify(mockLogger, times(10)).info(anyString());
 	}
+
+	@Test
+	public void testSetMaximumNumberOfDestinationJobs() {
+		int maxNumDestinationJobs = config.getMaximumNumberOfDestinationJobs();
+		assertEquals(4, maxNumDestinationJobs);
+		config.setMaximumNumberOfDestinationJobs(1);
+		assertEquals(1, config.getMaximumNumberOfDestinationJobs());
+	}
 }
