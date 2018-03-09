@@ -5,6 +5,8 @@ import org.sagebionetworks.migration.config.Configuration;
 
 import com.google.inject.Inject;
 
+import static org.sagebionetworks.migration.utils.ToolMigrationUtils.actualMaximumNumberOfDestinationJobs;
+
 public class MigrationClientImpl implements MigrationClient {
 
 	Logger logger;
@@ -26,7 +28,7 @@ public class MigrationClientImpl implements MigrationClient {
 		config.logConfiguration();
 		// Start by putting the destination stack in read-only mode.
 		stackStatus.setDestinationReadOnly();
-		attemptMigraionWithRetry();
+		attemptMigrationWithRetry();
 		/*
 		 * The destination must only be set to READ-WRITE if the last migration run was a
 		 * success.
@@ -38,11 +40,11 @@ public class MigrationClientImpl implements MigrationClient {
 	 * Attempt the migration. If there is a failure, retry until the max number of
 	 * retries are exhausted.
 	 */
-	void attemptMigraionWithRetry() {
+	void attemptMigrationWithRetry() {
 		for (int tryCount = 0; tryCount < config.getMaxRetries(); tryCount++) {
 			try {
 				logger.info("Attempting migration try number: " + tryCount + "...");
-				fullMigration.runFullMigration();
+				fullMigration.runFullMigration(actualMaximumNumberOfDestinationJobs(tryCount, config));
 				logger.info("migration successful");
 				return;
 			} catch (AsyncMigrationException e) {

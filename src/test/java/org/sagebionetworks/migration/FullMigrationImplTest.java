@@ -104,10 +104,10 @@ public class FullMigrationImplTest {
 	@Test
 	public void testRunFullMigration() {
 		// call under test
-		fullMigration.runFullMigration();
+		fullMigration.runFullMigration(1);
 		verify(mockTypeService).getAllCommonMigrationTypes();
 		verify(mockTypeService).getCommonPrimaryMigrationTypes();
-		verify(mockAsynchronousMigration).migratePrimaryTypes(typesToMigrate);
+		verify(mockAsynchronousMigration).migratePrimaryTypes(typesToMigrate, 1);
 		// called at start and end.
 		verify(mockTypeService, times(2)).getMigrationTypeCounts(allCommonTypes);
 		verify(mockTypeReporter).runCountDownBeforeStart();
@@ -123,7 +123,7 @@ public class FullMigrationImplTest {
 	public void testRunFullMigrationNoCheckSum() {
 		when(mockConfiguration.includeFullTableChecksums()).thenReturn(false);
 		// call under test
-		fullMigration.runFullMigration();
+		fullMigration.runFullMigration(1);
 		verify(mockTypeService).getAllCommonMigrationTypes();
 		verify(mockTypeService).getCommonPrimaryMigrationTypes();
 		verify(mockTypeService, never()).getFullTableChecksums(any(MigrationType.class));
@@ -135,7 +135,7 @@ public class FullMigrationImplTest {
 		when(mockConfiguration.includeFullTableChecksums()).thenReturn(true);
 		when(mockStackStatusService.isSourceReadOnly()).thenReturn(false);
 		// call under test
-		fullMigration.runFullMigration();
+		fullMigration.runFullMigration(1);
 		verify(mockTypeService).getAllCommonMigrationTypes();
 		verify(mockTypeService).getCommonPrimaryMigrationTypes();
 		verify(mockTypeService, never()).getFullTableChecksums(any(MigrationType.class));

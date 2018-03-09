@@ -1,6 +1,8 @@
 package org.sagebionetworks.migration.utils;
 
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -9,6 +11,10 @@ import java.util.Random;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
+import org.sagebionetworks.migration.config.Configuration;
 import org.sagebionetworks.repo.model.migration.MigrationType;
 import org.sagebionetworks.repo.model.migration.MigrationTypeCounts;
 import org.sagebionetworks.repo.model.migration.MigrationTypeCount;
@@ -20,12 +26,16 @@ public class ToolMigrationUtilsTest {
 	List<MigrationTypeCount> destTypeCounts;
 	MigrationTypeList typesToMigrate;
 
+	@Mock
+	Configuration mockConfig;
+
 	@Before
 	public void setUp() throws Exception {
 		srcTypeCounts = generateMigrationTypeCounts();
 		destTypeCounts = generateMigrationTypeCounts();
 		typesToMigrate = new MigrationTypeList();
 		typesToMigrate.setList(generateTypesToMigrate());
+		MockitoAnnotations.initMocks(this);
 	}
 
 	@After
@@ -159,7 +169,21 @@ public class ToolMigrationUtilsTest {
 		assertNotNull(outcomes);
 		assertEquals(expectedOutcomes.size(), outcomes.size());
 	}
-	
+
+	@Test
+	public void testActualMaximumNumberOfDestinationJobsFirstTry() {
+		when(mockConfig.getMaximumNumberOfDestinationJobs()).thenReturn(4);
+		assertEquals(mockConfig.getMaximumNumberOfDestinationJobs(), ToolMigrationUtils.actualMaximumNumberOfDestinationJobs(0, mockConfig));
+	}
+
+	@Test
+	public void testActualMaximumNumberOfDestinationJobsNotFirstTry() {
+		when(mockConfig.getMaximumNumberOfDestinationJobs()).thenReturn(4);
+		assertEquals(1, ToolMigrationUtils.actualMaximumNumberOfDestinationJobs(1, mockConfig));
+	}
+
+
+
 	private List<MigrationTypeCount> generateMigrationTypeCounts() {
 		Random r = new Random();
 		List<MigrationTypeCount> l = new LinkedList<MigrationTypeCount>();

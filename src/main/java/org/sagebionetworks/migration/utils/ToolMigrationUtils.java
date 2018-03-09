@@ -9,6 +9,7 @@ import java.util.Set;
 
 import org.sagebionetworks.client.SynapseAdminClient;
 import org.sagebionetworks.client.exceptions.SynapseException;
+import org.sagebionetworks.migration.config.Configuration;
 import org.sagebionetworks.repo.model.migration.MigrationType;
 import org.sagebionetworks.repo.model.migration.MigrationTypeCount;
 import org.sagebionetworks.repo.model.migration.MigrationTypeCounts;
@@ -71,6 +72,10 @@ public class ToolMigrationUtils {
 			result.add(outcome);
 		}
 		return result;
+	}
+
+	public static int actualMaximumNumberOfDestinationJobs(int tryNum, Configuration config) {
+		return (tryNum == 0 ? config.getMaximumNumberOfDestinationJobs() : 1);
 	}
 
 }

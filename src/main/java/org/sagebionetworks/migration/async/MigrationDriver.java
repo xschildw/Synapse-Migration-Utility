@@ -10,7 +10,8 @@ public interface MigrationDriver {
 	 * Migrate the common primary types Asynchronously.
 	 * 
 	 * @param commonPrimaryTypes
+	 * @param maximumNumberOfDestinationJobs
 	 */
-	void migratePrimaryTypes(List<TypeToMigrateMetadata> primaryTypes);
+	void migratePrimaryTypes(List<TypeToMigrateMetadata> primaryTypes, int maximumNumberOfDestinationJobs);
 
 }

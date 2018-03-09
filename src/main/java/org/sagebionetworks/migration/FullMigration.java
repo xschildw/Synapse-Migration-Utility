@@ -11,5 +11,5 @@ public interface FullMigration {
 	 *             migration attempt is necessary.
 	 *             Any other exception type will terminate migration.
 	 */
-	public void runFullMigration() throws AsyncMigrationException;
+	public void runFullMigration(int maximumNumberOfDestinationJobs) throws AsyncMigrationException;
 }

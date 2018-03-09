@@ -45,7 +45,7 @@ public class MigrationDriverImpl implements MigrationDriver {
 	 * (java.util.List)
 	 */
 	@Override
-	public void migratePrimaryTypes(List<TypeToMigrateMetadata> primaryTypes) {
+	public void migratePrimaryTypes(List<TypeToMigrateMetadata> primaryTypes, int maximumNumberOfDestinationJobs) {
 		AsyncMigrationException lastException = null;
 		// Tracks the active destination jobs.
 		List<Future<?>> activeDestinationJobs = new LinkedList<>();
@@ -56,7 +56,7 @@ public class MigrationDriverImpl implements MigrationDriver {
 			// Start this job on the destination.
 			activeDestinationJobs.add(jobExecutor.startDestinationJob(nextJob));
 			// wait for the number of active destination jobs to be under the max
-			while (activeDestinationJobs.size() >= config.getMaximumNumberOfDestinationJobs()) {
+			while (activeDestinationJobs.size() >= maximumNumberOfDestinationJobs) {
 				// give the jobs some time to complete
 				sleep();
 				try {

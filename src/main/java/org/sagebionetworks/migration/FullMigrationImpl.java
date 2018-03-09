@@ -37,7 +37,7 @@ public class FullMigrationImpl implements FullMigration {
 	}
 
 	@Override
-	public void runFullMigration() throws AsyncMigrationException {
+	public void runFullMigration(int maximumNumberOfDestinationJobs) throws AsyncMigrationException {
 
 		// Start by finding the types both the source and destination have in common.
 		logger.info("Determining types to migrate...");
@@ -58,7 +58,7 @@ public class FullMigrationImpl implements FullMigration {
 				countResults.getSourceResult(), countResults.getDestinationResult(), commonPrimaryTypes);
 		// run the migration process asynchronously
 		logger.info("Starting the asynchronous of all types...");
-		migrationDriver.migratePrimaryTypes(typesToMigrate);
+		migrationDriver.migratePrimaryTypes(typesToMigrate, maximumNumberOfDestinationJobs);
 
 		// Gather the final counts
 		logger.info("Computing final counts...");

@@ -206,10 +206,9 @@ public class MigrationDriverImplTest {
 
 	@Test
 	public void testMigratePrimaryTypesUnderMaxJobs() throws InterruptedException, ExecutionException {
-		// queue size larger than the number of jobs
-		when(mockConfig.getMaximumNumberOfDestinationJobs()).thenReturn(destinationJobs.size()+1);
 		// call under test
-		migrationDriver.migratePrimaryTypes(primaryTypes);
+		// queue size larger than the number of jobs
+		migrationDriver.migratePrimaryTypes(primaryTypes, destinationJobs.size()+1);
 		// should wait for all jobs to finish
 		verify(mockFutureOne).get();
 		verify(mockFutureTwo).get();
@@ -229,10 +228,9 @@ public class MigrationDriverImplTest {
 		when(mockFutureOne.isDone()).thenReturn(false, false, true);
 		when(mockFutureTwo.isDone()).thenReturn(false, false, false, true);
 		when(mockFutureThree.isDone()).thenReturn(true);
-		// queue size smaller than the number of jobs
-		when(mockConfig.getMaximumNumberOfDestinationJobs()).thenReturn(destinationJobs.size()-1);
 		// call under test
-		migrationDriver.migratePrimaryTypes(primaryTypes);
+		// queue size smaller than the number of jobs
+		migrationDriver.migratePrimaryTypes(primaryTypes, destinationJobs.size()-1);
 		// should wait for all jobs to finish
 		verify(mockFutureOne).get();
 		verify(mockFutureTwo).get();
@@ -257,12 +255,11 @@ public class MigrationDriverImplTest {
 		when(mockFutureThree.isDone()).thenReturn(true);
 		// threes throws on get()
 		doThrow(exceptionTwo).when(mockFutureThree).get();
-		// queue size smaller than the number of jobs
-		when(mockConfig.getMaximumNumberOfDestinationJobs()).thenReturn(destinationJobs.size()-1);
 
 		try {
 			// call under test
-			migrationDriver.migratePrimaryTypes(primaryTypes);
+			// queue size smaller than the number of jobs
+			migrationDriver.migratePrimaryTypes(primaryTypes, destinationJobs.size()-1);
 			fail();
 		} catch (AsyncMigrationException e) {
 			assertEquals(exceptionTwo, e);
@@ -288,12 +285,11 @@ public class MigrationDriverImplTest {
 		// threes throws on get()
 		doThrow(exceptionOne).when(mockFutureOne).get();
 		doThrow(exceptionTwo).when(mockFutureThree).get();
-		// queue size smaller than the number of jobs
-		when(mockConfig.getMaximumNumberOfDestinationJobs()).thenReturn(destinationJobs.size()+1);
 
 		try {
 			// call under test
-			migrationDriver.migratePrimaryTypes(primaryTypes);
+			// queue size smaller than the number of jobs
+			migrationDriver.migratePrimaryTypes(primaryTypes, destinationJobs.size()+1);
 			fail();
 		} catch (AsyncMigrationException e) {
 			assertEquals(exceptionTwo, e);
