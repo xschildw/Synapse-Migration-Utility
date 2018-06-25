@@ -3,12 +3,16 @@ package org.sagebionetworks.migration.config;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.util.Properties;
 
 import org.apache.logging.log4j.Logger;
 import org.sagebionetworks.migration.LoggerFactory;
 import org.sagebionetworks.repo.model.daemon.BackupAliasType;
 
+import com.amazonaws.services.secretsmanager.AWSSecretsManager;
+import com.amazonaws.services.secretsmanager.model.GetSecretValueRequest;
+import com.amazonaws.services.secretsmanager.model.GetSecretValueResult;
 import com.google.inject.Inject;
 
 /**
@@ -23,7 +27,8 @@ public class MigrationConfigurationImpl implements Configuration {
 	static final String KEY_DESTINATION_REPOSITORY_ENDPOINT = "org.sagebionetworks.destination.repository.endpoint";
 	static final String KEY_DESTINATION_AUTHENTICATION_ENDPOINT = "org.sagebionetworks.destination.authentication.endpoint";
 	static final String KEY_CONFIG_PATH = "org.sagebionetworks.config.path";
-	static final String KEY_APIKEY = "org.sagebionetworks.apikey";
+	static final String KEY_SOURCE_APIKEY = "org.sagebionetworks.migration.apikey.source";
+	static final String KEY_DESTINATION_APIKEY = "org.sagebionetworks.migration.apikey.destination";
 	static final String KEY_USERNAME = "org.sagebionetworks.username";
 	static final String KEY_MAX_THREADS = "org.sagebionetworks.max.threads";
 	static final String KEY_MAX_BACKUP_BATCHSIZE = "org.sagebionetworks.max.backup.batchsize";
@@ -38,14 +43,16 @@ public class MigrationConfigurationImpl implements Configuration {
 	Logger logger;
 	SystemPropertiesProvider propProvider;
 	FileProvider fileProvider;
+	AWSSecretsManager secretManager;
 	
 	Properties systemProperties;
 	
 	@Inject
-	public MigrationConfigurationImpl(LoggerFactory loggerFactory, SystemPropertiesProvider propProvider, FileProvider fileProvider) throws IOException {
+	public MigrationConfigurationImpl(LoggerFactory loggerFactory, SystemPropertiesProvider propProvider, FileProvider fileProvider, AWSSecretsManager secretManager) throws IOException {
 		this.logger = loggerFactory.getLogger(MigrationConfigurationImpl.class);
 		this.propProvider = propProvider;
 		this.fileProvider = fileProvider;
+		this.secretManager = secretManager;
 		// load the the System properties.
 		systemProperties = propProvider.getSystemProperties();
 		String path = getProperty(KEY_CONFIG_PATH);
@@ -60,7 +67,7 @@ public class MigrationConfigurationImpl implements Configuration {
 					getProperty(KEY_SOURCE_AUTHENTICATION_ENDPOINT),
 					getProperty(KEY_SOURCE_REPOSITORY_ENDPOINT),
 					getProperty(KEY_USERNAME),
-					getProperty(KEY_APIKEY)
+					getSecret(KEY_SOURCE_APIKEY)
 				);
 	}
 	
@@ -70,7 +77,7 @@ public class MigrationConfigurationImpl implements Configuration {
 					getProperty(KEY_DESTINATION_AUTHENTICATION_ENDPOINT),
 					getProperty(KEY_DESTINATION_REPOSITORY_ENDPOINT),
 					getProperty(KEY_USERNAME),
-					getProperty(KEY_APIKEY)
+					getSecret(KEY_DESTINATION_APIKEY)
 				);
 	}
 	
@@ -176,5 +183,16 @@ public class MigrationConfigurationImpl implements Configuration {
 		logger.info("Delay before migration starts MS: "+getDelayBeforeMigrationStartMS());
 		logger.info("Maximum number of destination jobs: "+getMaximumNumberOfDestinationJobs());
 		logger.info("Destination row count to ignore: "+getDestinationRowCountToIgnore());
+	}
+	
+	/**
+	 * Get a secret given the secret key.
+	 * 
+	 * @param secretId
+	 * @return
+	 */
+	String getSecret(String secretId) {
+		GetSecretValueResult result = secretManager.getSecretValue(new GetSecretValueRequest().withSecretId(secretId));
+		return result.getSecretString();
 	}
 }

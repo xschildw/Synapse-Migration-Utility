@@ -22,6 +22,10 @@ import org.mockito.runners.MockitoJUnitRunner;
 import org.sagebionetworks.migration.LoggerFactory;
 import org.sagebionetworks.repo.model.daemon.BackupAliasType;
 
+import com.amazonaws.services.secretsmanager.AWSSecretsManager;
+import com.amazonaws.services.secretsmanager.model.GetSecretValueRequest;
+import com.amazonaws.services.secretsmanager.model.GetSecretValueResult;
+
 @RunWith(MockitoJUnitRunner.class)
 public class MigrationConfigurationImplTest {
 
@@ -39,6 +43,8 @@ public class MigrationConfigurationImplTest {
 	LoggerFactory mockLoggerFactory;
 	@Mock
 	Logger mockLogger;
+	@Mock
+	AWSSecretsManager mockSecretManager;
 	
 	String filePath;
 	
@@ -51,7 +57,8 @@ public class MigrationConfigurationImplTest {
 	String destinationAuthEndpoint;
 	String destinationRepoEndPoint;
 	String userName;
-	String apiKey;
+	String sourceApiKey;
+	String destinationApiKey;
 	
 	@Before
 	public void before() throws IOException {
@@ -64,7 +71,8 @@ public class MigrationConfigurationImplTest {
 		destinationAuthEndpoint ="destinationAuthEndpoint";
 		destinationRepoEndPoint = "destinationRepoEndpoint";
 		userName = "userName";
-		apiKey = "apiKey";
+		sourceApiKey = "sourceKeySecret";
+		destinationApiKey = "destinationKeySecret";
 		
 		Properties props = new Properties();
 		props.put(MigrationConfigurationImpl.KEY_CONFIG_PATH, filePath);
@@ -74,7 +82,6 @@ public class MigrationConfigurationImplTest {
 		props.put(MigrationConfigurationImpl.KEY_DESTINATION_AUTHENTICATION_ENDPOINT, destinationAuthEndpoint);
 		props.put(MigrationConfigurationImpl.KEY_DESTINATION_REPOSITORY_ENDPOINT, destinationRepoEndPoint);
 		props.put(MigrationConfigurationImpl.KEY_USERNAME, userName);
-		props.put(MigrationConfigurationImpl.KEY_APIKEY, apiKey);
 		props.put(MigrationConfigurationImpl.KEY_MAX_BACKUP_BATCHSIZE, "2");
 		props.put(MigrationConfigurationImpl.KEY_MAX_RETRIES, "3");
 		props.put(MigrationConfigurationImpl.KEY_BACKUP_ALIAS_TYPE, BackupAliasType.TABLE_NAME.name());
@@ -92,7 +99,14 @@ public class MigrationConfigurationImplTest {
 		when(mockFile.exists()).thenReturn(true);
 		when(mockLoggerFactory.getLogger(any())).thenReturn(mockLogger);
 		
-		config = new MigrationConfigurationImpl(mockLoggerFactory, mockPropertyProvider, mockFileProvider);
+		when(mockSecretManager
+				.getSecretValue(new GetSecretValueRequest().withSecretId(MigrationConfigurationImpl.KEY_SOURCE_APIKEY)))
+						.thenReturn(new GetSecretValueResult().withSecretString(sourceApiKey));
+		when(mockSecretManager
+				.getSecretValue(new GetSecretValueRequest().withSecretId(MigrationConfigurationImpl.KEY_DESTINATION_APIKEY)))
+						.thenReturn(new GetSecretValueResult().withSecretString(destinationApiKey));
+		
+		config = new MigrationConfigurationImpl(mockLoggerFactory, mockPropertyProvider, mockFileProvider, mockSecretManager);
 		verify(mockProperties).load(mockInputStream);
 		verify(mockInputStream).close();
 	}
@@ -135,7 +149,7 @@ public class MigrationConfigurationImplTest {
 		assertEquals(sourceAuthEndpoint, info.getAuthenticationEndPoint());
 		assertEquals(sourceRepoEndpoint, info.getRepositoryEndPoint());
 		assertEquals(userName, info.getUserName());
-		assertEquals(apiKey, info.getApiKey());
+		assertEquals(sourceApiKey, info.getApiKey());
 	}
 	
 	
@@ -147,7 +161,7 @@ public class MigrationConfigurationImplTest {
 		assertEquals(destinationAuthEndpoint, info.getAuthenticationEndPoint());
 		assertEquals(destinationRepoEndPoint, info.getRepositoryEndPoint());
 		assertEquals(userName, info.getUserName());
-		assertEquals(apiKey, info.getApiKey());
+		assertEquals(destinationApiKey, info.getApiKey());
 	}
 	
 	@Test
