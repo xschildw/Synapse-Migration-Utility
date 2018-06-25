@@ -27,7 +27,12 @@ import org.sagebionetworks.migration.factory.SynapseClientFactoryImpl;
 import org.sagebionetworks.util.Clock;
 import org.sagebionetworks.util.DefaultClock;
 
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.secretsmanager.AWSSecretsManager;
+import com.amazonaws.services.secretsmanager.AWSSecretsManagerClientBuilder;
 import com.google.inject.AbstractModule;
+import com.google.inject.Provides;
 
 public class MigrationModule extends AbstractModule {
 
@@ -52,6 +57,14 @@ public class MigrationModule extends AbstractModule {
 		bind(MissingFromDestinationBuilder.class).to(MissingFromDestinationBuilderImpl.class);
 		bind(BackupJobExecutor.class).to(BackupJobExecutorImpl.class);
 		bind(ChecksumDeltaBuilder.class).to(ChecksumDeltaBuilderImpl.class);
+	}
+	
+	@Provides
+	public AWSSecretsManager provideAWSSecretsManager() {
+	    AWSSecretsManagerClientBuilder builder = AWSSecretsManagerClientBuilder.standard();
+		builder.withCredentials(new DefaultAWSCredentialsProviderChain());
+		builder.withRegion(Regions.US_EAST_1);
+	    return builder.build();
 	}
 
 }

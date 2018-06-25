@@ -90,6 +90,12 @@
 			<artifactId>guice</artifactId>
 			<version>4.1.0</version>
 		</dependency>
+		<!-- The AWS Java SDK -->
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-java-sdk</artifactId>
+			<version>1.11.338</version>
+		</dependency>
 	</dependencies>
 
 	<build>
