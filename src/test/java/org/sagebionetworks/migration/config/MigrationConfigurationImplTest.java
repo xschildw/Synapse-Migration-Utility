@@ -46,8 +46,6 @@ public class MigrationConfigurationImplTest {
 	@Mock
 	AWSSecretsManager mockSecretManager;
 	
-	String filePath;
-	
 	MigrationConfigurationImpl config;
 	
 	String sampleKey;
@@ -63,7 +61,6 @@ public class MigrationConfigurationImplTest {
 	@Before
 	public void before() throws IOException {
 		
-		filePath = "path-to-file";
 		sampleKey = "sampleKey";
 		sampleValue = "sampleValue";
 		sourceAuthEndpoint ="sourceAuthEndpoint";
@@ -75,7 +72,6 @@ public class MigrationConfigurationImplTest {
 		destinationApiKey = "destinationKeySecret";
 		
 		Properties props = new Properties();
-		props.put(MigrationConfigurationImpl.KEY_CONFIG_PATH, filePath);
 		props.put(sampleKey, sampleValue);
 		props.put(MigrationConfigurationImpl.KEY_SOURCE_AUTHENTICATION_ENDPOINT, sourceAuthEndpoint);
 		props.put(MigrationConfigurationImpl.KEY_SOURCE_REPOSITORY_ENDPOINT, sourceRepoEndpoint);
@@ -107,24 +103,6 @@ public class MigrationConfigurationImplTest {
 						.thenReturn(new GetSecretValueResult().withSecretString(destinationApiKey));
 		
 		config = new MigrationConfigurationImpl(mockLoggerFactory, mockPropertyProvider, mockFileProvider, mockSecretManager);
-		verify(mockProperties).load(mockInputStream);
-		verify(mockInputStream).close();
-	}
-	
-	@Test
-	public void testLoadPropertiesFromPath() throws IOException {
-		// call under test
-		Properties props = config.loadPropertiesFromPath(filePath);
-		assertEquals(mockProperties, props);
-		verify(mockProperties, times(2)).load(mockInputStream);
-		verify(mockInputStream, times(2)).close();
-	}
-	
-	@Test (expected=IllegalArgumentException.class)
-	public void testLoadPropertiesFromPathDoesNotExist() throws IOException {
-		when(mockFile.exists()).thenReturn(false);
-		// call under test
-		config.loadPropertiesFromPath(filePath);
 	}
 	
 	@Test

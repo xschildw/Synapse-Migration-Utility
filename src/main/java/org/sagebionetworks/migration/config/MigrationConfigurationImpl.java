@@ -3,7 +3,6 @@ package org.sagebionetworks.migration.config;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.ByteBuffer;
 import java.util.Properties;
 
 import org.apache.logging.log4j.Logger;
@@ -26,7 +25,6 @@ public class MigrationConfigurationImpl implements Configuration {
 	static final String KEY_SOURCE_AUTHENTICATION_ENDPOINT = "org.sagebionetworks.source.authentication.endpoint";
 	static final String KEY_DESTINATION_REPOSITORY_ENDPOINT = "org.sagebionetworks.destination.repository.endpoint";
 	static final String KEY_DESTINATION_AUTHENTICATION_ENDPOINT = "org.sagebionetworks.destination.authentication.endpoint";
-	static final String KEY_CONFIG_PATH = "org.sagebionetworks.config.path";
 	static final String KEY_SOURCE_APIKEY = "org.sagebionetworks.migration.apikey.source";
 	static final String KEY_DESTINATION_APIKEY = "org.sagebionetworks.migration.apikey.destination";
 	static final String KEY_USERNAME = "org.sagebionetworks.username";
@@ -55,10 +53,6 @@ public class MigrationConfigurationImpl implements Configuration {
 		this.secretManager = secretManager;
 		// load the the System properties.
 		systemProperties = propProvider.getSystemProperties();
-		String path = getProperty(KEY_CONFIG_PATH);
-		Properties configFromPath = loadPropertiesFromPath(path);
-		// add the additional config properties.
-		systemProperties.putAll(configFromPath);
 	}
 	
 	@Override
