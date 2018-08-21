@@ -33,7 +33,7 @@ public class MigrationClientImpl implements MigrationClient {
 			 * The destination must only be set to READ-WRITE if the last migration run was a
 			 * success.
 			 */
-			logger.info("Setting the destination READ-WRITE mode");
+			logger.info("Setting the destination to READ-WRITE mode.");
 			stackStatus.setDestinationReadWrite();
 		}else {
 			logger.info("The destination will remain in READ-ONLY mode.");
