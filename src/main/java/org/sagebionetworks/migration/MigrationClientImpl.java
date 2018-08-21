@@ -27,11 +27,17 @@ public class MigrationClientImpl implements MigrationClient {
 		// Start by putting the destination stack in read-only mode.
 		stackStatus.setDestinationReadOnly();
 		attemptMigraionWithRetry();
-		/*
-		 * The destination must only be set to READ-WRITE if the last migration run was a
-		 * success.
-		 */
-		stackStatus.setDestinationReadWrite();
+		
+		if(!config.remainInReadOnlyAfterMigration()) {
+			/*
+			 * The destination must only be set to READ-WRITE if the last migration run was a
+			 * success.
+			 */
+			logger.info("Setting the destination READ-WRITE mode");
+			stackStatus.setDestinationReadWrite();
+		}else {
+			logger.info("The destination will remain in READ-ONLY mode.");
+		}
 	}
 
 	/**

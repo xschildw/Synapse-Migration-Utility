@@ -19,6 +19,7 @@ import com.google.inject.Inject;
  */
 public class MigrationConfigurationImpl implements Configuration {
 
+	static final String KEY_REMAIN_READ_ONLY_MODE = "org.sagebionerworks.remain.read.only.mode";
 	static final String KEY_DESTINATION_ROW_COUNT_TO_IGNORE = "org.sagebiontworks.destination.row.count.to.ignore";
 	static final String KEY_MAX_NUMBER_DESTINATION_JOBS = "org.sagebionetworks.max.number.destination.jobs";
 	static final String KEY_SOURCE_REPOSITORY_ENDPOINT = "org.sagebionetworks.source.repository.endpoint";
@@ -188,5 +189,15 @@ public class MigrationConfigurationImpl implements Configuration {
 	String getSecret(String secretId) {
 		GetSecretValueResult result = secretManager.getSecretValue(new GetSecretValueRequest().withSecretId(secretId));
 		return result.getSecretString();
+	}
+
+	@Override
+	public boolean remainInReadOnlyAfterMigration() {
+		try {
+			return Boolean.parseBoolean(getProperty(KEY_REMAIN_READ_ONLY_MODE));
+		}catch(IllegalArgumentException e) {
+			// if the property is not set then return false.
+			return false;
+		}
 	}
 }

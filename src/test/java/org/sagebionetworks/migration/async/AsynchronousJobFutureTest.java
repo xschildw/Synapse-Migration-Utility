@@ -18,6 +18,7 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 import org.sagebionetworks.client.SynapseAdminClient;
+import org.sagebionetworks.client.exceptions.SynapseBadRequestException;
 import org.sagebionetworks.client.exceptions.SynapseException;
 import org.sagebionetworks.client.exceptions.SynapseServerException;
 import org.sagebionetworks.migration.AsyncMigrationException;
@@ -129,7 +130,7 @@ public class AsynchronousJobFutureTest {
 	
 	@Test (expected=AsyncMigrationException.class)
 	public void testIsDoneException() throws SynapseException {
-		SynapseServerException error = new SynapseServerException(500);
+		SynapseServerException error = new SynapseBadRequestException();
 		// failed after two tries
 		when(mockClient.getAdminAsynchronousJobStatus(jobId)).thenThrow(error);
 		// call under test;

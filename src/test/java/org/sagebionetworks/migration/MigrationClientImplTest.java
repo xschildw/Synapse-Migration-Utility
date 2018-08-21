@@ -39,6 +39,7 @@ public class MigrationClientImplTest {
 		maxNumberRetries = 3;
 		when(mockConfig.getMaxRetries()).thenReturn(maxNumberRetries);
 		when(loggerFactory.getLogger(any())).thenReturn(mockLogger);
+		when(mockConfig.remainInReadOnlyAfterMigration()).thenReturn(false);
 		client = new MigrationClientImpl(mockConfig, mockStackStatus, mockFullMigration, loggerFactory);
 	}
 	
@@ -50,7 +51,19 @@ public class MigrationClientImplTest {
 		verify(mockStackStatus).setDestinationReadOnly();
 		verify(mockFullMigration).runFullMigration();
 		verify(mockStackStatus).setDestinationReadWrite();
-		verify(mockLogger, atLeast(2)).info(anyString());
+		verify(mockLogger, atLeast(3)).info(anyString());
+	}
+	
+	@Test
+	public void testMigrateRemainReadOnly() {
+		when(mockConfig.remainInReadOnlyAfterMigration()).thenReturn(true);
+		// call under test
+		client.migrate();
+		verify(mockConfig).logConfiguration();
+		verify(mockStackStatus).setDestinationReadOnly();
+		verify(mockFullMigration).runFullMigration();
+		verify(mockStackStatus, never()).setDestinationReadWrite();
+		verify(mockLogger, atLeast(3)).info(anyString());
 	}
 	
 	@Test

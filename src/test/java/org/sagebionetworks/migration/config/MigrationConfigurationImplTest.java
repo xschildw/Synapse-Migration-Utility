@@ -1,7 +1,9 @@
 package org.sagebionetworks.migration.config;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.times;
@@ -57,6 +59,7 @@ public class MigrationConfigurationImplTest {
 	String userName;
 	String sourceApiKey;
 	String destinationApiKey;
+	Properties props;
 	
 	@Before
 	public void before() throws IOException {
@@ -71,7 +74,7 @@ public class MigrationConfigurationImplTest {
 		sourceApiKey = "sourceKeySecret";
 		destinationApiKey = "destinationKeySecret";
 		
-		Properties props = new Properties();
+		props = new Properties();
 		props.put(sampleKey, sampleValue);
 		props.put(MigrationConfigurationImpl.KEY_SOURCE_AUTHENTICATION_ENDPOINT, sourceAuthEndpoint);
 		props.put(MigrationConfigurationImpl.KEY_SOURCE_REPOSITORY_ENDPOINT, sourceRepoEndpoint);
@@ -147,5 +150,18 @@ public class MigrationConfigurationImplTest {
 		// call under test
 		config.logConfiguration();
 		verify(mockLogger, times(10)).info(anyString());
+	}
+	
+	@Test
+	public void testRemainInReadOnlyAfterMigrationDeafult() {
+		// by default should return false.
+		assertFalse(config.remainInReadOnlyAfterMigration());
+	}
+	
+	@Test
+	public void testRemainInReadOnlyAfterMigrationSet() {
+		// set the value
+		props.put(MigrationConfigurationImpl.KEY_REMAIN_READ_ONLY_MODE, "true");
+		assertTrue(config.remainInReadOnlyAfterMigration());
 	}
 }
