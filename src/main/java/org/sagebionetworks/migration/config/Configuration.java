@@ -93,4 +93,11 @@ public interface Configuration {
 	 */
 	public long getDestinationRowCountToIgnore();
 	
+	/**
+	 * Should the destination stack remain in read-only mode after successful migration?
+	 * @return By default returns false.  Override 
+	 */
+	public boolean remainInReadOnlyAfterMigration();
+	
+	
 }

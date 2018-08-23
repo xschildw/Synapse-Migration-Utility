@@ -11,6 +11,7 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 import org.sagebionetworks.client.SynapseAdminClient;
+import org.sagebionetworks.client.exceptions.SynapseBadRequestException;
 import org.sagebionetworks.client.exceptions.SynapseException;
 import org.sagebionetworks.client.exceptions.SynapseServerException;
 import org.sagebionetworks.migration.factory.SynapseClientFactory;
@@ -53,7 +54,7 @@ public class StackStatusServiceImplTest {
 	
 	@Test (expected=RuntimeException.class)
 	public void testSetDestinationReadOnlyException() throws SynapseException {
-		SynapseServerException failure = new SynapseServerException(500);
+		SynapseServerException failure = new SynapseBadRequestException();
 		when(mockDestinationClient.getCurrentStackStatus()).thenThrow(failure);
 		// call under test
 		service.setDestinationReadOnly();
@@ -72,7 +73,7 @@ public class StackStatusServiceImplTest {
 	
 	@Test (expected=RuntimeException.class)
 	public void testSetDestinationReadWriteException() throws SynapseException {
-		SynapseServerException failure = new SynapseServerException(500);
+		SynapseServerException failure = new SynapseBadRequestException();
 		when(mockDestinationClient.getCurrentStackStatus()).thenThrow(failure);
 		// call under test
 		service.setDestinationReadWrite();
