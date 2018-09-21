@@ -5,6 +5,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.Iterator;
@@ -100,6 +101,43 @@ public class MissingFromDestinationBuilderImplTest {
 		assertEquals(MigrationType.ACTIVITY, restoreJob.getMigrationType());
 		assertEquals("three", restoreJob.getBackupFileKey());
 		
+		// done
+		assertFalse(iterator.hasNext());
+	}
+
+	@Test
+	public void testBuildDestinationJobsWithNullMin() {
+		TypeToMigrateMetadata one = new TypeToMigrateMetadata();
+		one.setType(MigrationType.NODE);
+		one.setSrcMinId(1L);
+		one.setSrcMaxId(9L);
+		one.setDestMinId(null);
+		one.setDestMaxId(null);
+
+		TypeToMigrateMetadata two = new TypeToMigrateMetadata();
+		two.setType(MigrationType.ACTIVITY);
+		two.setSrcMinId(null);
+		two.setSrcMaxId(null);
+		two.setDestMinId(null);
+		two.setDestMaxId(null);
+
+		List<TypeToMigrateMetadata> primaryTypes = Lists.newArrayList(one, two);
+
+		Iterator<DestinationJob> iterator = builder.buildDestinationJobs(primaryTypes);
+		assertTrue(iterator.hasNext());
+		DestinationJob job = iterator.next();
+		assertTrue(job instanceof RestoreDestinationJob);
+		RestoreDestinationJob restoreJob = (RestoreDestinationJob) job;
+		assertEquals(MigrationType.NODE, restoreJob.getMigrationType());
+		assertEquals("one", restoreJob.getBackupFileKey());
+
+		assertTrue(iterator.hasNext());
+		job = iterator.next();
+		assertTrue(job instanceof RestoreDestinationJob);
+		restoreJob = (RestoreDestinationJob) job;
+		assertEquals(MigrationType.NODE, restoreJob.getMigrationType());
+		assertEquals("two", restoreJob.getBackupFileKey());
+
 		// done
 		assertFalse(iterator.hasNext());
 	}

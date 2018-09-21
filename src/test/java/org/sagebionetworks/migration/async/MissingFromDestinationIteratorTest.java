@@ -128,50 +128,36 @@ public class MissingFromDestinationIteratorTest {
 		verify(mockBackupJobExecutor, times(1)).executeBackupJob(any(MigrationType.class), anyLong(), anyLong());
 	}
 	
-	// PLFM-5107
-	@Test
-	public void testSourceAndDestMinAndMaxNull() {
+	@Test (expected=IllegalArgumentException.class)
+	public void testSouceMinNull() {
 		TypeToMigrateMetadata ranges = new TypeToMigrateMetadata();
 		ranges.setType(type);
-		//  If the min is null then max is also null and count == 0
 		ranges.setSrcMinId(null);
-		ranges.setSrcMaxId(null);
-		ranges.setSrcCount(0L);
-		ranges.setDestMinId(null);
-		ranges.setDestMaxId(null);
-		ranges.setDestCount(0L);
+		ranges.setSrcMaxId(99L);
+		ranges.setSrcCount(98L);
+		ranges.setDestMinId(1L);
+		ranges.setDestMaxId(99L);
+		ranges.setDestCount(98L);
 		
 		// call under test
-		MissingFromDestinationIterator iterator = new MissingFromDestinationIterator(mockConfig, mockBackupJobExecutor, ranges);
-
-		assertNotNull(iterator);
-		assertTrue(iterator.hasNext());
-		verify(mockBackupJobExecutor).executeBackupJob(type, 0L, 1L);
-		verify(mockBackupJobExecutor, times(1)).executeBackupJob(any(MigrationType.class), anyLong(), anyLong());
+		new MissingFromDestinationIterator(mockConfig, mockBackupJobExecutor, ranges);
 	}
-
-	// PLFM-5107
-	@Test
-	public void testSourceAndDestMinAndMaxNull2() {
+	
+	@Test (expected=IllegalArgumentException.class)
+	public void testSouceMaxNull() {
 		TypeToMigrateMetadata ranges = new TypeToMigrateMetadata();
 		ranges.setType(type);
-		//  If the min is null then max is also null and count == 0
-		ranges.setSrcMinId(0L);
-		ranges.setSrcMaxId(0L);
-		ranges.setSrcCount(1L);
+		ranges.setSrcMinId(1L);
+		ranges.setSrcMaxId(null);
+		ranges.setSrcCount(98L);
 		ranges.setDestMinId(1L);
-		ranges.setDestMaxId(1L);
-		ranges.setDestCount(1L);
-
+		ranges.setDestMaxId(99L);
+		ranges.setDestCount(98L);
+		
 		// call under test
-		MissingFromDestinationIterator iterator = new MissingFromDestinationIterator(mockConfig, mockBackupJobExecutor, ranges);
-
-		assertNotNull(iterator);
-		assertTrue(iterator.hasNext());
-		verify(mockBackupJobExecutor).executeBackupJob(type, 0L, 1L);
-		verify(mockBackupJobExecutor, times(1)).executeBackupJob(any(MigrationType.class), anyLong(), anyLong());
+		new MissingFromDestinationIterator(mockConfig, mockBackupJobExecutor, ranges);
 	}
-
+	
 	@Test
 	public void testSouceMinLessDestinationMin() {
 		TypeToMigrateMetadata ranges = new TypeToMigrateMetadata();

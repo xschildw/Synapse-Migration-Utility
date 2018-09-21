@@ -35,11 +35,13 @@ public class MissingFromDestinationIterator implements Iterator<DestinationJob> 
 	public MissingFromDestinationIterator(Configuration config, BackupJobExecutor backupJobExecutor,
 			TypeToMigrateMetadata typeToMigrate) {
 		super();
+		ValidateArgument.required(typeToMigrate.getSrcMinId(), typeToMigrate.getType().name() + ".SrcMinId()");
+		ValidateArgument.required(typeToMigrate.getSrcMaxId(), typeToMigrate.getType().name() + ".SrcMaxId()");
 		this.config = config;
 		this.backupJobExecutor = backupJobExecutor;
 		this.migrationType = typeToMigrate.getType();
-		srcMinId = (typeToMigrate.getSrcMinId() != null) ? typeToMigrate.getSrcMinId() : 0L;
-		srcMaxId = (typeToMigrate.getSrcMaxId() != null) ? typeToMigrate.getSrcMaxId() : 0L;
+		srcMinId = typeToMigrate.getSrcMinId();
+		srcMaxId = typeToMigrate.getSrcMaxId();
 		// Destination values are null when the destination is empty
 		long desMinId = (typeToMigrate.getDestMinId() != null) ? typeToMigrate.getDestMinId() : 0L;
 		long desMaxId = (typeToMigrate.getDestMaxId() != null) ? typeToMigrate.getDestMaxId() : 0L;
