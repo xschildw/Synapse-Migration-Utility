@@ -130,15 +130,4 @@ public class FullMigrationImplTest {
 		verify(mockTypeReporter, never()).reportChecksums(any(MigrationType.class), eq(checksumResutls));
 	}
 	
-	@Test
-	public void testRunFullMigrationIncludeChecksumNotReadOnly() {
-		when(mockConfiguration.includeFullTableChecksums()).thenReturn(true);
-		when(mockStackStatusService.isSourceReadOnly()).thenReturn(false);
-		// call under test
-		fullMigration.runFullMigration();
-		verify(mockTypeService).getAllCommonMigrationTypes();
-		verify(mockTypeService).getCommonPrimaryMigrationTypes();
-		verify(mockTypeService, never()).getFullTableChecksums(any(MigrationType.class));
-		verify(mockTypeReporter, never()).reportChecksums(any(MigrationType.class), eq(checksumResutls));
-	}
 }

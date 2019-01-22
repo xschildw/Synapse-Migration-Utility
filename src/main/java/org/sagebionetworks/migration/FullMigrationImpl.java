@@ -69,14 +69,10 @@ public class FullMigrationImpl implements FullMigration {
 		typeReporter.reportCountDifferences(countResults);
 
 		if (config.includeFullTableChecksums()) {
-			if (stackStatusService.isSourceReadOnly()) {
-				logger.info("Starting full table checksums...");
-				for(MigrationType type: allCommonTypes) {
-					ResultPair<MigrationTypeChecksum> checksum = typeService.getFullTableChecksums(type);
-					typeReporter.reportChecksums(type, checksum);
-				}
-			} else {
-				logger.info("Source is not in READ-ONLY so the full table checksum will be skipped");
+			logger.info("Starting full table checksums...");
+			for(MigrationType type: allCommonTypes) {
+				ResultPair<MigrationTypeChecksum> checksum = typeService.getFullTableChecksums(type);
+				typeReporter.reportChecksums(type, checksum);
 			}
 		}
 	}
