@@ -48,22 +48,8 @@ public class MigrationClientImplTest {
 		// call under test
 		client.migrate();
 		verify(mockConfig).logConfiguration();
-		verify(mockStackStatus).setDestinationReadOnly();
 		verify(mockFullMigration).runFullMigration();
-		verify(mockStackStatus).setDestinationReadWrite();
-		verify(mockLogger, atLeast(3)).info(anyString());
-	}
-	
-	@Test
-	public void testMigrateRemainReadOnly() {
-		when(mockConfig.remainInReadOnlyAfterMigration()).thenReturn(true);
-		// call under test
-		client.migrate();
-		verify(mockConfig).logConfiguration();
-		verify(mockStackStatus).setDestinationReadOnly();
-		verify(mockFullMigration).runFullMigration();
-		verify(mockStackStatus, never()).setDestinationReadWrite();
-		verify(mockLogger, atLeast(3)).info(anyString());
+		verify(mockLogger, atLeast(2)).info(anyString());
 	}
 	
 	@Test
@@ -78,7 +64,6 @@ public class MigrationClientImplTest {
 		}catch(RuntimeException e) {
 			assertEquals(unknown, e);
 		}
-		verify(mockStackStatus).setDestinationReadOnly();
 		// unknown exceptions do not trigger re-tries.
 		verify(mockFullMigration).runFullMigration();
 		// the destination must not be set back to READ-WRITE
@@ -99,7 +84,6 @@ public class MigrationClientImplTest {
 		}catch(AsyncMigrationException e) {
 			assertEquals("Migration failed to run to completion without error.", e.getMessage());
 		}
-		verify(mockStackStatus).setDestinationReadOnly();
 		// the number of attempts is controlled by the config.
 		verify(mockFullMigration, times(maxNumberRetries)).runFullMigration();
 		// the destination must not be set back to READ-WRITE
@@ -117,11 +101,8 @@ public class MigrationClientImplTest {
 		.when(mockFullMigration).runFullMigration();
 		// call under test
 		client.migrate();
-		verify(mockStackStatus).setDestinationReadOnly();
 		// First attempt fails but the next succeeds
 		verify(mockFullMigration, times(2)).runFullMigration();
-		// the destination can be set back to READ-WRITE sine the last run was successful.
-		verify(mockStackStatus).setDestinationReadWrite();
 		verify(mockLogger, times(1)).error(anyString(), any(Throwable.class));
 	}
 }
