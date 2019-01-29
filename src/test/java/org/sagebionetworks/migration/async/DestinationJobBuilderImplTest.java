@@ -12,6 +12,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
+import org.sagebionetworks.migration.async.checksum.ChecksumDeltaBuilder;
 import org.sagebionetworks.migration.utils.TypeToMigrateMetadata;
 import org.sagebionetworks.repo.model.migration.MigrationType;
 
@@ -35,7 +36,7 @@ public class DestinationJobBuilderImplTest {
 		List<DestinationJob> one = Lists.newArrayList(new RestoreDestinationJob(MigrationType.NODE, "one"));
 		List<DestinationJob> two = Lists.newArrayList(new RestoreDestinationJob(MigrationType.NODE, "two"));
 		when(mockMissingFromDestinationBuilder.buildDestinationJobs(primaryTypes)).thenReturn(one.iterator());
-		when(mockChecksumChangeBuilder.buildChecksumJobs(primaryTypes)).thenReturn(two.iterator());
+		when(mockChecksumChangeBuilder.buildAllRestoreJobsForMismatchedChecksums(primaryTypes)).thenReturn(two.iterator());
 		
 		builder = new DestinationJobBuilderImpl(mockMissingFromDestinationBuilder, mockChecksumChangeBuilder);
 	}
@@ -46,7 +47,7 @@ public class DestinationJobBuilderImplTest {
 		Iterator<DestinationJob> iterator = builder.buildDestinationJobs(primaryTypes);
 		assertNotNull(iterator);
 		verify(mockMissingFromDestinationBuilder).buildDestinationJobs(primaryTypes);
-		verify(mockChecksumChangeBuilder).buildChecksumJobs(primaryTypes);
+		verify(mockChecksumChangeBuilder).buildAllRestoreJobsForMismatchedChecksums(primaryTypes);
 	}
 
 }
