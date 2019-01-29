@@ -27,12 +27,12 @@ public class TypeChecksumProviderImpl implements TypeChecksumBuilder {
 	public Iterator<DestinationJob> buildAllRestoreJobsForType(TypeToMigrateMetadata primaryType, String salt) {
 		Iterator<DestinationJob> iterator = new LinkedList<DestinationJob>().iterator();
 		// divide the full range into batches
-		for (long minimumId = primaryType.getSrcMinId(); minimumId < primaryType
-				.getSrcMaxId(); minimumId += batchSize) {
+		for (long minimumId = primaryType.getSrcMinId(); minimumId <= primaryType
+				.getSrcMaxId(); minimumId += batchSize+1) {
 			long maximumId = Math.min(primaryType.getSrcMaxId(), minimumId + batchSize);
 			Iterator<DestinationJob> range = rangeProvider.providerRangeCheck(primaryType.getType(), minimumId,
 					maximumId, salt);
-			Iterators.concat(iterator, range);
+			iterator = Iterators.concat(iterator, range);
 		}
 		return iterator;
 	}
