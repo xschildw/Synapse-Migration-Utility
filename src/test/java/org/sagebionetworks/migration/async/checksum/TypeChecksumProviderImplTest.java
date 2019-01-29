@@ -33,7 +33,7 @@ public class TypeChecksumProviderImplTest {
 	@Mock
 	RangeCheksumBuilder mockRangeProvider;
 
-	TypeChecksumProviderImpl provider;
+	TypeChecksumBuilderImpl provider;
 
 	int batchSize;
 	MigrationType type;
@@ -55,7 +55,7 @@ public class TypeChecksumProviderImplTest {
 	public void before() {
 		batchSize = 13;
 		when(mockConfiguration.getMaximumBackupBatchSize()).thenReturn(batchSize);
-		provider = new TypeChecksumProviderImpl(mockConfiguration, mockRangeProvider);
+		provider = new TypeChecksumBuilderImpl(mockConfiguration, mockRangeProvider);
 		
 		type = MigrationType.ACL;
 		srcMinId = 11L;

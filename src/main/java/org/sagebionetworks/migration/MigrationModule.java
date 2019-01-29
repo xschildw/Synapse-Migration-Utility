@@ -14,6 +14,10 @@ import org.sagebionetworks.migration.async.MissingFromDestinationBuilder;
 import org.sagebionetworks.migration.async.MissingFromDestinationBuilderImpl;
 import org.sagebionetworks.migration.async.checksum.ChecksumDeltaBuilder;
 import org.sagebionetworks.migration.async.checksum.ChecksumDeltaBuilderImpl;
+import org.sagebionetworks.migration.async.checksum.RangeCheksumBuilder;
+import org.sagebionetworks.migration.async.checksum.RangeCheksumBuilderImpl;
+import org.sagebionetworks.migration.async.checksum.TypeChecksumBuilder;
+import org.sagebionetworks.migration.async.checksum.TypeChecksumBuilderImpl;
 import org.sagebionetworks.migration.async.FutureFactory;
 import org.sagebionetworks.migration.async.FutureFactoryImpl;
 import org.sagebionetworks.migration.config.Configuration;
@@ -57,6 +61,8 @@ public class MigrationModule extends AbstractModule {
 		bind(MissingFromDestinationBuilder.class).to(MissingFromDestinationBuilderImpl.class);
 		bind(BackupJobExecutor.class).to(BackupJobExecutorImpl.class);
 		bind(ChecksumDeltaBuilder.class).to(ChecksumDeltaBuilderImpl.class);
+		bind(TypeChecksumBuilder.class).to(TypeChecksumBuilderImpl.class);
+		bind(RangeCheksumBuilder.class).to(RangeCheksumBuilderImpl.class);
 	}
 	
 	@Provides

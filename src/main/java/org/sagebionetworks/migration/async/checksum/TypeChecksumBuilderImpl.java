@@ -11,13 +11,13 @@ import com.google.common.collect.Iterators;
 import com.google.inject.Inject;
 
 
-public class TypeChecksumProviderImpl implements TypeChecksumBuilder {
+public class TypeChecksumBuilderImpl implements TypeChecksumBuilder {
 
 	RangeCheksumBuilder rangeProvider;
 	int batchSize;
 
 	@Inject
-	public TypeChecksumProviderImpl(Configuration configuration, RangeCheksumBuilder rangeProvider) {
+	public TypeChecksumBuilderImpl(Configuration configuration, RangeCheksumBuilder rangeProvider) {
 		super();
 		this.batchSize = configuration.getMaximumBackupBatchSize();
 		this.rangeProvider = rangeProvider;
