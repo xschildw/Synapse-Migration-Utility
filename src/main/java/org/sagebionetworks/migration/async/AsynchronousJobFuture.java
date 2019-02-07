@@ -22,7 +22,8 @@ import org.sagebionetworks.util.Clock;
  */
 public class AsynchronousJobFuture<O extends AdminResponse> implements Future<O> {
 
-	static final int SLEEP_TIME = 2000;
+	// Migration can run 1000s of jobs that take < 1s, we should not spend too much time waiting
+	static final int SLEEP_TIME = 100;
 	static final String TIMEOUT_MESSAGE = "Timeout waiting for asynchronous job.";
 	
 	Reporter reporter;
