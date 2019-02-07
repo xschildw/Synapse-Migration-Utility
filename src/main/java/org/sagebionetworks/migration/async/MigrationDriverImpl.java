@@ -20,7 +20,8 @@ import com.google.inject.Inject;
  */
 public class MigrationDriverImpl implements MigrationDriver {
 
-	static final long SLEEP_TIME_MS = 2000L;
+	// Migration can run 1000s of jobs that take < 1s, we should not spend too much time waiting
+	static final long SLEEP_TIME_MS = 100L;
 
 	Configuration config;
 	DestinationJobBuilder jobBuilder;
