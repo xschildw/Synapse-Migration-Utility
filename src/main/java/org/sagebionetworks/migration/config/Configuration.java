@@ -78,13 +78,6 @@ public interface Configuration {
 	 * @return
 	 */
 	public long getDelayBeforeMigrationStartMS();
-
-	/**
-	 * Get the maximum number of concurrent jobs that can run agaisnt the destination.
-	 * 
-	 * @return
-	 */
-	public int getMaximumNumberOfDestinationJobs();
 	
 	/**
 	 * If the destination row count is less than this number, the destination table will be treated

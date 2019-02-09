@@ -1,5 +1,8 @@
 package org.sagebionetworks.migration;
 
+import java.util.Timer;
+import java.util.TimerTask;
+
 import org.sagebionetworks.migration.async.AsynchronousJobExecutor;
 import org.sagebionetworks.migration.async.AsynchronousJobExecutorImpl;
 import org.sagebionetworks.migration.async.BackupJobExecutor;
@@ -12,6 +15,8 @@ import org.sagebionetworks.migration.async.MigrationDriver;
 import org.sagebionetworks.migration.async.MigrationDriverImpl;
 import org.sagebionetworks.migration.async.MissingFromDestinationBuilder;
 import org.sagebionetworks.migration.async.MissingFromDestinationBuilderImpl;
+import org.sagebionetworks.migration.async.RestoreJobQueue;
+import org.sagebionetworks.migration.async.RestoreJobQueueImpl;
 import org.sagebionetworks.migration.async.checksum.ChecksumDeltaBuilder;
 import org.sagebionetworks.migration.async.checksum.ChecksumDeltaBuilderImpl;
 import org.sagebionetworks.migration.async.checksum.RangeCheksumBuilder;
@@ -71,6 +76,25 @@ public class MigrationModule extends AbstractModule {
 		builder.withCredentials(new DefaultAWSCredentialsProviderChain());
 		builder.withRegion(Regions.US_EAST_1);
 	    return builder.build();
+	}
+	
+	@Provides
+	public RestoreJobQueue provideRestorJobQueue(DestinationJobExecutor jobExecutor, Reporter reporter) {
+		// setup the queue to run on a timer.
+		RestoreJobQueueImpl queue = new RestoreJobQueueImpl(jobExecutor, reporter);
+		// Setup the timer
+		boolean isDaemon = true;
+		Timer timer = new Timer(isDaemon);
+		long deayMS = 1000;
+		timer.schedule(new TimerTask() {
+
+			@Override
+			public void run() {
+				queue.timerFired();
+
+			}
+		}, deayMS);
+		return queue;
 	}
 
 }

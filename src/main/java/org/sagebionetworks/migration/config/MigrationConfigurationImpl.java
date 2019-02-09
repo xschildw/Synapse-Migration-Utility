@@ -21,7 +21,6 @@ public class MigrationConfigurationImpl implements Configuration {
 
 	static final String KEY_REMAIN_READ_ONLY_MODE = "org.sagebionerworks.remain.read.only.mode";
 	static final String KEY_DESTINATION_ROW_COUNT_TO_IGNORE = "org.sagebiontworks.destination.row.count.to.ignore";
-	static final String KEY_MAX_NUMBER_DESTINATION_JOBS = "org.sagebionetworks.max.number.destination.jobs";
 	static final String KEY_SOURCE_REPOSITORY_ENDPOINT = "org.sagebionetworks.source.repository.endpoint";
 	static final String KEY_SOURCE_AUTHENTICATION_ENDPOINT = "org.sagebionetworks.source.authentication.endpoint";
 	static final String KEY_DESTINATION_REPOSITORY_ENDPOINT = "org.sagebionetworks.destination.repository.endpoint";
@@ -116,11 +115,6 @@ public class MigrationConfigurationImpl implements Configuration {
 		return Boolean.parseBoolean(getProperty(KEY_INCLUDE_FULL_TABLE_CHECKSUM));
 	}
 	
-	@Override
-	public int getMaximumNumberOfDestinationJobs() {
-		return Integer.parseInt(getProperty(KEY_MAX_NUMBER_DESTINATION_JOBS));
-	}
-	
 	/**
 	 * 
 	 * @param key
@@ -176,7 +170,6 @@ public class MigrationConfigurationImpl implements Configuration {
 		logger.info("Include full table checksums: "+includeFullTableChecksums());
 		logger.info("Asynchronous job timeout MS: "+getWorkerTimeoutMs());
 		logger.info("Delay before migration starts MS: "+getDelayBeforeMigrationStartMS());
-		logger.info("Maximum number of destination jobs: "+getMaximumNumberOfDestinationJobs());
 		logger.info("Destination row count to ignore: "+getDestinationRowCountToIgnore());
 	}
 	
