@@ -148,7 +148,7 @@ public class MigrationConfigurationImplTest {
 	public void testLogConfiguration() {
 		// call under test
 		config.logConfiguration();
-		verify(mockLogger, times(10)).info(anyString());
+		verify(mockLogger, times(9)).info(anyString());
 	}
 	
 	@Test

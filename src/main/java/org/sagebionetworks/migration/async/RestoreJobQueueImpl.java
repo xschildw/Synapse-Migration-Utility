@@ -126,11 +126,24 @@ public class RestoreJobQueueImpl implements RestoreJobQueue, Runnable {
 		Iterator<DestinationJob> queuIterator = jobWaitingQueue.iterator();
 		while (queuIterator.hasNext()) {
 			DestinationJob job = queuIterator.next();
-			// do we already have job of this type running?
-			Future<?> future = this.runningJobs.get(job.getMigrationType());
-			if (future == null) {
+			boolean canJobStart = false;
+			if(MigrationType.CHANGE.equals(job.getMigrationType())) {
+				// Change jobs can only be run if no other jobs are running.
+				if(this.runningJobs.isEmpty()) {
+					canJobStart = true;
+				}
+			}else {
+				/*
+				 * Non-change jobs can run as long as no other job of the 
+				 * same time is already running
+				 */
+				if (!runningJobs.containsKey(job.getMigrationType())) {
+					canJobStart = true;
+				}
+			}
+			if(canJobStart) {
 				// Start a job and add it to the queue
-				future = jobExecutor.startDestinationJob(job);
+				Future<?> future = jobExecutor.startDestinationJob(job);
 				this.runningJobs.put(job.getMigrationType(), future);
 				queuIterator.remove();
 			}
