@@ -11,7 +11,6 @@ import org.apache.logging.log4j.Logger;
 import org.sagebionetworks.migration.AsyncMigrationException;
 import org.sagebionetworks.migration.LoggerFactory;
 import org.sagebionetworks.repo.model.migration.MigrationType;
-import org.sagebionetworks.util.Clock;
 
 /**
  * DestinationJob of the same MigrationType are run in sequentially, while jobs
@@ -25,10 +24,9 @@ import org.sagebionetworks.util.Clock;
  * ensure consistency between the two thread.
  *
  */
-public class RestoreJobQueueImpl implements RestoreJobQueue {
+public class RestoreJobQueueImpl implements RestoreJobQueue, Runnable {
 
 	DestinationJobExecutor jobExecutor;
-	Clock clock;
 	Logger logger;
 	/*
 	 * The queue of jobs waiting to be started.
@@ -70,19 +68,24 @@ public class RestoreJobQueueImpl implements RestoreJobQueue {
 	 */
 	@Override
 	public synchronized boolean isDone() {
-		return jobWaitingQueue.isEmpty() && runningJobs.isEmpty();
+		boolean isDone = jobWaitingQueue.isEmpty() && runningJobs.isEmpty();
+		// When all jobs are done throw the last exception if one exists.
+		if(isDone && lastException != null) {
+			throw lastException;
+		}
+		return isDone;
 	}
 
 	/**
 	 * Called each time the timer is fired. Note: This method is called from the
 	 * timer thread.
 	 */
-	public synchronized void timerFired() {
+	void timerFired() {
 		/*
 		 * Check on all of the running jobs. Finished or failed jobs will be removed.
 		 * Status of all running jobs will be reported to the log.
 		 */
-		checkOnRunningJobs();
+		removeAllFinishedJobs();
 		/*
 		 * Start all jobs that currently do not have
 		 */
@@ -97,7 +100,7 @@ public class RestoreJobQueueImpl implements RestoreJobQueue {
 	 * Calling this method will trigger each running job to report its current
 	 * status to the log.
 	 */
-	void checkOnRunningJobs() {
+	void removeAllFinishedJobs() {
 		// remove all finished jobs
 		Iterator<Future<?>> runningItertor = runningJobs.values().iterator();
 		while (runningItertor.hasNext()) {
@@ -135,8 +138,8 @@ public class RestoreJobQueueImpl implements RestoreJobQueue {
 	}
 
 	@Override
-	public synchronized AsyncMigrationException getLastException() {
-		return lastException;
+	public synchronized void run() {
+		this.timerFired();
 	}
 
 }

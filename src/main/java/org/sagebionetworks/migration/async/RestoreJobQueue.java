@@ -17,14 +17,12 @@ public interface RestoreJobQueue {
 	
 	/**
 	 * Are all jobs done?
+	 *
+	 *@throws If one or more AsyncMigrationException occur while processing the jobs, this method will
+	 *throw the last AsyncMigrationException encountered after all jobs are done.
 	 * @return
 	 */
-	public boolean isDone();
+	public boolean isDone() throws AsyncMigrationException;
 
-	/**
-	 * Get the last observed exception.
-	 * @return
-	 */
-	public AsyncMigrationException getLastException();
 
 }

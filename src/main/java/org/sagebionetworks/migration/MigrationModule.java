@@ -78,23 +78,42 @@ public class MigrationModule extends AbstractModule {
 	    return builder.build();
 	}
 	
+	/**
+	 * Setup the RestoreJobQueue with a timer thread.
+	 * 
+	 * @param jobExecutor
+	 * @param loggerFactory
+	 * @return
+	 */
 	@Provides
-	public RestoreJobQueue provideRestorJobQueue(DestinationJobExecutor jobExecutor, Reporter reporter) {
+	public RestoreJobQueue provideRestorJobQueue(DestinationJobExecutor jobExecutor, LoggerFactory loggerFactory) {
 		// setup the queue to run on a timer.
-		RestoreJobQueueImpl queue = new RestoreJobQueueImpl(jobExecutor, reporter);
+		RestoreJobQueueImpl queue = new RestoreJobQueueImpl(jobExecutor, loggerFactory);
+		long delayMS = 100;
+		long periodMS = 1000;
+		MigrationModule.startDaemonTimer(delayMS, periodMS, queue);
+		return queue;
+	}
+	
+	/**
+	 * Start a daemon timer to fire the passed runnable.
+	 * 
+	 * @param delayMS Delay to start the timer in MS.
+	 * @param periodMs The period the timer will fire in MS.
+	 * @param runner The Runnable.run() method will be called each time the timer is fired.
+	 */
+	public static Timer startDaemonTimer(long delayMS, long periodMS, Runnable runner) {
 		// Setup the timer
 		boolean isDaemon = true;
 		Timer timer = new Timer(isDaemon);
-		long deayMS = 1000;
 		timer.schedule(new TimerTask() {
 
 			@Override
 			public void run() {
-				queue.timerFired();
-
+				runner.run();
 			}
-		}, deayMS);
-		return queue;
+		}, delayMS, periodMS);
+		return timer;
 	}
 
 }

@@ -3,7 +3,6 @@ package org.sagebionetworks.migration.async;
 import java.util.Iterator;
 import java.util.List;
 
-import org.sagebionetworks.migration.AsyncMigrationException;
 import org.sagebionetworks.migration.config.Configuration;
 import org.sagebionetworks.migration.utils.TypeToMigrateMetadata;
 import org.sagebionetworks.util.Clock;
@@ -17,6 +16,7 @@ import com.google.inject.Inject;
  */
 public class MigrationDriverImpl implements MigrationDriver {
 
+	public static final long SLEEP_TIME_MS = 1000L;
 	Configuration config;
 	DestinationJobBuilder jobBuilder;
 	RestoreJobQueue restoreJobQueue;
@@ -51,15 +51,11 @@ public class MigrationDriverImpl implements MigrationDriver {
 		// Wait for all of the restore jobs to finish
 		while (!restoreJobQueue.isDone()) {
 			try {
-				clock.sleep(1000L);
+				clock.sleep(SLEEP_TIME_MS);
 			} catch (InterruptedException e1) {
 				// interrupt will trigger failure.
 				throw new RuntimeException(e1);
 			}
-		}
-		AsyncMigrationException lastException = restoreJobQueue.getLastException();
-		if (lastException != null) {
-			throw lastException;
 		}
 	}
 
