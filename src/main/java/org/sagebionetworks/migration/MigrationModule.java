@@ -1,5 +1,8 @@
 package org.sagebionetworks.migration;
 
+import java.util.Timer;
+import java.util.TimerTask;
+
 import org.sagebionetworks.migration.async.AsynchronousJobExecutor;
 import org.sagebionetworks.migration.async.AsynchronousJobExecutorImpl;
 import org.sagebionetworks.migration.async.BackupJobExecutor;
@@ -12,6 +15,8 @@ import org.sagebionetworks.migration.async.MigrationDriver;
 import org.sagebionetworks.migration.async.MigrationDriverImpl;
 import org.sagebionetworks.migration.async.MissingFromDestinationBuilder;
 import org.sagebionetworks.migration.async.MissingFromDestinationBuilderImpl;
+import org.sagebionetworks.migration.async.RestoreJobQueue;
+import org.sagebionetworks.migration.async.RestoreJobQueueImpl;
 import org.sagebionetworks.migration.async.checksum.ChecksumDeltaBuilder;
 import org.sagebionetworks.migration.async.checksum.ChecksumDeltaBuilderImpl;
 import org.sagebionetworks.migration.async.checksum.RangeCheksumBuilder;
@@ -71,6 +76,44 @@ public class MigrationModule extends AbstractModule {
 		builder.withCredentials(new DefaultAWSCredentialsProviderChain());
 		builder.withRegion(Regions.US_EAST_1);
 	    return builder.build();
+	}
+	
+	/**
+	 * Setup the RestoreJobQueue with a timer thread.
+	 * 
+	 * @param jobExecutor
+	 * @param loggerFactory
+	 * @return
+	 */
+	@Provides
+	public RestoreJobQueue provideRestorJobQueue(DestinationJobExecutor jobExecutor, LoggerFactory loggerFactory) {
+		// setup the queue to run on a timer.
+		RestoreJobQueueImpl queue = new RestoreJobQueueImpl(jobExecutor, loggerFactory);
+		long delayMS = 100;
+		long periodMS = 1000;
+		MigrationModule.startDaemonTimer(delayMS, periodMS, queue);
+		return queue;
+	}
+	
+	/**
+	 * Start a daemon timer to fire the passed runnable.
+	 * 
+	 * @param delayMS Delay to start the timer in MS.
+	 * @param periodMs The period the timer will fire in MS.
+	 * @param runner The Runnable.run() method will be called each time the timer is fired.
+	 */
+	public static Timer startDaemonTimer(long delayMS, long periodMS, Runnable runner) {
+		// Setup the timer
+		boolean isDaemon = true;
+		Timer timer = new Timer(isDaemon);
+		timer.schedule(new TimerTask() {
+
+			@Override
+			public void run() {
+				runner.run();
+			}
+		}, delayMS, periodMS);
+		return timer;
 	}
 
 }

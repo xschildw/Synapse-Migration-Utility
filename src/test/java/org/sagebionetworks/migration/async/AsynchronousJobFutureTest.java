@@ -6,11 +6,13 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+
+import static org.sagebionetworks.migration.async.AsynchronousJobFuture.*;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -88,7 +90,7 @@ public class AsynchronousJobFutureTest {
 		failedStatus.setErrorMessage(errorMessage);
 		
 		defaultTimeoutMS = 11;
-		when(mockClock.currentTimeMillis()).thenReturn(0L,1L,2L,3L,4L,5L,6L,7L,8L,9L);
+		when(mockClock.currentTimeMillis()).thenReturn(5000L,5001L,5002L,5003L,5004L,5005L,5006L,5007L,5008L,5009L);
 		// complete after two tries
 		when(mockClient.getAdminAsynchronousJobStatus(jobId)).thenReturn(processingStatus, processingStatus, completeStatus);
 		type = MigrationType.NODE;
@@ -110,7 +112,7 @@ public class AsynchronousJobFutureTest {
 		assertTrue(future.isDone());
 		// once done no more get status calls should occur
 		verify(mockClient, times(3)).getAdminAsynchronousJobStatus(jobId);
-		verify(mockReporter, times(2)).reportProgress(jobTarget, processingStatus);
+		verify(mockReporter, times(1)).reportProgress(jobTarget, processingStatus);
 	}
 	
 	
@@ -125,6 +127,30 @@ public class AsynchronousJobFutureTest {
 		assertTrue(future.isDone());
 		// once done no more get status calls should occur
 		verify(mockClient, times(3)).getAdminAsynchronousJobStatus(jobId);
+		verify(mockReporter, times(1)).reportProgress(jobTarget, processingStatus);
+	}
+	
+	@Test
+	public void testIsDoneReportThrottled() throws SynapseException {
+		// setup the clock such that every other call should trigger report.
+		Long startTime = MINIMUM_MS_BETWEEN_REPORTS+1;
+		Long halfTime = MINIMUM_MS_BETWEEN_REPORTS/2L;
+		when(mockClock.currentTimeMillis()).thenReturn(
+				startTime
+				,startTime+(1*halfTime)
+				,startTime+(2*halfTime)
+				,startTime+(3*halfTime)
+				,startTime+(4*halfTime)
+		);
+
+		// complete after two tries
+		when(mockClient.getAdminAsynchronousJobStatus(jobId)).thenReturn(processingStatus, processingStatus, processingStatus, completeStatus);
+		// calls under test
+		assertFalse(future.isDone());
+		assertFalse(future.isDone());
+		assertFalse(future.isDone());
+		assertTrue(future.isDone());
+		// progress should occur the first time, then every other time.
 		verify(mockReporter, times(2)).reportProgress(jobTarget, processingStatus);
 	}
 	
@@ -150,8 +176,8 @@ public class AsynchronousJobFutureTest {
 		assertEquals(wrappedReponse, result);
 		// should sleep twice.
 		verify(mockClock,times(2)).sleep(AsynchronousJobFuture.SLEEP_TIME);
-		verify(mockClock, times(3)).currentTimeMillis();
-		verify(mockReporter, times(2)).reportProgress(jobTarget, processingStatus);
+		verify(mockClock, atLeast(3)).currentTimeMillis();
+		verify(mockReporter, times(1)).reportProgress(jobTarget, processingStatus);
 	}
 	
 	@Test
@@ -167,7 +193,7 @@ public class AsynchronousJobFutureTest {
 			assertEquals(AsynchronousJobFuture.TIMEOUT_MESSAGE, e.getMessage());
 		}
 		verify(mockClock, times(3)).currentTimeMillis();
-		verify(mockReporter, times(2)).reportProgress(jobTarget, processingStatus);
+		verify(mockReporter, times(1)).reportProgress(jobTarget, processingStatus);
 	}
 	
 	@Test

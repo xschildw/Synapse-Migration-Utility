@@ -24,6 +24,8 @@ public class AsynchronousJobFuture<O extends AdminResponse> implements Future<O>
 
 	// Migration can run 1000s of jobs that take < 1s, we should not spend too much time waiting
 	static final int SLEEP_TIME = 100;
+	// throttles the number of reports.
+	static final long MINIMUM_MS_BETWEEN_REPORTS = 2000L;
 	static final String TIMEOUT_MESSAGE = "Timeout waiting for asynchronous job.";
 	
 	Reporter reporter;
@@ -33,6 +35,7 @@ public class AsynchronousJobFuture<O extends AdminResponse> implements Future<O>
 	JobTarget jobTarget;
 	String jobName;
 	long defaultTimeoutMS;
+	Long lastReportMS;
 
 	/**
 	 * Create a future to track a started job.
@@ -49,6 +52,7 @@ public class AsynchronousJobFuture<O extends AdminResponse> implements Future<O>
 		this.jobTarget = jobTarget;
 		this.client = client;
 		this.defaultTimeoutMS = defaultTimeoutMS;
+		this.lastReportMS = 0L;
 	}
 
 	@Override
@@ -71,7 +75,12 @@ public class AsynchronousJobFuture<O extends AdminResponse> implements Future<O>
 				this.jobStatus = this.client.getAdminAsynchronousJobStatus(this.jobStatus.getJobId());
 			}
 			// a job is done if it is not processing.
-			reporter.reportProgress(jobTarget, jobStatus);
+			long now = clock.currentTimeMillis();
+			if(now - lastReportMS >= MINIMUM_MS_BETWEEN_REPORTS) {
+				lastReportMS = now;
+				reporter.reportProgress(jobTarget, jobStatus);
+			}
+
 			return AsynchJobState.PROCESSING != this.jobStatus.getJobState();
 		} catch (Exception e) {
 			throw new AsyncMigrationException(e);

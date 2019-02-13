@@ -87,7 +87,6 @@ public class MigrationConfigurationImplTest {
 		props.put(MigrationConfigurationImpl.KEY_INCLUDE_FULL_TABLE_CHECKSUM, "true");
 		props.put(MigrationConfigurationImpl.KEY_DELAY_BEFORE_START_MS, "30000");
 		props.put(MigrationConfigurationImpl.KEY_THREAD_TIMOUT_MS, "100000000");
-		props.put(MigrationConfigurationImpl.KEY_MAX_NUMBER_DESTINATION_JOBS, "4");
 		props.put(MigrationConfigurationImpl.KEY_DESTINATION_ROW_COUNT_TO_IGNORE, "1000");
 		
 		when(mockPropertyProvider.getSystemProperties()).thenReturn(props);
@@ -149,7 +148,7 @@ public class MigrationConfigurationImplTest {
 	public void testLogConfiguration() {
 		// call under test
 		config.logConfiguration();
-		verify(mockLogger, times(10)).info(anyString());
+		verify(mockLogger, times(9)).info(anyString());
 	}
 	
 	@Test
