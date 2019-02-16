@@ -129,12 +129,16 @@ public class ChecksumRangeExecutor implements Iterator<DestinationJob> {
 		if (sourceResult != null) {
 			for (RangeChecksum sourceChecksum : sourceResult) {
 				// Find the matching destination checksum by bin
-				RangeChecksum destinationChecksum = destinationBinToRange.get(sourceChecksum.getBinNumber());
+				RangeChecksum destinationChecksum = destinationBinToRange.remove(sourceChecksum.getBinNumber());
 				if (destinationChecksum == null || !sourceChecksum.equals(destinationChecksum)) {
 					// Checksums do not match
 					mismatchRanges.add(sourceChecksum);
 				}
 			}
+		}
+		// anything left in destination map was not in source
+		if(!destinationBinToRange.isEmpty()) {
+			mismatchRanges.addAll(destinationBinToRange.values());
 		}
 		return mismatchRanges;
 	}

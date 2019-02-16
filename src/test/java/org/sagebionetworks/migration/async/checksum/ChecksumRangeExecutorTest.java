@@ -187,7 +187,9 @@ public class ChecksumRangeExecutorTest {
 		// Call under test
 		List<RangeChecksum> results = ChecksumRangeExecutor.findAllMismatchedRanges(srcList, destList);
 		assertNotNull(results);
-		assertTrue(results.isEmpty());
+		assertEquals(2, results.size());
+		assertEquals(srcOne, results.get(0));
+		assertEquals(srcTwo, results.get(1));
 	}
 
 	@Test
@@ -198,7 +200,9 @@ public class ChecksumRangeExecutorTest {
 		// Call under test
 		List<RangeChecksum> results = ChecksumRangeExecutor.findAllMismatchedRanges(srcList, destList);
 		assertNotNull(results);
-		assertTrue(results.isEmpty());
+		assertEquals(2, results.size());
+		assertEquals(srcOne, results.get(0));
+		assertEquals(srcTwo, results.get(1));
 	}
 
 	@Test
