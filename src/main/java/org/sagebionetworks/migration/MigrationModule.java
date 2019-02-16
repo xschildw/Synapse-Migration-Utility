@@ -7,10 +7,10 @@ import org.sagebionetworks.migration.async.AsynchronousJobExecutor;
 import org.sagebionetworks.migration.async.AsynchronousJobExecutorImpl;
 import org.sagebionetworks.migration.async.BackupJobExecutor;
 import org.sagebionetworks.migration.async.BackupJobExecutorImpl;
-import org.sagebionetworks.migration.async.DestinationJobBuilder;
-import org.sagebionetworks.migration.async.DestinationJobBuilderImpl;
 import org.sagebionetworks.migration.async.DestinationJobExecutor;
 import org.sagebionetworks.migration.async.DestinationJobExecutorImpl;
+import org.sagebionetworks.migration.async.FutureFactory;
+import org.sagebionetworks.migration.async.FutureFactoryImpl;
 import org.sagebionetworks.migration.async.MigrationDriver;
 import org.sagebionetworks.migration.async.MigrationDriverImpl;
 import org.sagebionetworks.migration.async.MissingFromDestinationBuilder;
@@ -21,10 +21,6 @@ import org.sagebionetworks.migration.async.checksum.ChecksumDeltaBuilder;
 import org.sagebionetworks.migration.async.checksum.ChecksumDeltaBuilderImpl;
 import org.sagebionetworks.migration.async.checksum.RangeCheksumBuilder;
 import org.sagebionetworks.migration.async.checksum.RangeCheksumBuilderImpl;
-import org.sagebionetworks.migration.async.checksum.TypeChecksumBuilder;
-import org.sagebionetworks.migration.async.checksum.TypeChecksumBuilderImpl;
-import org.sagebionetworks.migration.async.FutureFactory;
-import org.sagebionetworks.migration.async.FutureFactoryImpl;
 import org.sagebionetworks.migration.config.Configuration;
 import org.sagebionetworks.migration.config.FileProvider;
 import org.sagebionetworks.migration.config.FileProviderImp;
@@ -61,12 +57,10 @@ public class MigrationModule extends AbstractModule {
 		bind(Reporter.class).to(ReporterImpl.class);
 		bind(TypeService.class).to(TypeServiceImpl.class);
 		bind(MigrationDriver.class).to(MigrationDriverImpl.class);
-		bind(DestinationJobBuilder.class).to(DestinationJobBuilderImpl.class);
 		bind(DestinationJobExecutor.class).to(DestinationJobExecutorImpl.class);
 		bind(MissingFromDestinationBuilder.class).to(MissingFromDestinationBuilderImpl.class);
 		bind(BackupJobExecutor.class).to(BackupJobExecutorImpl.class);
 		bind(ChecksumDeltaBuilder.class).to(ChecksumDeltaBuilderImpl.class);
-		bind(TypeChecksumBuilder.class).to(TypeChecksumBuilderImpl.class);
 		bind(RangeCheksumBuilder.class).to(RangeCheksumBuilderImpl.class);
 	}
 	

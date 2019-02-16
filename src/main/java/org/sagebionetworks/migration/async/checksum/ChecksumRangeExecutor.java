@@ -1,20 +1,25 @@
 package org.sagebionetworks.migration.async.checksum;
 
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
 import org.sagebionetworks.migration.async.AsynchronousJobExecutor;
 import org.sagebionetworks.migration.async.BackupJobExecutor;
 import org.sagebionetworks.migration.async.DestinationJob;
 import org.sagebionetworks.migration.async.ResultPair;
-import org.sagebionetworks.repo.model.migration.AsyncMigrationRangeChecksumRequest;
-import org.sagebionetworks.repo.model.migration.MigrationRangeChecksum;
+import org.sagebionetworks.repo.model.migration.BatchChecksumRequest;
+import org.sagebionetworks.repo.model.migration.BatchChecksumResponse;
 import org.sagebionetworks.repo.model.migration.MigrationType;
+import org.sagebionetworks.repo.model.migration.RangeChecksum;
 
 /**
  * This executor will first compare the checksums from both the source and
  * destination for the given ID range. If the checksums do not match, then n
- * number of backup jobs will be started to restore the entire range. If the checksums
- * match, no further work is required.
+ * number of backup jobs will be started to restore the entire range. If the
+ * checksums match, no further work is required.
  * <p>
  * No work is done in the constructor of this object. Checksums will not be
  * executed until the first call to {@link #hasNext()}.
@@ -24,11 +29,13 @@ public class ChecksumRangeExecutor implements Iterator<DestinationJob> {
 
 	AsynchronousJobExecutor asynchronousJobExecutor;
 	BackupJobExecutor backupJobExecutor;
+	Long batchSize;
 	MigrationType type;
 	Long minimumId;
 	Long maximumId;
 	String salt;
-	Iterator<DestinationJob> restoreJobs;
+	Iterator<DestinationJob> lastBackupJobs;
+	Iterator<RangeChecksum> mismatchedRanges;
 
 	/**
 	 * No work is done in the constructor of this object. Checksums will not be
@@ -42,84 +49,98 @@ public class ChecksumRangeExecutor implements Iterator<DestinationJob> {
 	 * @param salt
 	 */
 	public ChecksumRangeExecutor(AsynchronousJobExecutor asynchronousJobExecutor, BackupJobExecutor backupJobExecutor,
-			MigrationType type, Long minimumId, Long maximumId, String salt) {
+			Long batchSize, MigrationType type, Long minimumId, Long maximumId, String salt) {
 		super();
 		this.asynchronousJobExecutor = asynchronousJobExecutor;
 		this.backupJobExecutor = backupJobExecutor;
+		this.batchSize = batchSize;
 		this.type = type;
 		this.minimumId = minimumId;
 		this.maximumId = maximumId;
 		this.salt = salt;
+		// start with an empty iterator.
+		lastBackupJobs = new LinkedList<DestinationJob>().iterator();
 	}
 
 	@Override
 	public boolean hasNext() {
-		if (restoreJobs != null) {
-			return restoreJobs.hasNext();
+		if (mismatchedRanges == null) {
+			/*
+			 * This is the first call so find all batches with mismatched checksums.
+			 */
+			this.mismatchedRanges = findAllMismatchedRanges();
 		}
-		// the first call
-		if (doChecksumsMatch()) {
-			// Checksums match so there is nothing more to do.
-			return false;
+		if (lastBackupJobs.hasNext()) {
+			return true;
 		} else {
-			// Checksums do not match so start the backup jobs for this range.
-			restoreJobs = backupJobExecutor.executeBackupJob(type, minimumId, maximumId + 1);
-			return restoreJobs.hasNext();
+			// find the next set of restore jobs
+			if (!mismatchedRanges.hasNext()) {
+				// we are done.
+				return false;
+			}
+			// Start n number of backup jobs for the mismatched ID range.
+			RangeChecksum misMatchRange = mismatchedRanges.next();
+			lastBackupJobs = backupJobExecutor.executeBackupJob(type, misMatchRange.getMinimumId(),
+					misMatchRange.getMaximumId());
+			return lastBackupJobs.hasNext();
 		}
 	}
 
 	@Override
 	public DestinationJob next() {
-		if (restoreJobs == null) {
-			return null;
-		} else {
-			return restoreJobs.next();
+		return lastBackupJobs.next();
+	}
+
+	/**
+	 * Find all checksum ranges that do not match on both the source and
+	 * destination.
+	 * 
+	 * @return
+	 */
+	Iterator<RangeChecksum> findAllMismatchedRanges() {
+		BatchChecksumRequest request = new BatchChecksumRequest();
+		request.setMigrationType(this.type);
+		request.setBatchSize(this.batchSize);
+		request.setMinimumId(this.minimumId);
+		request.setMaximumId(this.maximumId);
+		request.setSalt(this.salt);
+		// get all checksums for this range from both the source and destination.
+		ResultPair<BatchChecksumResponse> results = asynchronousJobExecutor.executeSourceAndDestinationJob(request,
+				BatchChecksumResponse.class);
+		return findAllMismatchedRanges(results.getSourceResult().getCheksums(), results.getDestinationResult().getCheksums()).iterator();
+	}
+
+	/**
+	 * Find all of the mismatched ranges for the given source and destination checksums.
+	 * 
+	 * @param sourceResult
+	 * @param destinationResult
+	 * @return
+	 */
+	static List<RangeChecksum> findAllMismatchedRanges(List<RangeChecksum> sourceResult, List<RangeChecksum> destinationResult) {
+		// Map destination bins to their checksums
+		Map<Long, RangeChecksum> destinationBinToRange = new HashMap<>();
+		if (destinationResult != null) {
+			for (RangeChecksum range : destinationResult) {
+				destinationBinToRange.put(range.getBinNumber(), range);
+			}
 		}
-	}
-
-	/**
-	 * Execute the checksum requests for this range.
-	 * 
-	 * @return
-	 */
-	boolean doChecksumsMatch() {
-		// Get the check sum
-		AsyncMigrationRangeChecksumRequest request = new AsyncMigrationRangeChecksumRequest();
-		// Max is inclusive in checksums
-		request.setMaxId(this.maximumId);
-		request.setMinId(this.minimumId);
-		request.setSalt(salt);
-		request.setMigrationType(type);
-		// run the checksum on both the source and destination
-		ResultPair<MigrationRangeChecksum> results = asynchronousJobExecutor.executeSourceAndDestinationJob(request,
-				MigrationRangeChecksum.class);
-		return doChecksumsMatch(results);
-	}
-
-	/**
-	 * Given the results of the checksums for both the source and destination, do
-	 * the checksums match?
-	 * 
-	 * @param results
-	 * @return
-	 */
-	public static boolean doChecksumsMatch(ResultPair<MigrationRangeChecksum> results) {
-		if (results != null) {
-			MigrationRangeChecksum sourceResults = results.getSourceResult();
-			MigrationRangeChecksum destResults = results.getDestinationResult();
-			if (sourceResults != null && destResults != null) {
-				String sourceChecksum = sourceResults.getChecksum();
-				String destChecksum = destResults.getChecksum();
-				// null at both the source and destination means no data for that range.
-				if (sourceChecksum == null && destChecksum == null) {
-					return true;
-				}
-				if (sourceChecksum != null && destChecksum != null) {
-					return sourceChecksum.equals(destChecksum);
+		List<RangeChecksum> mismatchRanges = new LinkedList<>();
+		if (sourceResult != null) {
+			for (RangeChecksum sourceChecksum : sourceResult) {
+				// Find the matching destination checksum by bin
+				RangeChecksum destinationChecksum = destinationBinToRange.remove(sourceChecksum.getBinNumber());
+				if (destinationChecksum == null || !sourceChecksum.equals(destinationChecksum)) {
+					// Checksums do not match
+					mismatchRanges.add(sourceChecksum);
 				}
 			}
 		}
-		return false;
+		// anything left in destination map was not in source
+		if(!destinationBinToRange.isEmpty()) {
+			mismatchRanges.addAll(destinationBinToRange.values());
+		}
+		return mismatchRanges;
 	}
 
 }

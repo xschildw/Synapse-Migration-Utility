@@ -6,8 +6,10 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.when;
 
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 
 import org.junit.Before;
@@ -20,9 +22,11 @@ import org.sagebionetworks.migration.async.BackupJobExecutor;
 import org.sagebionetworks.migration.async.DeleteDestinationJob;
 import org.sagebionetworks.migration.async.DestinationJob;
 import org.sagebionetworks.migration.async.ResultPair;
-import org.sagebionetworks.repo.model.migration.AsyncMigrationRangeChecksumRequest;
-import org.sagebionetworks.repo.model.migration.MigrationRangeChecksum;
+import org.sagebionetworks.repo.model.migration.AdminResponse;
+import org.sagebionetworks.repo.model.migration.BatchChecksumRequest;
+import org.sagebionetworks.repo.model.migration.BatchChecksumResponse;
 import org.sagebionetworks.repo.model.migration.MigrationType;
+import org.sagebionetworks.repo.model.migration.RangeChecksum;
 
 import com.google.common.collect.Lists;
 
@@ -34,12 +38,20 @@ public class ChecksumRangeExecutorTest {
 	@Mock
 	BackupJobExecutor mockBackupJobExecutor;
 
+	Long batchSize;
 	MigrationType type;
 	Long minimumId;
 	Long maximumId;
 	String salt;
 
-	List<DestinationJob> jobs;
+	List<DestinationJob> jobsOne;
+	List<DestinationJob> jobsTwo;
+
+	RangeChecksum srcOne;
+	RangeChecksum srcTwo;
+	RangeChecksum destOne;
+
+	ChecksumRangeExecutor extractor;
 
 	@Before
 	public void before() {
@@ -55,171 +67,196 @@ public class ChecksumRangeExecutorTest {
 		DeleteDestinationJob two = new DeleteDestinationJob();
 		two.setMigrationType(type);
 		two.setRowIdsToDelete(Lists.newArrayList(444L));
-		jobs = Lists.newArrayList(one, two);
+		jobsOne = Lists.newArrayList(one, two);
+
+		DeleteDestinationJob three = new DeleteDestinationJob();
+		three.setMigrationType(type);
+		three.setRowIdsToDelete(Lists.newArrayList(555L));
+		jobsTwo = Lists.newArrayList(three);
+
 		when(mockBackupJobExecutor.executeBackupJob(any(MigrationType.class), any(Long.class), any(Long.class)))
-				.thenReturn(jobs.iterator());
+				.thenReturn(jobsOne.iterator(), jobsTwo.iterator());
 
+		srcOne = new RangeChecksum();
+		srcOne.setBinNumber(1L);
+		srcOne.setChecksum("c1");
+		srcOne.setCount(4l);
+		srcOne.setMinimumId(0L);
+		srcOne.setMaximumId(3L);
+		srcTwo = new RangeChecksum();
+		srcTwo.setBinNumber(2L);
+		srcTwo.setChecksum("c2");
+		srcTwo.setCount(2l);
+		srcTwo.setMinimumId(4L);
+		srcTwo.setMaximumId(5L);
+
+		BatchChecksumResponse sourceResponse = new BatchChecksumResponse();
+		sourceResponse.setCheksums(Lists.newArrayList(srcOne, srcTwo));
+		sourceResponse.setMigrationType(MigrationType.FILE_HANDLE);
+
+		// setup two changes in destination
+		BatchChecksumResponse destinationResponse = new BatchChecksumResponse();
+		RangeChecksum destOne = copy(srcOne);
+		destOne.setChecksum("no match");
+		RangeChecksum destTwo = copy(srcTwo);
+		destTwo.setChecksum("no match two");
+		destinationResponse.setCheksums(Lists.newArrayList(destOne, destTwo));
+		destinationResponse.setMigrationType(MigrationType.FILE_HANDLE);
+
+		ResultPair<AdminResponse> resultPair = new ResultPair<>();
+		resultPair.setSourceResult(sourceResponse);
+		resultPair.setDestinationResult(destinationResponse);
+		when(mockAsynchronousJobExecutor.executeSourceAndDestinationJob(any(), any())).thenReturn(resultPair);
+
+		extractor = new ChecksumRangeExecutor(mockAsynchronousJobExecutor, mockBackupJobExecutor, batchSize, type,
+				minimumId, maximumId, salt);
 	}
 
 	@Test
-	public void testDoChecksumsMatchTrue() {
-		boolean isMatch = true;
-		ResultPair<MigrationRangeChecksum> resutls = createChecksumPair(isMatch);
-		// call under test
-		assertTrue(ChecksumRangeExecutor.doChecksumsMatch(resutls));
+	public void testFindAllMismatchedRangesPerfectMatch() {
+		List<RangeChecksum> srcList = Lists.newArrayList(srcOne, srcTwo);
+		RangeChecksum destOne = copy(srcOne);
+		RangeChecksum destTwo = copy(srcTwo);
+		List<RangeChecksum> destList = Lists.newArrayList(destTwo, destOne);
+		// Call under test
+		List<RangeChecksum> results = ChecksumRangeExecutor.findAllMismatchedRanges(srcList, destList);
+		assertNotNull(results);
+		assertTrue(results.isEmpty());
 	}
 
 	@Test
-	public void testDoChecksumsMatchFalse() {
-		boolean isMatch = false;
-		ResultPair<MigrationRangeChecksum> resutls = createChecksumPair(isMatch);
-		// call under test
-		assertFalse(ChecksumRangeExecutor.doChecksumsMatch(resutls));
+	public void testFindAllMismatchedRangesChecksumMismatch() {
+		List<RangeChecksum> srcList = Lists.newArrayList(srcOne, srcTwo);
+		RangeChecksum destOne = copy(srcOne);
+		destOne.setChecksum("not the same");
+		RangeChecksum destTwo = copy(srcTwo);
+		List<RangeChecksum> destList = Lists.newArrayList(destTwo, destOne);
+		// Call under test
+		List<RangeChecksum> results = ChecksumRangeExecutor.findAllMismatchedRanges(srcList, destList);
+		assertNotNull(results);
+		assertEquals(1, results.size());
+		assertEquals(srcOne, results.get(0));
 	}
 
 	@Test
-	public void testDoChecksumsMatchNull() {
-		ResultPair<MigrationRangeChecksum> resutls = null;
-		// call under test
-		assertFalse(ChecksumRangeExecutor.doChecksumsMatch(resutls));
+	public void testFindAllMismatchedRangesCountMismatch() {
+		List<RangeChecksum> srcList = Lists.newArrayList(srcOne, srcTwo);
+		RangeChecksum destOne = copy(srcOne);
+		// mismatch in count should trigger mismatch.
+		destOne.setCount(0L);
+		RangeChecksum destTwo = copy(srcTwo);
+		List<RangeChecksum> destList = Lists.newArrayList(destTwo, destOne);
+		// Call under test
+		List<RangeChecksum> results = ChecksumRangeExecutor.findAllMismatchedRanges(srcList, destList);
+		assertNotNull(results);
+		assertEquals(1, results.size());
+		assertEquals(srcOne, results.get(0));
 	}
 
 	@Test
-	public void testDoChecksumsMatchNullSouce() {
-		boolean isMatch = true;
-		ResultPair<MigrationRangeChecksum> resutls = createChecksumPair(isMatch);
-		resutls.setSourceResult(null);
-		// call under test
-		assertFalse(ChecksumRangeExecutor.doChecksumsMatch(resutls));
+	public void testFindAllMismatchedRangesDestinationNull() {
+		List<RangeChecksum> srcList = Lists.newArrayList(srcOne, srcTwo);
+		// destination is empty
+		List<RangeChecksum> destList = null;
+		// Call under test
+		List<RangeChecksum> results = ChecksumRangeExecutor.findAllMismatchedRanges(srcList, destList);
+		assertNotNull(results);
+		assertEquals(2, results.size());
+		assertEquals(srcOne, results.get(0));
+		assertEquals(srcTwo, results.get(1));
 	}
 
 	@Test
-	public void testDoChecksumsMatchNullDestination() {
-		boolean isMatch = true;
-		ResultPair<MigrationRangeChecksum> resutls = createChecksumPair(isMatch);
-		resutls.setDestinationResult(null);
-		// call under test
-		assertFalse(ChecksumRangeExecutor.doChecksumsMatch(resutls));
+	public void testFindAllMismatchedRangesDestinationEmpty() {
+		List<RangeChecksum> srcList = Lists.newArrayList(srcOne, srcTwo);
+		// destination is empty
+		List<RangeChecksum> destList = new LinkedList<>();
+		// Call under test
+		List<RangeChecksum> results = ChecksumRangeExecutor.findAllMismatchedRanges(srcList, destList);
+		assertNotNull(results);
+		assertEquals(2, results.size());
+		assertEquals(srcOne, results.get(0));
+		assertEquals(srcTwo, results.get(1));
 	}
 
 	@Test
-	public void testDoChecksumsMatchNullSouceChecksum() {
-		boolean isMatch = true;
-		ResultPair<MigrationRangeChecksum> resutls = createChecksumPair(isMatch);
-		resutls.getSourceResult().setChecksum(null);
-		// call under test
-		assertFalse(ChecksumRangeExecutor.doChecksumsMatch(resutls));
+	public void testFindAllMismatchedRangesSourceEmpty() {
+		List<RangeChecksum> srcList = new LinkedList<>();
+		// destination is empty
+		List<RangeChecksum> destList = Lists.newArrayList(srcOne, srcTwo);
+		// Call under test
+		List<RangeChecksum> results = ChecksumRangeExecutor.findAllMismatchedRanges(srcList, destList);
+		assertNotNull(results);
+		assertEquals(2, results.size());
+		assertEquals(srcOne, results.get(0));
+		assertEquals(srcTwo, results.get(1));
 	}
 
 	@Test
-	public void testDoChecksumsMatchNullDestChecksum() {
-		boolean isMatch = true;
-		ResultPair<MigrationRangeChecksum> resutls = createChecksumPair(isMatch);
-		resutls.getDestinationResult().setChecksum(null);
-		// call under test
-		assertFalse(ChecksumRangeExecutor.doChecksumsMatch(resutls));
+	public void testFindAllMismatchedRangesNullSource() {
+		List<RangeChecksum> srcList = null;
+		// destination is empty
+		List<RangeChecksum> destList = Lists.newArrayList(srcOne, srcTwo);
+		// Call under test
+		List<RangeChecksum> results = ChecksumRangeExecutor.findAllMismatchedRanges(srcList, destList);
+		assertNotNull(results);
+		assertEquals(2, results.size());
+		assertEquals(srcOne, results.get(0));
+		assertEquals(srcTwo, results.get(1));
 	}
 
 	@Test
-	public void testDoChecksumsMatchNullSouceAndDestChecksum() {
-		boolean isMatch = true;
-		ResultPair<MigrationRangeChecksum> resutls = createChecksumPair(isMatch);
-		resutls.getSourceResult().setChecksum(null);
-		resutls.getDestinationResult().setChecksum(null);
+	public void testFindAllMismatchedRanges() {
 		// call under test
-		assertTrue(ChecksumRangeExecutor.doChecksumsMatch(resutls));
-	}
+		Iterator<RangeChecksum> result = extractor.findAllMismatchedRanges();
+		assertNotNull(result);
+		assertTrue(result.hasNext());
+		assertEquals(srcOne, result.next());
+		assertTrue(result.hasNext());
+		assertEquals(srcTwo, result.next());
+		assertFalse(result.hasNext());
 
-	@Test
-	public void testIteratorNoMatch() {
-		boolean isMatch = false;
-		setupChecksumCheck(isMatch);
-
-		ChecksumRangeExecutor executor = new ChecksumRangeExecutor(mockAsynchronousJobExecutor, mockBackupJobExecutor,
-				type, minimumId, maximumId, salt);
-		// call under test
-		assertTrue(executor.hasNext());
-		// call under test
-		DestinationJob next = executor.next();
-		assertNotNull(next);
-		assertEquals(jobs.get(0), next);
-		// call under test
-		assertTrue(executor.hasNext());
-		// call under test
-		next = executor.next();
-		assertNotNull(next);
-		assertEquals(jobs.get(1), next);
-		// call under test
-		assertFalse(executor.hasNext());
-
-		// Verify checksum request
-		AsyncMigrationRangeChecksumRequest expectedRequest = new AsyncMigrationRangeChecksumRequest();
-		expectedRequest.setMaxId(this.maximumId);
-		expectedRequest.setMinId(this.minimumId);
-		expectedRequest.setSalt(this.salt);
+		BatchChecksumRequest expectedRequest = new BatchChecksumRequest();
 		expectedRequest.setMigrationType(this.type);
-		verify(mockAsynchronousJobExecutor).executeSourceAndDestinationJob(expectedRequest,
-				MigrationRangeChecksum.class);
+		expectedRequest.setBatchSize(this.batchSize);
+		expectedRequest.setMinimumId(this.minimumId);
+		expectedRequest.setMaximumId(this.maximumId);
+		expectedRequest.setSalt(this.salt);
 
-		// verify backup request
-		verify(mockBackupJobExecutor).executeBackupJob(this.type, this.minimumId, this.maximumId + 1L);
+		verify(mockAsynchronousJobExecutor).executeSourceAndDestinationJob(expectedRequest,
+				BatchChecksumResponse.class);
 	}
 
 	@Test
-	public void testIteratorMatch() {
-		boolean isMatch = true;
-		setupChecksumCheck(isMatch);
+	public void testHasNextAndNext() {
+		// calls under test
+		assertTrue(extractor.hasNext());
+		assertEquals(jobsOne.get(0), extractor.next());
+		assertTrue(extractor.hasNext());
+		assertEquals(jobsOne.get(1), extractor.next());
+		assertTrue(extractor.hasNext());
+		assertEquals(jobsTwo.get(0), extractor.next());
+		assertFalse(extractor.hasNext());
 
-		ChecksumRangeExecutor executor = new ChecksumRangeExecutor(mockAsynchronousJobExecutor, mockBackupJobExecutor,
-				type, minimumId, maximumId, salt);
-		// call under test
-		assertFalse(executor.hasNext());
-		assertEquals(null, executor.next());
-
-		// Verify checksum request
-		AsyncMigrationRangeChecksumRequest expectedRequest = new AsyncMigrationRangeChecksumRequest();
-		expectedRequest.setMaxId(this.maximumId);
-		expectedRequest.setMinId(this.minimumId);
-		expectedRequest.setSalt(this.salt);
-		expectedRequest.setMigrationType(this.type);
-		verify(mockAsynchronousJobExecutor).executeSourceAndDestinationJob(expectedRequest,
-				MigrationRangeChecksum.class);
-
-		// verify backup request
-		verify(mockBackupJobExecutor, never()).executeBackupJob(any(MigrationType.class), any(Long.class), any(Long.class));
+		verify(mockAsynchronousJobExecutor).executeSourceAndDestinationJob(any(), any());
+		verify(mockBackupJobExecutor).executeBackupJob(type, srcOne.getMinimumId(), srcOne.getMaximumId());
+		verify(mockBackupJobExecutor).executeBackupJob(type, srcTwo.getMinimumId(), srcTwo.getMaximumId());
 	}
 
 	/**
-	 * Helper to create a checksum results from both the source and destination.
+	 * Create a copy of the given object
 	 * 
-	 * @param isMatch Should the checksums match?
+	 * @param toCopy
 	 * @return
 	 */
-	public ResultPair<MigrationRangeChecksum> createChecksumPair(boolean isMatch) {
-		ResultPair<MigrationRangeChecksum> result = new ResultPair<>();
-		String checksum = "checksum";
-		MigrationRangeChecksum sourceChecksum = new MigrationRangeChecksum();
-		sourceChecksum.setChecksum(checksum);
-		result.setSourceResult(sourceChecksum);
-		MigrationRangeChecksum destinationChecksum = new MigrationRangeChecksum();
-		if (!isMatch) {
-			checksum = "different";
-		}
-		destinationChecksum.setChecksum(checksum);
-		result.setDestinationResult(destinationChecksum);
-		return result;
-	}
-
-	/**
-	 * Helper to setup a checksum match
-	 * 
-	 * @param isMatch
-	 */
-	public void setupChecksumCheck(boolean isMatch) {
-		// setup checksums do not match
-		ResultPair<MigrationRangeChecksum> resutls = createChecksumPair(isMatch);
-		when(mockAsynchronousJobExecutor.executeSourceAndDestinationJob(any(AsyncMigrationRangeChecksumRequest.class),
-				any(Class.class))).thenReturn(resutls);
+	static RangeChecksum copy(RangeChecksum toCopy) {
+		RangeChecksum copy = new RangeChecksum();
+		copy.setBinNumber(toCopy.getBinNumber());
+		copy.setCount(toCopy.getCount());
+		copy.setChecksum(toCopy.getChecksum());
+		copy.setMaximumId(toCopy.getMaximumId());
+		copy.setMinimumId(toCopy.getMinimumId());
+		return copy;
 	}
 
 }

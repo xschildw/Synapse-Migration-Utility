@@ -3,6 +3,7 @@ package org.sagebionetworks.migration.async;
 import java.util.Iterator;
 import java.util.List;
 
+import org.sagebionetworks.migration.async.checksum.ChecksumDeltaBuilder;
 import org.sagebionetworks.migration.config.Configuration;
 import org.sagebionetworks.migration.utils.TypeToMigrateMetadata;
 import org.sagebionetworks.util.Clock;
@@ -18,16 +19,18 @@ public class MigrationDriverImpl implements MigrationDriver {
 
 	public static final long SLEEP_TIME_MS = 1000L;
 	Configuration config;
-	DestinationJobBuilder jobBuilder;
+	MissingFromDestinationBuilder missingFromDestinationBuilder;
+	ChecksumDeltaBuilder checksumChangeBuilder;
 	RestoreJobQueue restoreJobQueue;
 	Clock clock;
 
 	@Inject
-	public MigrationDriverImpl(Configuration config, DestinationJobBuilder jobBuilder, RestoreJobQueue restoreJobQueue,
-			Clock clock) {
+	public MigrationDriverImpl(Configuration config, MissingFromDestinationBuilder missingFromDestinationBuilder,
+			ChecksumDeltaBuilder checksumChangeBuilder, RestoreJobQueue restoreJobQueue, Clock clock) {
 		super();
 		this.config = config;
-		this.jobBuilder = jobBuilder;
+		this.missingFromDestinationBuilder = missingFromDestinationBuilder;
+		this.checksumChangeBuilder = checksumChangeBuilder;
 		this.restoreJobQueue = restoreJobQueue;
 		this.clock = clock;
 	}
@@ -41,8 +44,23 @@ public class MigrationDriverImpl implements MigrationDriver {
 	 */
 	@Override
 	public void migratePrimaryTypes(List<TypeToMigrateMetadata> primaryTypes) {
+		/*
+		 * Phase One: Find and process all data that is missing from the destination.
+		 */
+		findAndProcessJobs(missingFromDestinationBuilder.buildDestinationJobs(primaryTypes));
+		/*
+		 * Phase Two: Find and process all remaining deltas between source and
+		 * destination by comparing checkums.
+		 */
+		findAndProcessJobs(checksumChangeBuilder.buildAllRestoreJobsForMismatchedChecksums(primaryTypes));
+	}
+
+	/**
+	 * Find and process all jobs from the provided job iterator.
+	 * @param jobIterator
+	 */
+	void findAndProcessJobs(Iterator<DestinationJob> jobIterator) {
 		// find all of the restore jobs as fast as possible.
-		Iterator<DestinationJob> jobIterator = jobBuilder.buildDestinationJobs(primaryTypes);
 		while (jobIterator.hasNext()) {
 			DestinationJob nextJob = jobIterator.next();
 			// push restore jobs the restore queue
