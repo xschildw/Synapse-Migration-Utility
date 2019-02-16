@@ -12,23 +12,25 @@ import com.google.common.collect.Iterators;
 import com.google.inject.Inject;
 
 public class ChecksumDeltaBuilderImpl implements ChecksumDeltaBuilder {
-	
-	TypeChecksumBuilder typeChecksumBuilder;
-	
+
+	RangeCheksumBuilder rangeProvider;
+
 	@Inject
-	public ChecksumDeltaBuilderImpl(TypeChecksumBuilder typeChecksumBuilder) {
+	public ChecksumDeltaBuilderImpl(RangeCheksumBuilder rangeProvider) {
 		super();
-		this.typeChecksumBuilder = typeChecksumBuilder;
+		this.rangeProvider = rangeProvider;
 	}
 
 	@Override
-	public Iterator<DestinationJob> buildAllRestoreJobsForMismatchedChecksums(List<TypeToMigrateMetadata> primaryTypes) {
+	public Iterator<DestinationJob> buildAllRestoreJobsForMismatchedChecksums(
+			List<TypeToMigrateMetadata> primaryTypes) {
 		// The same salt is used for all types.
 		String salt = UUID.randomUUID().toString();
 		// Concatenate the iterators for each type.
 		Iterator<DestinationJob> iterator = new LinkedList<DestinationJob>().iterator();
-		for(TypeToMigrateMetadata primary: primaryTypes) {
-			Iterator<DestinationJob> typeIterator = typeChecksumBuilder.buildAllRestoreJobsForType(primary, salt);
+		for (TypeToMigrateMetadata primary : primaryTypes) {
+			Iterator<DestinationJob> typeIterator = rangeProvider.providerRangeCheck(primary.getType(),
+					primary.getSrcMinId(), primary.getSrcMaxId(), salt);
 			iterator = Iterators.concat(iterator, typeIterator);
 		}
 		return iterator;
