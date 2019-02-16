@@ -107,18 +107,27 @@ public class ChecksumRangeExecutor implements Iterator<DestinationJob> {
 		// get all checksums for this range from both the source and destination.
 		ResultPair<BatchChecksumResponse> results = asynchronousJobExecutor.executeSourceAndDestinationJob(request,
 				BatchChecksumResponse.class);
-		BatchChecksumResponse sourceResult = results.getSourceResult();
-		BatchChecksumResponse destinationResult = results.getDestinationResult();
+		return findAllMismatchedRanges(results.getSourceResult().getCheksums(), results.getDestinationResult().getCheksums()).iterator();
+	}
+
+	/**
+	 * Find all of the mismatched ranges for the given source and destination checksums.
+	 * 
+	 * @param sourceResult
+	 * @param destinationResult
+	 * @return
+	 */
+	static List<RangeChecksum> findAllMismatchedRanges(List<RangeChecksum> sourceResult, List<RangeChecksum> destinationResult) {
 		// Map destination bins to their checksums
 		Map<Long, RangeChecksum> destinationBinToRange = new HashMap<>();
-		if (destinationResult.getCheksums() != null) {
-			for (RangeChecksum range : destinationResult.getCheksums()) {
+		if (destinationResult != null) {
+			for (RangeChecksum range : destinationResult) {
 				destinationBinToRange.put(range.getBinNumber(), range);
 			}
 		}
 		List<RangeChecksum> mismatchRanges = new LinkedList<>();
-		if (sourceResult.getCheksums() != null) {
-			for (RangeChecksum sourceChecksum : sourceResult.getCheksums()) {
+		if (sourceResult != null) {
+			for (RangeChecksum sourceChecksum : sourceResult) {
 				// Find the matching destination checksum by bin
 				RangeChecksum destinationChecksum = destinationBinToRange.get(sourceChecksum.getBinNumber());
 				if (destinationChecksum == null || !sourceChecksum.equals(destinationChecksum)) {
@@ -127,7 +136,7 @@ public class ChecksumRangeExecutor implements Iterator<DestinationJob> {
 				}
 			}
 		}
-		return mismatchRanges.iterator();
+		return mismatchRanges;
 	}
 
 }
