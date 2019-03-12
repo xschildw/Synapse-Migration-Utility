@@ -8,6 +8,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import org.apache.logging.log4j.Logger;
@@ -126,11 +127,13 @@ public class RestoreJobQueueImplTest {
 	}
 	
 	@Test
-	public void testLastException() {
+	public void testLastException() throws InterruptedException, ExecutionException {
+		when(mockNodeOneFuture.isDone()).thenReturn(true);
 		AsyncMigrationException firstException = new AsyncMigrationException("One");
-		when(mockNodeOneFuture.isDone()).thenThrow(firstException);
+		when(mockNodeOneFuture.get()).thenThrow(firstException);
+		when(mockNodeTwoFuture.isDone()).thenReturn(true);
 		AsyncMigrationException secondException = new AsyncMigrationException("two");
-		when(mockNodeTwoFuture.isDone()).thenThrow(secondException);
+		when(mockNodeTwoFuture.get()).thenThrow(secondException);
 		// push both jobs to the queue
 		queue.pushJob(nodeOne);
 		queue.pushJob(nodeTwo);
@@ -146,7 +149,7 @@ public class RestoreJobQueueImplTest {
 			queue.isDone();
 			fail();
 		}catch(AsyncMigrationException e) {
-			assertEquals(secondException, e);
+			assertEquals(secondException, e.getCause());
 		}
 	}
 }

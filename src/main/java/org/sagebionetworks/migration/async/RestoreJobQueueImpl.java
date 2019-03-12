@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import org.apache.logging.log4j.Logger;
@@ -108,11 +109,13 @@ public class RestoreJobQueueImpl implements RestoreJobQueue, Runnable {
 			try {
 				// check if this job is done.
 				if (future.isDone()) {
+					// A call to get() is needed to check if the job failed. PLFM-5430.
+					future.get();
 					runningItertor.remove();
 				}
-			} catch (AsyncMigrationException e) {
+			} catch (AsyncMigrationException | InterruptedException | ExecutionException e) {
 				// track the last seen exception.
-				lastException = e;
+				lastException = new AsyncMigrationException(e);
 				runningItertor.remove();
 			}
 		}
