@@ -144,6 +144,8 @@ public class RestoreJobQueueImplTest {
 		queue.timerFired();
 		assertFalse(queue.isDone());
 		queue.timerFired();
+		assertFalse(queue.isDone());
+		queue.timerFired();
 		try {
 			// second exception should be thrown.
 			queue.isDone();
@@ -152,4 +154,73 @@ public class RestoreJobQueueImplTest {
 			assertEquals(secondException, e.getCause());
 		}
 	}
+	
+	/**
+	 * See: PLFM-5474
+	 * An unexpected exception should terminate
+	 * at isDone().
+	 */
+	@Test
+	public void testForPLFM_5474IsDone(){
+		OutOfMemoryError terminate = new OutOfMemoryError("Out of memory");
+		when(mockJobExecutor.startDestinationJob(nodeOne)).thenThrow(terminate);
+		// push one job
+		queue.pushJob(nodeOne);
+		// Exception should not be thrown on timer fired
+		queue.timerFired();
+		try {
+			queue.isDone();
+			fail();
+		}catch(RuntimeException e) {
+			assertEquals(e.getCause(), terminate);
+		}
+	}
+	
+	/**
+	 * See: PLFM-5474
+	 * An unexpected exception should terminate
+	 * at isDone().
+	 */
+	@Test
+	public void testForPLFM_5474PushJob(){
+		OutOfMemoryError terminate = new OutOfMemoryError("Out of memory");
+		when(mockJobExecutor.startDestinationJob(nodeOne)).thenThrow(terminate);
+		// push one job
+		queue.pushJob(nodeOne);
+		// Exception should not be thrown on timer fired
+		queue.timerFired();
+		try {
+			// call under test
+			queue.pushJob(nodeTwo);
+			fail();
+		}catch(RuntimeException e) {
+			assertEquals(e.getCause(), terminate);
+		}
+	}
+	
+	@Test
+	public void testForPLFM_5474StartAsych(){
+		AsyncMigrationException nonTermiante = new AsyncMigrationException("Some random exception");
+		// fail the first time then succeed the second time.
+		when(mockJobExecutor.startDestinationJob(nodeOne)).thenThrow(nonTermiante).thenReturn(mockNodeOneFuture);
+		when(mockNodeOneFuture.isDone()).thenReturn(true);
+		// push one job
+		queue.pushJob(nodeOne);
+		// First will fail
+		queue.timerFired();
+		assertFalse(queue.isDone());
+		// Second works
+		queue.timerFired();
+		assertFalse(queue.isDone());
+		// second should finish
+		queue.timerFired();
+		try {
+			// Exception from first failure should be exposed.
+			queue.isDone();
+			fail();
+		}catch(RuntimeException e) {
+			assertEquals(e.getCause(), nonTermiante);
+		}
+	}
+	
 }
