@@ -38,6 +38,7 @@ public class RestoreJobQueueImpl implements RestoreJobQueue, Runnable {
 	 */
 	Map<MigrationType, Future<?>> runningJobs;
 	AsyncMigrationException lastException;
+	RuntimeException terminationException;
 
 	/**
 	 * Create a new queue. The caller must all call timerFired() from a timer
@@ -59,6 +60,9 @@ public class RestoreJobQueueImpl implements RestoreJobQueue, Runnable {
 	 */
 	@Override
 	public synchronized void pushJob(DestinationJob job) {
+		if(this.terminationException != null) {
+			throw terminationException;
+		}
 		// Add the job to the wait queue.
 		jobWaitingQueue.add(job);
 	}
@@ -69,6 +73,9 @@ public class RestoreJobQueueImpl implements RestoreJobQueue, Runnable {
 	 */
 	@Override
 	public synchronized boolean isDone() {
+		if(this.terminationException != null) {
+			throw terminationException;
+		}
 		boolean isDone = jobWaitingQueue.isEmpty() && runningJobs.isEmpty();
 		// When all jobs are done throw the last exception if one exists.
 		if(isDone && lastException != null) {
@@ -82,41 +89,50 @@ public class RestoreJobQueueImpl implements RestoreJobQueue, Runnable {
 	 * timer thread.
 	 */
 	void timerFired() {
-		/*
-		 * Check on all of the running jobs. Finished or failed jobs will be removed.
-		 * Status of all running jobs will be reported to the log.
-		 */
-		removeAllFinishedJobs();
-		/*
-		 * Start all jobs that currently do not have
-		 */
-		startEligibleJobs();
+		try {
+			/*
+			 * Check on all of the running jobs. Finished or failed jobs will be removed.
+			 * Status of all running jobs will be reported to the log.
+			 */
+			removeAllFinishedJobs();
+			/*
+			 * Start all jobs that currently do not have
+			 */
+			startEligibleJobs();
 
-		logger.info("Currently running: " + runningJobs.size() + " restore jobs.  Waiting to start "
-				+ jobWaitingQueue.size() + " restore jobs.");
+			logger.info("Currently running: " + runningJobs.size() + " restore jobs.  Waiting to start "
+					+ jobWaitingQueue.size() + " restore jobs.");
+		} catch (AsyncMigrationException | ExecutionException e) {
+			logger.warn("Job exception but will continue: "+e.getMessage());
+			lastException = new AsyncMigrationException(e);
+		} catch (Throwable e) {
+			// Any other exception will trigger termination
+			logger.error("Unexpected exception. Will terminate.");
+			terminationException = new RuntimeException(e);
+		}
 	}
 
 	/**
 	 * Check on all of the running jobs. Finished jobs and failed jobs are removed.
 	 * Calling this method will trigger each running job to report its current
 	 * status to the log.
+	 * @throws ExecutionException 
+	 * @throws InterruptedException 
 	 */
-	void removeAllFinishedJobs() {
+	void removeAllFinishedJobs() throws InterruptedException, ExecutionException {
 		// remove all finished jobs
 		Iterator<Future<?>> runningItertor = runningJobs.values().iterator();
 		while (runningItertor.hasNext()) {
 			Future<?> future = runningItertor.next();
-			try {
-				// check if this job is done.
-				if (future.isDone()) {
+			// check if this job is done.
+			if (future.isDone()) {
+				try {
 					// A call to get() is needed to check if the job failed. PLFM-5430.
 					future.get();
+				}finally {
+					// Unconditionally remove finished jobs
 					runningItertor.remove();
 				}
-			} catch (AsyncMigrationException | InterruptedException | ExecutionException e) {
-				// track the last seen exception.
-				lastException = new AsyncMigrationException(e);
-				runningItertor.remove();
 			}
 		}
 	}
