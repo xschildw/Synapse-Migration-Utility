@@ -1,27 +1,18 @@
 package org.sagebionetworks.migration.async.checksum;
 
-import com.amazonaws.services.dynamodbv2.xspec.M;
 import com.google.common.collect.Lists;
-import com.sun.xml.internal.org.jvnet.mimepull.MIMEConfig;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
-import org.sagebionetworks.migration.async.BackupJobExecutor;
 import org.sagebionetworks.migration.async.DestinationJob;
-import org.sagebionetworks.migration.async.MissingFromDestinationBuilderImpl;
 import org.sagebionetworks.migration.async.RestoreDestinationJob;
-import org.sagebionetworks.migration.config.Configuration;
 import org.sagebionetworks.migration.utils.TypeToMigrateMetadata;
-import org.sagebionetworks.repo.model.daemon.BackupAliasType;
-import org.sagebionetworks.repo.model.migration.BatchChecksumRequest;
 import org.sagebionetworks.repo.model.migration.MigrationType;
 
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 
 import static org.junit.Assert.*;
