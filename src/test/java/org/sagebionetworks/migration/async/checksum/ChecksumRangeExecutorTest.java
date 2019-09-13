@@ -5,8 +5,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -226,6 +225,19 @@ public class ChecksumRangeExecutorTest {
 		verify(mockAsynchronousJobExecutor).executeSourceAndDestinationJob(expectedRequest,
 				BatchChecksumResponse.class);
 	}
+
+	@Test
+	public void testFindAllMismatchedRangesMinIdNull() {
+		when(mockAsynchronousJobExecutor.executeSourceAndDestinationJob(any(), any())).thenThrow(new IllegalArgumentException());
+		extractor = new ChecksumRangeExecutor(mockAsynchronousJobExecutor, mockBackupJobExecutor, batchSize, type,
+				null, null, salt);
+		// call under test
+		Iterator<RangeChecksum> it = extractor.findAllMismatchedRanges();
+		assertNotNull(it);
+		assertFalse(it.hasNext());
+		verify(mockAsynchronousJobExecutor, never()).executeSourceAndDestinationJob(any(), eq(BatchChecksumResponse.class));
+	}
+
 
 	@Test
 	public void testHasNextAndNext() {

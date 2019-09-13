@@ -5,9 +5,9 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -15,6 +15,7 @@ import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 import org.sagebionetworks.migration.config.Configuration;
@@ -38,6 +39,10 @@ public class MissingFromDestinationBuilderImplTest {
 	int batchSize;
 	String backupFileKey;
 	BackupAliasType aliasType;
+
+	ArgumentCaptor<Long> minIdCaptor = ArgumentCaptor.forClass(Long.class);
+	ArgumentCaptor<Long> maxIdCaptor = ArgumentCaptor.forClass(Long.class);
+
 	
 	@Before
 	public void before() {
@@ -109,8 +114,8 @@ public class MissingFromDestinationBuilderImplTest {
 	public void testBuildDestinationJobsWithNullMin() {
 		TypeToMigrateMetadata one = new TypeToMigrateMetadata();
 		one.setType(MigrationType.NODE);
-		one.setSrcMinId(1L);
-		one.setSrcMaxId(9L);
+		one.setSrcMinId(5L);
+		one.setSrcMaxId(20L);
 		one.setDestMinId(null);
 		one.setDestMaxId(null);
 
@@ -118,8 +123,8 @@ public class MissingFromDestinationBuilderImplTest {
 		two.setType(MigrationType.ACTIVITY);
 		two.setSrcMinId(null);
 		two.setSrcMaxId(null);
-		two.setDestMinId(null);
-		two.setDestMaxId(null);
+		two.setDestMinId(3L);
+		two.setDestMaxId(9L);
 
 		List<TypeToMigrateMetadata> primaryTypes = Lists.newArrayList(one, two);
 
@@ -138,7 +143,16 @@ public class MissingFromDestinationBuilderImplTest {
 		assertEquals(MigrationType.NODE, restoreJob.getMigrationType());
 		assertEquals("two", restoreJob.getBackupFileKey());
 
-		// done
+		assertTrue(iterator.hasNext());
+		job = iterator.next();
+		assertTrue(job instanceof RestoreDestinationJob);
+		restoreJob = (RestoreDestinationJob) job;
+		assertEquals(MigrationType.ACTIVITY, restoreJob.getMigrationType());
+		assertEquals("three", restoreJob.getBackupFileKey());
+		verify(mockBackupJobExecutor, times(2)).executeBackupJob(any(), minIdCaptor.capture(), maxIdCaptor.capture());
+		assertEquals(Arrays.asList(5L, 3L), minIdCaptor.getAllValues());
+		assertEquals(Arrays.asList(21L, 10L), maxIdCaptor.getAllValues());
+
 		assertFalse(iterator.hasNext());
 	}
 }
