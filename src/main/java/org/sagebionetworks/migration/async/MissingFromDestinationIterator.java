@@ -35,13 +35,10 @@ public class MissingFromDestinationIterator implements Iterator<DestinationJob> 
 	public MissingFromDestinationIterator(Configuration config, BackupJobExecutor backupJobExecutor,
 			TypeToMigrateMetadata typeToMigrate) {
 		super();
-		ValidateArgument.required(typeToMigrate.getSrcMinId(), typeToMigrate.getType().name() + ".SrcMinId()");
-		ValidateArgument.required(typeToMigrate.getSrcMaxId(), typeToMigrate.getType().name() + ".SrcMaxId()");
 		this.config = config;
 		this.backupJobExecutor = backupJobExecutor;
 		this.migrationType = typeToMigrate.getType();
-		srcMinId = typeToMigrate.getSrcMinId();
-		srcMaxId = typeToMigrate.getSrcMaxId();
+
 		// Destination values are null when the destination is empty
 		long desMinId = (typeToMigrate.getDestMinId() != null) ? typeToMigrate.getDestMinId() : 0L;
 		long desMaxId = (typeToMigrate.getDestMaxId() != null) ? typeToMigrate.getDestMaxId() : 0L;
@@ -51,13 +48,25 @@ public class MissingFromDestinationIterator implements Iterator<DestinationJob> 
 			// treat the destination as empty
 			desMaxId = desMinId;
 		}
-		// Find the ID ranges common to both source and destination.
-		minCommonId = Math.max(srcMinId, desMinId);
-		maxCommonId = Math.min(srcMaxId, desMaxId);
-		// Find the absolute mins and maxs
-		absoluteMinId = Math.min(srcMinId, desMinId);
-		absoluteMaxId = Math.max(srcMaxId, desMaxId);
 
+		// If the source is empty we need to delete everything from the destination
+		if (typeToMigrate.getSrcMinId() == null) {
+			srcMinId = desMinId;
+			srcMaxId = desMaxId;
+			// No rows in common, the destination needs to be deleted
+			minCommonId = 0L;
+			maxCommonId = 0L;
+		} else {
+			srcMinId = typeToMigrate.getSrcMinId();
+			srcMaxId = typeToMigrate.getSrcMaxId();
+
+			// Find the ID ranges common to both source and destination.
+			minCommonId = Math.max(srcMinId, desMinId);
+			maxCommonId = Math.min(srcMaxId, desMaxId);
+			// Find the absolute mins and maxs
+			absoluteMinId = Math.min(srcMinId, desMinId);
+			absoluteMaxId = Math.max(srcMaxId, desMaxId);
+		}
 	}
 
 	@Override

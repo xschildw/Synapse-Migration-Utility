@@ -28,11 +28,8 @@ public class MissingFromDestinationBuilderImpl implements MissingFromDestination
 		Iterator<DestinationJob> iterator = new LinkedList<DestinationJob>().iterator();
 		// Concatenate an iterator for each type.
 		for(TypeToMigrateMetadata typeToMigrate: primaryTypes) {
-			// PLFM-5107: skip type if source count is null
-			if (typeToMigrate.getSrcMinId() != null) {
-				MissingFromDestinationIterator typeIterator = new MissingFromDestinationIterator(config, backupJobExecutor, typeToMigrate);
-				iterator = Iterators.concat(iterator, typeIterator);
-			}
+			MissingFromDestinationIterator typeIterator = new MissingFromDestinationIterator(config, backupJobExecutor, typeToMigrate);
+			iterator = Iterators.concat(iterator, typeIterator);
 		}
 		return iterator;
 	}

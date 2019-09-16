@@ -98,16 +98,20 @@ public class ChecksumRangeExecutor implements Iterator<DestinationJob> {
 	 * @return
 	 */
 	Iterator<RangeChecksum> findAllMismatchedRanges() {
-		BatchChecksumRequest request = new BatchChecksumRequest();
-		request.setMigrationType(this.type);
-		request.setBatchSize(this.batchSize);
-		request.setMinimumId(this.minimumId);
-		request.setMaximumId(this.maximumId);
-		request.setSalt(this.salt);
-		// get all checksums for this range from both the source and destination.
-		ResultPair<BatchChecksumResponse> results = asynchronousJobExecutor.executeSourceAndDestinationJob(request,
-				BatchChecksumResponse.class);
-		return findAllMismatchedRanges(results.getSourceResult().getCheksums(), results.getDestinationResult().getCheksums()).iterator();
+		List<RangeChecksum> mismatchedRangesList = new LinkedList<>();
+		if (this.minimumId != null) {
+			BatchChecksumRequest request = new BatchChecksumRequest();
+			request.setMigrationType(this.type);
+			request.setBatchSize(this.batchSize);
+			request.setMinimumId(this.minimumId);
+			request.setMaximumId(this.maximumId);
+			request.setSalt(this.salt);
+			// get all checksums for this range from both the source and destination.
+			ResultPair<BatchChecksumResponse> results = asynchronousJobExecutor.executeSourceAndDestinationJob(request,
+					BatchChecksumResponse.class);
+			mismatchedRangesList = findAllMismatchedRanges(results.getSourceResult().getCheksums(), results.getDestinationResult().getCheksums());
+		}
+		return mismatchedRangesList.iterator();
 	}
 
 	/**

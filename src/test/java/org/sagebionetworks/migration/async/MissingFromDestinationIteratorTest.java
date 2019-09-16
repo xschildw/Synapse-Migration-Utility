@@ -128,34 +128,26 @@ public class MissingFromDestinationIteratorTest {
 		verify(mockBackupJobExecutor, times(1)).executeBackupJob(any(MigrationType.class), anyLong(), anyLong());
 	}
 	
-	@Test (expected=IllegalArgumentException.class)
+	@Test
 	public void testSouceMinNull() {
 		TypeToMigrateMetadata ranges = new TypeToMigrateMetadata();
 		ranges.setType(type);
 		ranges.setSrcMinId(null);
-		ranges.setSrcMaxId(99L);
-		ranges.setSrcCount(98L);
-		ranges.setDestMinId(1L);
-		ranges.setDestMaxId(99L);
-		ranges.setDestCount(98L);
-		
-		// call under test
-		new MissingFromDestinationIterator(mockConfig, mockBackupJobExecutor, ranges);
-	}
-	
-	@Test (expected=IllegalArgumentException.class)
-	public void testSouceMaxNull() {
-		TypeToMigrateMetadata ranges = new TypeToMigrateMetadata();
-		ranges.setType(type);
-		ranges.setSrcMinId(1L);
 		ranges.setSrcMaxId(null);
-		ranges.setSrcCount(98L);
+		ranges.setSrcCount(0L);
 		ranges.setDestMinId(1L);
 		ranges.setDestMaxId(99L);
 		ranges.setDestCount(98L);
-		
+
+		MissingFromDestinationIterator it = new MissingFromDestinationIterator(mockConfig, mockBackupJobExecutor, ranges);
+
 		// call under test
-		new MissingFromDestinationIterator(mockConfig, mockBackupJobExecutor, ranges);
+		it.hasNext();
+
+		verify(mockBackupJobExecutor).executeBackupJob(type, 1L, 100L);
+
+
+
 	}
 	
 	@Test
@@ -262,5 +254,5 @@ public class MissingFromDestinationIteratorTest {
 		verify(mockBackupJobExecutor).executeBackupJob(type, 51L, 100L);
 		verify(mockBackupJobExecutor, times(2)).executeBackupJob(any(MigrationType.class), anyLong(), anyLong());
 	}
-	
+
 }
