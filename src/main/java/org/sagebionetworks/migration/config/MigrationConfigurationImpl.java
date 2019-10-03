@@ -20,7 +20,6 @@ import com.google.inject.Inject;
 public class MigrationConfigurationImpl implements Configuration {
 
 	static final String KEY_REMAIN_READ_ONLY_MODE = "org.sagebionerworks.remain.read.only.mode";
-	static final String KEY_DESTINATION_ROW_COUNT_TO_IGNORE = "org.sagebiontworks.destination.row.count.to.ignore";
 	static final String KEY_SOURCE_REPOSITORY_ENDPOINT = "org.sagebionetworks.source.repository.endpoint";
 	static final String KEY_SOURCE_AUTHENTICATION_ENDPOINT = "org.sagebionetworks.source.authentication.endpoint";
 	static final String KEY_DESTINATION_REPOSITORY_ENDPOINT = "org.sagebionetworks.destination.repository.endpoint";
@@ -156,11 +155,6 @@ public class MigrationConfigurationImpl implements Configuration {
 	}
 	
 	@Override
-	public long getDestinationRowCountToIgnore() {
-		return Long.parseLong(getProperty(KEY_DESTINATION_ROW_COUNT_TO_IGNORE));
-	}
-
-	@Override
 	public void logConfiguration() {
 		logger.info("Source: "+getSourceConnectionInfo().toString());
 		logger.info("Destination: "+getDestinationConnectionInfo().toString());
@@ -170,7 +164,6 @@ public class MigrationConfigurationImpl implements Configuration {
 		logger.info("Include full table checksums: "+includeFullTableChecksums());
 		logger.info("Asynchronous job timeout MS: "+getWorkerTimeoutMs());
 		logger.info("Delay before migration starts MS: "+getDelayBeforeMigrationStartMS());
-		logger.info("Destination row count to ignore: "+getDestinationRowCountToIgnore());
 	}
 	
 	/**

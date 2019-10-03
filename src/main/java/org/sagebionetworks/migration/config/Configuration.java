@@ -80,13 +80,6 @@ public interface Configuration {
 	public long getDelayBeforeMigrationStartMS();
 	
 	/**
-	 * If the destination row count is less than this number, the destination table will be treated
-	 * as empty and a full backup/restore for that type will occur.
-	 * @return
-	 */
-	public long getDestinationRowCountToIgnore();
-	
-	/**
 	 * Should the destination stack remain in read-only mode after successful migration?
 	 * @return By default returns false.  Override 
 	 */
