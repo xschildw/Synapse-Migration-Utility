@@ -37,7 +37,6 @@ public class MissingFromDestinationIteratorTest {
 	int batchSize;
 	String backupFileKey;
 	BackupAliasType aliasType;
-	long destinationRowCountToIgnore;
 	RestoreDestinationJob one;
 	RestoreDestinationJob two;
 	
@@ -45,7 +44,6 @@ public class MissingFromDestinationIteratorTest {
 	public void before() {
 		type = MigrationType.NODE;
 		batchSize = 3;
-		destinationRowCountToIgnore = 10;
 		when(mockConfig.getMaximumBackupBatchSize()).thenReturn(batchSize);
 		aliasType = BackupAliasType.TABLE_NAME;
 		when(mockConfig.getBackupAliasType()).thenReturn(aliasType);
@@ -103,7 +101,7 @@ public class MissingFromDestinationIteratorTest {
 	}
 	
 	@Test
-	public void testSouceMinNull() {
+	public void testSourceMinNull() {
 		TypeToMigrateMetadata ranges = new TypeToMigrateMetadata();
 		ranges.setType(type);
 		ranges.setSrcMinId(null);
