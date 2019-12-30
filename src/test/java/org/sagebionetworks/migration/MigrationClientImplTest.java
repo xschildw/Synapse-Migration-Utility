@@ -48,10 +48,24 @@ public class MigrationClientImplTest {
 		// call under test
 		client.migrate();
 		verify(mockConfig).logConfiguration();
+		verify(mockStackStatus).setDestinationReadOnly();
+		verify(mockStackStatus).setDestinationReadWrite();
 		verify(mockFullMigration).runFullMigration();
-		verify(mockLogger, atLeast(2)).info(anyString());
+		verify(mockLogger, atLeast(3)).info(anyString());
 	}
-	
+
+	@Test
+	public void testMigrateDestinationRemainReadOnly() {
+		when(mockConfig.remainInReadOnlyAfterMigration()).thenReturn(true);
+		// call under test
+		client.migrate();
+		verify(mockConfig).logConfiguration();
+		verify(mockStackStatus).setDestinationReadOnly();
+		verify(mockStackStatus, never()).setDestinationReadWrite();
+		verify(mockFullMigration).runFullMigration();
+		verify(mockLogger, atLeast(3)).info(anyString());
+	}
+
 	@Test
 	public void testMigrateUnknownException() {
 		// setup a failure
@@ -66,6 +80,8 @@ public class MigrationClientImplTest {
 		}
 		// unknown exceptions do not trigger re-tries.
 		verify(mockFullMigration).runFullMigration();
+		// destination was set to READ-ONLY
+		verify(mockStackStatus).setDestinationReadOnly();
 		// the destination must not be set back to READ-WRITE
 		verify(mockStackStatus, never()).setDestinationReadWrite();
 		verify(mockLogger, never()).error(anyString(), any(Throwable.class));
@@ -86,6 +102,8 @@ public class MigrationClientImplTest {
 		}
 		// the number of attempts is controlled by the config.
 		verify(mockFullMigration, times(maxNumberRetries)).runFullMigration();
+		// destination was set to READ-ONLY
+		verify(mockStackStatus).setDestinationReadOnly();
 		// the destination must not be set back to READ-WRITE
 		verify(mockStackStatus, never()).setDestinationReadWrite();
 		verify(mockLogger, times(maxNumberRetries)).error(anyString(), any(Throwable.class));
@@ -104,5 +122,10 @@ public class MigrationClientImplTest {
 		// First attempt fails but the next succeeds
 		verify(mockFullMigration, times(2)).runFullMigration();
 		verify(mockLogger, times(1)).error(anyString(), any(Throwable.class));
+		// destination was set to READ-ONLY
+		verify(mockStackStatus).setDestinationReadOnly();
+		// was set back to READ-WRITE
+		verify(mockStackStatus).setDestinationReadWrite();
+
 	}
 }

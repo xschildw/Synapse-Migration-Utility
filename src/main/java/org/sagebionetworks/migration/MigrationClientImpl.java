@@ -24,7 +24,14 @@ public class MigrationClientImpl implements MigrationClient {
 	@Override
 	public void migrate() {
 		config.logConfiguration();
+		stackStatus.setDestinationReadOnly();
 		attemptMigraionWithRetry();
+		if (! config.remainInReadOnlyAfterMigration()) {
+			logger.info("Setting the destination to READ-WRITE mode.");
+			stackStatus.setDestinationReadWrite();
+		} else {
+			logger.info("Destination remains in READ-ONLY mode.");
+		}
 	}
 
 	/**
