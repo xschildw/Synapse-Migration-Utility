@@ -37,7 +37,6 @@ public class MissingFromDestinationIteratorTest {
 	int batchSize;
 	String backupFileKey;
 	BackupAliasType aliasType;
-	long destinationRowCountToIgnore;
 	RestoreDestinationJob one;
 	RestoreDestinationJob two;
 	
@@ -45,8 +44,6 @@ public class MissingFromDestinationIteratorTest {
 	public void before() {
 		type = MigrationType.NODE;
 		batchSize = 3;
-		destinationRowCountToIgnore = 10;
-		when(mockConfig.getDestinationRowCountToIgnore()).thenReturn(destinationRowCountToIgnore);
 		when(mockConfig.getMaximumBackupBatchSize()).thenReturn(batchSize);
 		aliasType = BackupAliasType.TABLE_NAME;
 		when(mockConfig.getBackupAliasType()).thenReturn(aliasType);
@@ -83,31 +80,6 @@ public class MissingFromDestinationIteratorTest {
 		verifyZeroInteractions(mockBackupJobExecutor);
 	}
 	
-	/**
-	 * Treat the destination as empty when there are only a few rows
-	 * in the destination.
-	 */
-	@Test
-	public void testDestinationCountLessThanIgnore() {
-		TypeToMigrateMetadata ranges = new TypeToMigrateMetadata();
-		ranges.setType(type);
-		ranges.setSrcMinId(1L);
-		ranges.setSrcMaxId(99L);
-		ranges.setSrcCount(98L);
-		ranges.setDestMinId(1L);
-		ranges.setDestMaxId(99L);
-		ranges.setDestCount(destinationRowCountToIgnore-1);
-		
-		MissingFromDestinationIterator iterator = new MissingFromDestinationIterator(mockConfig, mockBackupJobExecutor, ranges);
-		assertTrue(iterator.hasNext());
-		assertEquals(one, iterator.next());
-		assertFalse(iterator.hasNext());
-		
-		// should backup the full range for this case
-		verify(mockBackupJobExecutor).executeBackupJob(type, 1L, 100L);
-		verify(mockBackupJobExecutor, times(1)).executeBackupJob(any(MigrationType.class), anyLong(), anyLong());
-	}
-	
 	@Test
 	public void testDestinationIsNull() {
 		TypeToMigrateMetadata ranges = new TypeToMigrateMetadata();
@@ -129,7 +101,7 @@ public class MissingFromDestinationIteratorTest {
 	}
 	
 	@Test
-	public void testSouceMinNull() {
+	public void testSourceMinNull() {
 		TypeToMigrateMetadata ranges = new TypeToMigrateMetadata();
 		ranges.setType(type);
 		ranges.setSrcMinId(null);
@@ -145,9 +117,6 @@ public class MissingFromDestinationIteratorTest {
 		it.hasNext();
 
 		verify(mockBackupJobExecutor).executeBackupJob(type, 1L, 100L);
-
-
-
 	}
 	
 	@Test
@@ -253,6 +222,24 @@ public class MissingFromDestinationIteratorTest {
 		verify(mockBackupJobExecutor).executeBackupJob(type, 1L, 26L);
 		verify(mockBackupJobExecutor).executeBackupJob(type, 51L, 100L);
 		verify(mockBackupJobExecutor, times(2)).executeBackupJob(any(MigrationType.class), anyLong(), anyLong());
+	}
+
+	@Test
+	public void testSourceMaxLessThanOrEqualDestinationMin() {
+		TypeToMigrateMetadata ranges = new TypeToMigrateMetadata();
+		ranges.setType(type);
+		ranges.setSrcMinId(1L);
+		ranges.setSrcMaxId(1L);
+		ranges.setSrcCount(1L);
+		ranges.setDestMinId(1L);
+		ranges.setDestMaxId(8L);
+		ranges.setDestCount(5L);
+
+		MissingFromDestinationIterator iterator = new MissingFromDestinationIterator(mockConfig, mockBackupJobExecutor, ranges);
+
+		assertTrue(iterator.hasNext());
+
+		verify(mockBackupJobExecutor).executeBackupJob(type, 1L, 9L);
 	}
 
 }

@@ -44,11 +44,6 @@ public class MissingFromDestinationIterator implements Iterator<DestinationJob> 
 		long desMaxId = (typeToMigrate.getDestMaxId() != null) ? typeToMigrate.getDestMaxId() : 0L;
 		long desCount = (typeToMigrate.getDestCount() != null) ? typeToMigrate.getDestCount() : 0L;
 
-		if (desCount < config.getDestinationRowCountToIgnore()) {
-			// treat the destination as empty
-			desMaxId = desMinId;
-		}
-
 		// If the source is empty we need to delete everything from the destination
 		if (typeToMigrate.getSrcMinId() == null) {
 			srcMinId = desMinId;
@@ -56,6 +51,8 @@ public class MissingFromDestinationIterator implements Iterator<DestinationJob> 
 			// No rows in common, the destination needs to be deleted
 			minCommonId = 0L;
 			maxCommonId = 0L;
+			absoluteMinId = 0L;
+			absoluteMaxId = desMaxId;
 		} else {
 			srcMinId = typeToMigrate.getSrcMinId();
 			srcMaxId = typeToMigrate.getSrcMaxId();
@@ -76,7 +73,7 @@ public class MissingFromDestinationIterator implements Iterator<DestinationJob> 
 			if (maxCommonId <= minCommonId) {
 				// no rows common between the source and destination so a full backup of the source is required.
 				long minimumId = srcMinId;
-				long maximumId = srcMaxId + 1;
+				long maximumId = absoluteMaxId + 1;
 				Iterator<DestinationJob> iterator = backupJobExecutor.executeBackupJob(migrationType, minimumId,
 						maximumId);
 				jobIterator = Iterators.concat(jobIterator, iterator);
