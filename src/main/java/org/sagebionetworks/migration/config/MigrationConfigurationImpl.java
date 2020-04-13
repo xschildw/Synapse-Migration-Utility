@@ -19,7 +19,7 @@ import com.google.inject.Inject;
  */
 public class MigrationConfigurationImpl implements Configuration {
 
-	static final String KEY_REMAIN_READ_ONLY_MODE = "org.sagebionerworks.remain.read.only.mode";
+	static final String KEY_REMAIN_READ_ONLY_MODE = "org.sagebionetworks.remain.read.only.mode";
 	static final String KEY_SOURCE_REPOSITORY_ENDPOINT = "org.sagebionetworks.source.repository.endpoint";
 	static final String KEY_SOURCE_AUTHENTICATION_ENDPOINT = "org.sagebionetworks.source.authentication.endpoint";
 	static final String KEY_DESTINATION_REPOSITORY_ENDPOINT = "org.sagebionetworks.destination.repository.endpoint";
@@ -35,7 +35,7 @@ public class MigrationConfigurationImpl implements Configuration {
 	static final String KEY_THRESHOLD_PERCENTAGE = "org.sagebionetworks.full.table.migration.threshold.percentage";
 	static final String KEY_BACKUP_ALIAS_TYPE = "org.sagebionetworks.backup.alias.type";
 	static final String KEY_DELAY_BEFORE_START_MS = "org.sagebionetworks.delay.before.start.ms";
-	static final String KEY_INCLUDE_FULL_TABLE_CHECKSUM = "org.sagebionerworks.include.full.table.checksum";
+	static final String KEY_INCLUDE_FULL_TABLE_CHECKSUM = "org.sagebionetworks.include.full.table.checksum";
 	
 	Logger logger;
 	SystemPropertiesProvider propProvider;

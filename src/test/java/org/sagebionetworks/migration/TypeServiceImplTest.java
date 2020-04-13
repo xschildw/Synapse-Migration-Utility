@@ -22,8 +22,6 @@ import org.sagebionetworks.repo.model.migration.MigrationTypeChecksum;
 import org.sagebionetworks.repo.model.migration.MigrationTypeCount;
 import org.sagebionetworks.repo.model.migration.MigrationTypeCounts;
 import org.sagebionetworks.repo.model.migration.MigrationTypeNames;
-
-import com.amazonaws.services.dynamodbv2.xspec.M;
 import com.google.common.collect.Lists;
 
 @RunWith(MockitoJUnitRunner.class)
