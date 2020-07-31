@@ -24,9 +24,9 @@ public class MigrationConfigurationImpl implements Configuration {
 	static final String KEY_SOURCE_AUTHENTICATION_ENDPOINT = "org.sagebionetworks.source.authentication.endpoint";
 	static final String KEY_DESTINATION_REPOSITORY_ENDPOINT = "org.sagebionetworks.destination.repository.endpoint";
 	static final String KEY_DESTINATION_AUTHENTICATION_ENDPOINT = "org.sagebionetworks.destination.authentication.endpoint";
-	static final String KEY_SOURCE_APIKEY = "org.sagebionetworks.migration.apikey.source";
-	static final String KEY_DESTINATION_APIKEY = "org.sagebionetworks.migration.apikey.destination";
-	static final String KEY_USERNAME = "org.sagebionetworks.username";
+	static final String KEY_SERVICE_KEY = "org.sagebionetworks.service.key";
+	static final String KEY_SOURCE_SERVICE_SECRET = "org.sagebionetworks.service.secret.source";
+	static final String KEY_DESTINATION_SERVICE_SECRET = "org.sagebionetworks.service.secret.destination";
 	static final String KEY_MAX_THREADS = "org.sagebionetworks.max.threads";
 	static final String KEY_MAX_BACKUP_BATCHSIZE = "org.sagebionetworks.max.backup.batchsize";
 	static final String KEY_MIN_DELTA_RANGESIZE = "org.sagebionetworks.min.delta.rangesize";
@@ -59,8 +59,8 @@ public class MigrationConfigurationImpl implements Configuration {
 		return new SynapseConnectionInfo(
 					getProperty(KEY_SOURCE_AUTHENTICATION_ENDPOINT),
 					getProperty(KEY_SOURCE_REPOSITORY_ENDPOINT),
-					getProperty(KEY_USERNAME),
-					getSecret(KEY_SOURCE_APIKEY)
+					getProperty(KEY_SERVICE_KEY),
+					getSecret(KEY_SOURCE_SERVICE_SECRET)
 				);
 	}
 	
@@ -69,8 +69,8 @@ public class MigrationConfigurationImpl implements Configuration {
 		return new SynapseConnectionInfo(
 					getProperty(KEY_DESTINATION_AUTHENTICATION_ENDPOINT),
 					getProperty(KEY_DESTINATION_REPOSITORY_ENDPOINT),
-					getProperty(KEY_USERNAME),
-					getSecret(KEY_DESTINATION_APIKEY)
+					getProperty(KEY_SERVICE_KEY),
+					getSecret(KEY_DESTINATION_SERVICE_SECRET)
 				);
 	}
 	

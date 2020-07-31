@@ -1,5 +1,7 @@
 package org.sagebionetworks.migration.config;
 
+import java.util.Objects;
+
 /**
  * Holds all of the information needed to establish a Synapse Connection
  *
@@ -10,85 +12,68 @@ public class SynapseConnectionInfo {
 	 * The only public constructor.
 	 * @param authenticationEndPoint
 	 * @param repositoryEndPoint
-	 * @param adminUsername
-	 * @param adminPassword
+	 * @param serviceKey
+	 * @param serviceSecret
 	 */
 	public SynapseConnectionInfo(String authenticationEndPoint,
 			String repositoryEndPoint,
-			String userName,
-			String APIKey
+			String serviceKey,
+			String serviceSecret
 			) {
 		super();
 		this.authenticationEndPoint = authenticationEndPoint;
 		this.repositoryEndPoint = repositoryEndPoint;
-		this.APIKey = APIKey;
-		this.userName = userName;
+		this.serviceKey = serviceKey;
+		this.serviceSecret = serviceSecret;
 	}
 	
 	private String authenticationEndPoint;
 	private String repositoryEndPoint;
-	private String APIKey;
-	private String userName;
-	
+	private String serviceKey;
+	private String serviceSecret;
 	
 	public String getAuthenticationEndPoint() {
 		return authenticationEndPoint;
 	}
+	
 	public String getRepositoryEndPoint() {
 		return repositoryEndPoint;
 	}
-	public String getApiKey() {
-		return APIKey;
+
+	public String getServiceKey() {
+		return serviceKey;
 	}
-	public String getUserName() {
-		return userName;
+	
+	public String getServiceSecret() {
+		return serviceSecret;
 	}
+
 	@Override
 	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((APIKey == null) ? 0 : APIKey.hashCode());
-		result = prime * result + ((authenticationEndPoint == null) ? 0 : authenticationEndPoint.hashCode());
-		result = prime * result + ((repositoryEndPoint == null) ? 0 : repositoryEndPoint.hashCode());
-		result = prime * result + ((userName == null) ? 0 : userName.hashCode());
-		return result;
+		return Objects.hash(authenticationEndPoint, repositoryEndPoint, serviceKey, serviceSecret);
 	}
+
 	@Override
 	public boolean equals(Object obj) {
-		if (this == obj)
+		if (this == obj) {
 			return true;
-		if (obj == null)
+		}
+		if (obj == null) {
 			return false;
-		if (getClass() != obj.getClass())
+		}
+		if (getClass() != obj.getClass()) {
 			return false;
+		}
 		SynapseConnectionInfo other = (SynapseConnectionInfo) obj;
-		if (APIKey == null) {
-			if (other.APIKey != null)
-				return false;
-		} else if (!APIKey.equals(other.APIKey))
-			return false;
-		if (authenticationEndPoint == null) {
-			if (other.authenticationEndPoint != null)
-				return false;
-		} else if (!authenticationEndPoint.equals(other.authenticationEndPoint))
-			return false;
-		if (repositoryEndPoint == null) {
-			if (other.repositoryEndPoint != null)
-				return false;
-		} else if (!repositoryEndPoint.equals(other.repositoryEndPoint))
-			return false;
-		if (userName == null) {
-			if (other.userName != null)
-				return false;
-		} else if (!userName.equals(other.userName))
-			return false;
-		return true;
+		return Objects.equals(authenticationEndPoint, other.authenticationEndPoint)
+				&& Objects.equals(repositoryEndPoint, other.repositoryEndPoint)
+				&& Objects.equals(serviceKey, other.serviceKey) && Objects.equals(serviceSecret, other.serviceSecret);
 	}
+
 	@Override
 	public String toString() {
 		return "SynapseConnectionInfo [authenticationEndPoint=" + authenticationEndPoint + ", repositoryEndPoint="
-				+ repositoryEndPoint + ", APIKey=" + APIKey + ", userName=" + userName + "]";
+				+ repositoryEndPoint + ", serviceKey=" + serviceKey + "]";
 	}
-
 
 }
