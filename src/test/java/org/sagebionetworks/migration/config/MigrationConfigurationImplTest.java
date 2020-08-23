@@ -56,9 +56,9 @@ public class MigrationConfigurationImplTest {
 	String sourceRepoEndpoint;
 	String destinationAuthEndpoint;
 	String destinationRepoEndPoint;
-	String userName;
-	String sourceApiKey;
-	String destinationApiKey;
+	String serviceKey;
+	String sourceServiceSecret;
+	String destinationServiceSecret;
 	Properties props;
 	
 	@Before
@@ -70,9 +70,9 @@ public class MigrationConfigurationImplTest {
 		sourceRepoEndpoint = "souceRepoEndpoint";
 		destinationAuthEndpoint ="destinationAuthEndpoint";
 		destinationRepoEndPoint = "destinationRepoEndpoint";
-		userName = "userName";
-		sourceApiKey = "sourceKeySecret";
-		destinationApiKey = "destinationKeySecret";
+		serviceKey = "migration";
+		sourceServiceSecret = "sourceKeySecret";
+		destinationServiceSecret = "destinationKeySecret";
 		
 		props = new Properties();
 		props.put(sampleKey, sampleValue);
@@ -80,7 +80,7 @@ public class MigrationConfigurationImplTest {
 		props.put(MigrationConfigurationImpl.KEY_SOURCE_REPOSITORY_ENDPOINT, sourceRepoEndpoint);
 		props.put(MigrationConfigurationImpl.KEY_DESTINATION_AUTHENTICATION_ENDPOINT, destinationAuthEndpoint);
 		props.put(MigrationConfigurationImpl.KEY_DESTINATION_REPOSITORY_ENDPOINT, destinationRepoEndPoint);
-		props.put(MigrationConfigurationImpl.KEY_USERNAME, userName);
+		props.put(MigrationConfigurationImpl.KEY_SERVICE_KEY, serviceKey);
 		props.put(MigrationConfigurationImpl.KEY_MAX_BACKUP_BATCHSIZE, "2");
 		props.put(MigrationConfigurationImpl.KEY_MAX_RETRIES, "3");
 		props.put(MigrationConfigurationImpl.KEY_BACKUP_ALIAS_TYPE, BackupAliasType.TABLE_NAME.name());
@@ -97,11 +97,11 @@ public class MigrationConfigurationImplTest {
 		when(mockLoggerFactory.getLogger(any())).thenReturn(mockLogger);
 		
 		when(mockSecretManager
-				.getSecretValue(new GetSecretValueRequest().withSecretId(MigrationConfigurationImpl.KEY_SOURCE_APIKEY)))
-						.thenReturn(new GetSecretValueResult().withSecretString(sourceApiKey));
+				.getSecretValue(new GetSecretValueRequest().withSecretId(MigrationConfigurationImpl.KEY_SOURCE_SERVICE_SECRET)))
+						.thenReturn(new GetSecretValueResult().withSecretString(sourceServiceSecret));
 		when(mockSecretManager
-				.getSecretValue(new GetSecretValueRequest().withSecretId(MigrationConfigurationImpl.KEY_DESTINATION_APIKEY)))
-						.thenReturn(new GetSecretValueResult().withSecretString(destinationApiKey));
+				.getSecretValue(new GetSecretValueRequest().withSecretId(MigrationConfigurationImpl.KEY_DESTINATION_SERVICE_SECRET)))
+						.thenReturn(new GetSecretValueResult().withSecretString(destinationServiceSecret));
 		
 		config = new MigrationConfigurationImpl(mockLoggerFactory, mockPropertyProvider, mockFileProvider, mockSecretManager);
 	}
@@ -127,8 +127,8 @@ public class MigrationConfigurationImplTest {
 		assertNotNull(info);
 		assertEquals(sourceAuthEndpoint, info.getAuthenticationEndPoint());
 		assertEquals(sourceRepoEndpoint, info.getRepositoryEndPoint());
-		assertEquals(userName, info.getUserName());
-		assertEquals(sourceApiKey, info.getApiKey());
+		assertEquals(serviceKey, info.getServiceKey());
+		assertEquals(sourceServiceSecret, info.getServiceSecret());
 	}
 	
 	
@@ -139,8 +139,8 @@ public class MigrationConfigurationImplTest {
 		assertNotNull(info);
 		assertEquals(destinationAuthEndpoint, info.getAuthenticationEndPoint());
 		assertEquals(destinationRepoEndPoint, info.getRepositoryEndPoint());
-		assertEquals(userName, info.getUserName());
-		assertEquals(destinationApiKey, info.getApiKey());
+		assertEquals(serviceKey, info.getServiceKey());
+		assertEquals(destinationServiceSecret, info.getServiceSecret());
 	}
 	
 	@Test
