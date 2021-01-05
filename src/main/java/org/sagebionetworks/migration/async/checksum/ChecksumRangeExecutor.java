@@ -80,8 +80,10 @@ public class ChecksumRangeExecutor implements Iterator<DestinationJob> {
 			}
 			// Start n number of backup jobs for the mismatched ID range.
 			RangeChecksum misMatchRange = mismatchedRanges.next();
-			lastBackupJobs = backupJobExecutor.executeBackupJob(type, misMatchRange.getMinimumId(),
-					misMatchRange.getMaximumId());
+			// Fix for PLFM-6551, the bin numbers need to drive the backup range.
+			long binStart = misMatchRange.getBinNumber()*batchSize;
+			long binEnd = binStart+batchSize-1;
+			lastBackupJobs = backupJobExecutor.executeBackupJob(type, binStart, binEnd);
 			return lastBackupJobs.hasNext();
 		}
 	}
