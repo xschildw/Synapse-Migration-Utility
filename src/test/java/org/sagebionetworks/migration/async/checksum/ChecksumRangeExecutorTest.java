@@ -75,19 +75,21 @@ public class ChecksumRangeExecutorTest {
 
 		when(mockBackupJobExecutor.executeBackupJob(any(MigrationType.class), any(Long.class), any(Long.class)))
 				.thenReturn(jobsOne.iterator(), jobsTwo.iterator());
+		
+		batchSize = 10L;
 
 		srcOne = new RangeChecksum();
-		srcOne.setBinNumber(1L);
+		srcOne.setBinNumber(0L);
 		srcOne.setChecksum("c1");
-		srcOne.setCount(4l);
-		srcOne.setMinimumId(0L);
-		srcOne.setMaximumId(3L);
+		srcOne.setCount(7l);
+		srcOne.setMinimumId(2L);
+		srcOne.setMaximumId(9L);
 		srcTwo = new RangeChecksum();
-		srcTwo.setBinNumber(2L);
+		srcTwo.setBinNumber(1L);
 		srcTwo.setChecksum("c2");
-		srcTwo.setCount(2l);
-		srcTwo.setMinimumId(4L);
-		srcTwo.setMaximumId(5L);
+		srcTwo.setCount(10l);
+		srcTwo.setMinimumId(10L);
+		srcTwo.setMaximumId(19L);
 
 		BatchChecksumResponse sourceResponse = new BatchChecksumResponse();
 		sourceResponse.setCheksums(Lists.newArrayList(srcOne, srcTwo));
@@ -251,8 +253,8 @@ public class ChecksumRangeExecutorTest {
 		assertFalse(extractor.hasNext());
 
 		verify(mockAsynchronousJobExecutor).executeSourceAndDestinationJob(any(), any());
-		verify(mockBackupJobExecutor).executeBackupJob(type, srcOne.getMinimumId(), srcOne.getMaximumId());
-		verify(mockBackupJobExecutor).executeBackupJob(type, srcTwo.getMinimumId(), srcTwo.getMaximumId());
+		verify(mockBackupJobExecutor).executeBackupJob(type, 0L, 9L);
+		verify(mockBackupJobExecutor).executeBackupJob(type, 10L, 19L);
 	}
 
 	/**
