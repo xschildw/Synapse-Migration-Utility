@@ -137,6 +137,9 @@ public class StackSimulator extends AbstractModule {
 				return remainInReadOnlyAfterMigration;
 			}
 
+			@Override
+			public void validate() {}
+
 		});
 	}
 }

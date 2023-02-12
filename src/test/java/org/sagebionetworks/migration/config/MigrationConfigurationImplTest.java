@@ -1,9 +1,6 @@
 package org.sagebionetworks.migration.config;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.times;
@@ -161,5 +158,20 @@ public class MigrationConfigurationImplTest {
 		// set the value
 		props.put(MigrationConfigurationImpl.KEY_REMAIN_READ_ONLY_MODE, "true");
 		assertTrue(config.remainInReadOnlyAfterMigration());
+	}
+
+	@Test
+	public void testValidateValidDestination() {
+		props.put(MigrationConfigurationImpl.KEY_DESTINATION_AUTHENTICATION_ENDPOINT, "repo-prod.prod.sagebase.org/auth/v1");
+		props.put(MigrationConfigurationImpl.KEY_DESTINATION_REPOSITORY_ENDPOINT, "repo-prod.prod.sagebase.org/repo/v1");
+		config.validate();
+	}
+
+	@Test
+	public void testValidateInvalidDestination() {
+		IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+			config.validate()
+		);
+		assertEquals("Destination endpoints cannot be production endpoints", ex.getMessage());
 	}
 }

@@ -34,6 +34,9 @@ public class MigrationConfigurationImpl implements Configuration {
 	static final String KEY_BACKUP_ALIAS_TYPE = "org.sagebionetworks.backup.alias.type";
 	static final String KEY_DELAY_BEFORE_START_MS = "org.sagebionetworks.delay.before.start.ms";
 	static final String KEY_INCLUDE_FULL_TABLE_CHECKSUM = "org.sagebionetworks.include.full.table.checksum";
+
+	static final String REPO_PROD_ENDPOINT = "repo-prod.prod.sagebase.org/repo/v1";
+	static final String AUTH_PROD_ENDPOINT = "repo-prod.prod.sagebase.org/auth/v1";
 	
 	Logger logger;
 	SystemPropertiesProvider propProvider;
@@ -173,5 +176,16 @@ public class MigrationConfigurationImpl implements Configuration {
 			// if the property is not set then return false.
 			return false;
 		}
+	}
+
+	@Override
+	public void validate() throws IllegalArgumentException {
+		String destinationRepoEndpoint = getProperty(KEY_DESTINATION_REPOSITORY_ENDPOINT);
+		String destinationAuthEndpoint = getProperty(KEY_DESTINATION_AUTHENTICATION_ENDPOINT);
+
+		if (REPO_PROD_ENDPOINT.equals(destinationRepoEndpoint) && AUTH_PROD_ENDPOINT.equals(destinationAuthEndpoint) ) {
+			return;
+		}
+		throw new IllegalArgumentException("Destination endpoints cannot be production endpoints");
 	}
 }
