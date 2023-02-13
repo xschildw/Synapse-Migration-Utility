@@ -34,9 +34,10 @@ public class MigrationConfigurationImpl implements Configuration {
 	static final String KEY_BACKUP_ALIAS_TYPE = "org.sagebionetworks.backup.alias.type";
 	static final String KEY_DELAY_BEFORE_START_MS = "org.sagebionetworks.delay.before.start.ms";
 	static final String KEY_INCLUDE_FULL_TABLE_CHECKSUM = "org.sagebionetworks.include.full.table.checksum";
+	static final String KEY_STACK = "org,sagebionetworks.stack";
 
-	static final String REPO_PROD_ENDPOINT = "repo-prod.prod.sagebase.org/repo/v1";
-	static final String AUTH_PROD_ENDPOINT = "repo-prod.prod.sagebase.org/auth/v1";
+	static final String REPO_ENDPOINT_FORMAT = "repo-%s.%s.sagebase.org/repo/v1";
+	static final String AUTH_ENDPOINT_FORMAT = "repo-%s.%s.sagebase.org/auth/v1";
 	
 	Logger logger;
 	SystemPropertiesProvider propProvider;
@@ -45,6 +46,13 @@ public class MigrationConfigurationImpl implements Configuration {
 	
 	Properties systemProperties;
 	
+	private String getAuthEndpoint(String stack, String stackRole) {
+		return AUTH_ENDPOINT_FORMAT.format(stackRole, stack);
+	}
+
+	private String getRepoEndpoint(String stack, String stackRole) {
+		return REPO_ENDPOINT_FORMAT.format(stackRole, stack);
+	}
 	@Inject
 	public MigrationConfigurationImpl(LoggerFactory loggerFactory, SystemPropertiesProvider propProvider, FileProvider fileProvider, AWSSecretsManager secretManager) throws IOException {
 		this.logger = loggerFactory.getLogger(MigrationConfigurationImpl.class);
@@ -58,21 +66,19 @@ public class MigrationConfigurationImpl implements Configuration {
 	@Override
 	public SynapseConnectionInfo getSourceConnectionInfo(){
 		return new SynapseConnectionInfo(
-					getProperty(KEY_SOURCE_AUTHENTICATION_ENDPOINT),
-					getProperty(KEY_SOURCE_REPOSITORY_ENDPOINT),
-					getProperty(KEY_SERVICE_KEY),
-					getSecret(KEY_SOURCE_SERVICE_SECRET)
-				);
+			getAuthEndpoint("prod", getProperty(KEY_STACK)),
+			getRepoEndpoint("prod", getProperty(KEY_STACK)),
+			getProperty(KEY_SERVICE_KEY),
+			getSecret(KEY_SOURCE_SERVICE_SECRET));
 	}
 	
 	@Override
 	public SynapseConnectionInfo getDestinationConnectionInfo(){
 		return new SynapseConnectionInfo(
-					getProperty(KEY_DESTINATION_AUTHENTICATION_ENDPOINT),
-					getProperty(KEY_DESTINATION_REPOSITORY_ENDPOINT),
-					getProperty(KEY_SERVICE_KEY),
-					getSecret(KEY_DESTINATION_SERVICE_SECRET)
-				);
+				getAuthEndpoint("staging", getProperty(KEY_STACK)),
+				getRepoEndpoint("staging", getProperty(KEY_STACK)),
+				getProperty(KEY_SERVICE_KEY),
+				getSecret(KEY_SOURCE_SERVICE_SECRET));
 	}
 	
 	@Override
@@ -178,14 +184,4 @@ public class MigrationConfigurationImpl implements Configuration {
 		}
 	}
 
-	@Override
-	public void validate() throws IllegalArgumentException {
-		String destinationRepoEndpoint = getProperty(KEY_DESTINATION_REPOSITORY_ENDPOINT);
-		String destinationAuthEndpoint = getProperty(KEY_DESTINATION_AUTHENTICATION_ENDPOINT);
-
-		if (REPO_PROD_ENDPOINT.equals(destinationRepoEndpoint) && AUTH_PROD_ENDPOINT.equals(destinationAuthEndpoint) ) {
-			return;
-		}
-		throw new IllegalArgumentException("Destination endpoints cannot be production endpoints");
-	}
 }

@@ -72,10 +72,4 @@ public interface Configuration {
 	 */
 	public boolean remainInReadOnlyAfterMigration();
 
-	/**
-	 * 	Validates the configuration
-	 *	Throw IllegalArgumentException if destination endpoint is the production endpoint
-	 */
-	public void validate() throws IllegalArgumentException;
-
 }

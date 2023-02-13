@@ -119,11 +119,12 @@ public class MigrationConfigurationImplTest {
 	
 	@Test
 	public void testGetSourceConnectionInfo() {
+		props.put(MigrationConfigurationImpl.KEY_STACK, "dev");
 		// call under test
 		SynapseConnectionInfo info = config.getSourceConnectionInfo();
 		assertNotNull(info);
-		assertEquals(sourceAuthEndpoint, info.getAuthenticationEndPoint());
-		assertEquals(sourceRepoEndpoint, info.getRepositoryEndPoint());
+		assertEquals("repo-prod.dev.sagebase.org/auth/v1", info.getAuthenticationEndPoint());
+		assertEquals("repo-prod.dev.sagebase.org/repo/v1", info.getRepositoryEndPoint());
 		assertEquals(serviceKey, info.getServiceKey());
 		assertEquals(sourceServiceSecret, info.getServiceSecret());
 	}
@@ -160,18 +161,4 @@ public class MigrationConfigurationImplTest {
 		assertTrue(config.remainInReadOnlyAfterMigration());
 	}
 
-	@Test
-	public void testValidateValidDestination() {
-		props.put(MigrationConfigurationImpl.KEY_DESTINATION_AUTHENTICATION_ENDPOINT, "repo-prod.prod.sagebase.org/auth/v1");
-		props.put(MigrationConfigurationImpl.KEY_DESTINATION_REPOSITORY_ENDPOINT, "repo-prod.prod.sagebase.org/repo/v1");
-		config.validate();
-	}
-
-	@Test
-	public void testValidateInvalidDestination() {
-		IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
-			config.validate()
-		);
-		assertEquals("Destination endpoints cannot be production endpoints", ex.getMessage());
-	}
 }
