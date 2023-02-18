@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
+import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWithSerializerProvider;
 import org.apache.logging.log4j.Logger;
 import org.sagebionetworks.migration.LoggerFactory;
 import org.sagebionetworks.repo.model.daemon.BackupAliasType;
@@ -33,35 +34,10 @@ public class MigrationConfigurationImpl implements Configuration {
 	static final String KEY_STACK = "org.sagebionetworks.stack";
 	static final String REPO_ENDPOINT_FORMAT = "repo-%s.%s.sagebase.org/%s/v1";
 
-	enum StackType {
-		PROD ("prod"),
-		STAGING ("staging");
-
-		private final String label;
-
-		private StackType(String s) {
-			label = s;
-		}
-
-		public String toString() {
-			return this.label;
-		}
-	}
-
-	enum EndpointType {
-		REPO ("repo"),
-		AUTH ("auth");
-
-		private final String label;
-
-		private EndpointType(String s) {
-			label = s;
-		}
-
-		public String toString() {
-			return this.label;
-		}
-	}
+	static final String STACK_TYPE_STAGING = "staging";
+	static final String STACK_TYPE_PROD = "prod";
+	static final String ENDPOINT_TYPE_AUTH = "auth";
+	static final String ENDPOINT_TYPE_REPO = "repo";
 
 	Logger logger;
 	SystemPropertiesProvider propProvider;
@@ -70,8 +46,22 @@ public class MigrationConfigurationImpl implements Configuration {
 	
 	Properties systemProperties;
 
-	private String buildRepoEndpoint(String stack, StackType stackType, EndpointType endpointType) {
+	private String buildRepoEndpoint(String stack, String stackType, String endpointType) throws IllegalArgumentException {
+		validateEndpointType(endpointType);
+		validateStackType(stackType);
 		return String.format(REPO_ENDPOINT_FORMAT, stackType.toString(), stack, endpointType.toString());
+	}
+
+	private void validateStackType(String stackType) throws IllegalArgumentException {
+		if (!"prod".equals(stackType) && !"staging".equals(stackType)) {
+			throw new IllegalArgumentException("stackType must be 'prod' or 'staging");
+		}
+	}
+
+	private void validateEndpointType(String endpointType) throws IllegalArgumentException {
+		if (!"auth".equals(endpointType) && !"repo".equals(endpointType)) {
+			throw new IllegalArgumentException("endpointType must be 'auth' or 'repo");
+		}
 	}
 
 	@Inject
@@ -87,8 +77,8 @@ public class MigrationConfigurationImpl implements Configuration {
 	@Override
 	public SynapseConnectionInfo getSourceConnectionInfo(){
 		return new SynapseConnectionInfo(
-					buildRepoEndpoint(getProperty(KEY_STACK), StackType.PROD,  EndpointType.AUTH),
-					buildRepoEndpoint(getProperty(KEY_STACK), StackType.PROD,  EndpointType.REPO),
+					buildRepoEndpoint(getProperty(KEY_STACK), STACK_TYPE_PROD, ENDPOINT_TYPE_AUTH),
+					buildRepoEndpoint(getProperty(KEY_STACK), STACK_TYPE_PROD, ENDPOINT_TYPE_REPO),
 					getProperty(KEY_SERVICE_KEY),
 					getSecret(KEY_SOURCE_SERVICE_SECRET)
 				);
@@ -97,8 +87,8 @@ public class MigrationConfigurationImpl implements Configuration {
 	@Override
 	public SynapseConnectionInfo getDestinationConnectionInfo(){
 		return new SynapseConnectionInfo(
-					buildRepoEndpoint(getProperty(KEY_STACK), StackType.STAGING,  EndpointType.AUTH),
-					buildRepoEndpoint(getProperty(KEY_STACK), StackType.STAGING,  EndpointType.REPO),
+					buildRepoEndpoint(getProperty(KEY_STACK), STACK_TYPE_STAGING, ENDPOINT_TYPE_AUTH),
+					buildRepoEndpoint(getProperty(KEY_STACK), STACK_TYPE_STAGING, ENDPOINT_TYPE_REPO),
 					getProperty(KEY_SERVICE_KEY),
 					getSecret(KEY_DESTINATION_SERVICE_SECRET)
 				);

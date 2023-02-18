@@ -21,10 +21,12 @@ public class MigrationModuleTest {
 	Runnable mockRunner;
 	
 	@Test
-	public void testInjector() {
+	public void testWiring() {
 		// Simple test to determine if the Guice can build all of the dependencies.
 		Injector injector = Guice.createInjector(new MigrationModule());
 		assertNotNull(injector);
+		MigrationClient client = injector.getInstance(MigrationClient.class);
+		assertNotNull(client);
 	}
 	
 	@Test
