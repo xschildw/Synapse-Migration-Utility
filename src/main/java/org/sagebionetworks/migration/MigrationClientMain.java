@@ -15,12 +15,12 @@ public class MigrationClientMain {
 	static private Logger logger = LogManager.getLogger(MigrationClientMain.class);
 
 	public static void main(String[] args) throws Exception {
-		// Start IoC
-		Injector injector = Guice.createInjector(new MigrationModule());
-		MigrationClient client = injector.getInstance(MigrationClient.class);
 		try {
+		// Start IoC
+			Injector injector = Guice.createInjector(new MigrationModule());
+			MigrationClient client = injector.getInstance(MigrationClient.class);
 			client.migrate();
-		}catch(Throwable e) {
+		} catch(Throwable e) {
 			logger.error("Migration failed: ",e);
 			// -1 signals the failure to the caller.
 			System.exit(-1);
