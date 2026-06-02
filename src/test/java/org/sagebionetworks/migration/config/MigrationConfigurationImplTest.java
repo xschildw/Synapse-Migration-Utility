@@ -11,9 +11,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.sagebionetworks.migration.config.MigrationConfigurationImpl.REPO_ENDPOINT_FORMAT;
 
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Properties;
@@ -39,12 +37,6 @@ public class MigrationConfigurationImplTest {
 	SystemPropertiesProvider mockPropertyProvider;
 	@Mock
 	FileProvider mockFileProvider;
-	@Mock
-	File mockFile;
-	@Mock
-	InputStream mockInputStream;
-	@Mock
-	Properties mockProperties;
 	@Mock
 	LoggerFactory mockLoggerFactory;
 	@Mock
@@ -81,11 +73,7 @@ public class MigrationConfigurationImplTest {
 		props.put(MigrationConfigurationImpl.KEY_THREAD_TIMOUT_MS, "100000000");
 
 		when(mockPropertyProvider.getSystemProperties()).thenReturn(props);
-		when(mockPropertyProvider.createNewProperties()).thenReturn(mockProperties);
 
-		when(mockFileProvider.getFile(anyString())).thenReturn(mockFile);
-		when(mockFileProvider.createInputStream(any(File.class))).thenReturn(mockInputStream);
-		when(mockFile.exists()).thenReturn(true);
 		when(mockLoggerFactory.getLogger(any())).thenReturn(mockLogger);
 		
 		config = new MigrationConfigurationImpl(mockLoggerFactory, mockPropertyProvider, mockFileProvider, mockSecretManager);
@@ -188,6 +176,47 @@ public class MigrationConfigurationImplTest {
 		assertEquals("https://repo-staging.dev.sagebase.org/auth/v1", connInfo.getAuthenticationEndPoint());
 		assertEquals(serviceKey, connInfo.getServiceKey());
 		assertEquals(destinationServiceSecret, connInfo.getServiceSecret());
+	}
+
+	@Test
+	public void testGetDestinationConnectionInfoTstProd() {
+		when(mockSecretManager
+				.getSecretValue(new GetSecretValueRequest().withSecretId(MigrationConfigurationImpl.KEY_DESTINATION_SERVICE_SECRET)))
+				.thenReturn(new GetSecretValueResult().withSecretString(destinationServiceSecret));
+		props.put(MigrationConfigurationImpl.KEY_STACK, "prod");
+		props.put(MigrationConfigurationImpl.KEY_DESTINATION_STACK_TYPE, "tst");
+
+		SynapseConnectionInfo connInfo = config.getDestinationConnectionInfo();
+		assertNotNull(connInfo);
+		assertEquals("https://repo-tst.prod.sagebase.org/repo/v1", connInfo.getRepositoryEndPoint());
+		assertEquals("https://repo-tst.prod.sagebase.org/auth/v1", connInfo.getAuthenticationEndPoint());
+		assertEquals(serviceKey, connInfo.getServiceKey());
+		assertEquals(destinationServiceSecret, connInfo.getServiceSecret());
+	}
+
+	@Test
+	public void testGetDestinationConnectionInfoTstDev() {
+		when(mockSecretManager
+				.getSecretValue(new GetSecretValueRequest().withSecretId(MigrationConfigurationImpl.KEY_DESTINATION_SERVICE_SECRET)))
+				.thenReturn(new GetSecretValueResult().withSecretString(destinationServiceSecret));
+		props.put(MigrationConfigurationImpl.KEY_STACK, "dev");
+		props.put(MigrationConfigurationImpl.KEY_DESTINATION_STACK_TYPE, "TST");
+
+		SynapseConnectionInfo connInfo = config.getDestinationConnectionInfo();
+		assertNotNull(connInfo);
+		assertEquals("https://repo-tst.dev.sagebase.org/repo/v1", connInfo.getRepositoryEndPoint());
+		assertEquals("https://repo-tst.dev.sagebase.org/auth/v1", connInfo.getAuthenticationEndPoint());
+		assertEquals(serviceKey, connInfo.getServiceKey());
+		assertEquals(destinationServiceSecret, connInfo.getServiceSecret());
+	}
+
+	@Test (expected=IllegalArgumentException.class)
+	public void testGetDestinationConnectionInfoUnsupportedDestinationStackType() {
+		props.put(MigrationConfigurationImpl.KEY_STACK, "dev");
+		props.put(MigrationConfigurationImpl.KEY_DESTINATION_STACK_TYPE, "prod");
+
+		// call under test
+		config.getDestinationConnectionInfo();
 	}
 
 }

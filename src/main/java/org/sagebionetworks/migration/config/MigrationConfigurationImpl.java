@@ -35,11 +35,14 @@ public class MigrationConfigurationImpl implements Configuration {
 	static final String KEY_DELAY_BEFORE_START_MS = "org.sagebionetworks.delay.before.start.ms";
 	static final String KEY_INCLUDE_FULL_TABLE_CHECKSUM = "org.sagebionetworks.include.full.table.checksum";
 	static final String KEY_STACK = "org.sagebionetworks.stack";
+	static final String KEY_DESTINATION_STACK_TYPE = "org.sagebionetworks.destination.stack.type";
+	static final StackType DEFAULT_DESTINATION_STACK_TYPE = StackType.STAGING;
 	static final String REPO_ENDPOINT_FORMAT = "https://repo-%s.%s.sagebase.org/%s/v1";
 
 	enum StackType {
 		PROD ("prod"),
-		STAGING ("staging");
+		STAGING ("staging"),
+		TST ("tst");
 
 		private final String label;
 
@@ -77,6 +80,19 @@ public class MigrationConfigurationImpl implements Configuration {
 	private String buildRepoEndpoint(String stack, StackType stackType, EndpointType endpointType) {
 		return String.format(REPO_ENDPOINT_FORMAT, stackType.toString(), stack, endpointType.toString());
 	}
+
+	StackType getDestinationStackType() {
+		String value = this.systemProperties.getProperty(KEY_DESTINATION_STACK_TYPE);
+		if (value == null || value.trim().isEmpty()) {
+			return DEFAULT_DESTINATION_STACK_TYPE;
+		}
+		for (StackType stackType : new StackType[] { StackType.STAGING, StackType.TST }) {
+			if (stackType.toString().equalsIgnoreCase(value.trim())) {
+				return stackType;
+			}
+		}
+		throw new IllegalArgumentException("Unsupported destination stack type: " + value + ". Supported values: staging, tst");
+	}
 	
 	@Inject
 	public MigrationConfigurationImpl(LoggerFactory loggerFactory, SystemPropertiesProvider propProvider, FileProvider fileProvider, AWSSecretsManager secretManager) throws IOException {
@@ -100,9 +116,10 @@ public class MigrationConfigurationImpl implements Configuration {
 	
 	@Override
 	public SynapseConnectionInfo getDestinationConnectionInfo(){
+		StackType destinationStackType = getDestinationStackType();
 		return new SynapseConnectionInfo(
-				buildRepoEndpoint(getProperty(KEY_STACK), StackType.STAGING,  EndpointType.AUTH),
-				buildRepoEndpoint(getProperty(KEY_STACK), StackType.STAGING,  EndpointType.REPO),
+				buildRepoEndpoint(getProperty(KEY_STACK), destinationStackType,  EndpointType.AUTH),
+				buildRepoEndpoint(getProperty(KEY_STACK), destinationStackType,  EndpointType.REPO),
 				getProperty(KEY_SERVICE_KEY),
 				getSecret(KEY_DESTINATION_SERVICE_SECRET)
 		);
