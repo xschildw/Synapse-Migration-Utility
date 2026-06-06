@@ -1,8 +1,8 @@
 package org.sagebionetworks.migration;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -10,14 +10,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.*;
 
 import org.apache.logging.log4j.Logger;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.sagebionetworks.migration.config.Configuration;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class MigrationClientImplTest {
 
 	@Mock
@@ -30,19 +30,19 @@ public class MigrationClientImplTest {
 	StackStatusService mockStackStatus;
 	@Mock
 	FullMigration mockFullMigration;
-	
+
 	int maxNumberRetries;
 	MigrationClientImpl client;
-	
-	@Before
+
+	@BeforeEach
 	public void before() {
 		maxNumberRetries = 3;
 		when(mockConfig.getMaxRetries()).thenReturn(maxNumberRetries);
 		when(loggerFactory.getLogger(any())).thenReturn(mockLogger);
-		when(mockConfig.remainInReadOnlyAfterMigration()).thenReturn(false);
+		lenient().when(mockConfig.remainInReadOnlyAfterMigration()).thenReturn(false);
 		client = new MigrationClientImpl(mockConfig, mockStackStatus, mockFullMigration, loggerFactory);
 	}
-	
+
 	@Test
 	public void testMigrate() {
 		// call under test
@@ -86,8 +86,8 @@ public class MigrationClientImplTest {
 		verify(mockStackStatus, never()).setDestinationReadWrite();
 		verify(mockLogger, never()).error(anyString(), any(Throwable.class));
 	}
-	
-	
+
+
 	@Test
 	public void testMigrateAsynchException() {
 		// setup a failure
@@ -108,7 +108,7 @@ public class MigrationClientImplTest {
 		verify(mockStackStatus, never()).setDestinationReadWrite();
 		verify(mockLogger, times(maxNumberRetries)).error(anyString(), any(Throwable.class));
 	}
-	
+
 	@Test
 	public void testMigrateAsynchExceptionWithSuccess() {
 		// setup a failure

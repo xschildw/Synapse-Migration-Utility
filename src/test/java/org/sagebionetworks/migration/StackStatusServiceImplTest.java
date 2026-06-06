@@ -1,15 +1,16 @@
 package org.sagebionetworks.migration;
 
 import static org.mockito.Mockito.verify;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.sagebionetworks.client.SynapseAdminClient;
 import org.sagebionetworks.client.exceptions.SynapseBadRequestException;
 import org.sagebionetworks.client.exceptions.SynapseException;
@@ -18,9 +19,9 @@ import org.sagebionetworks.migration.factory.SynapseClientFactory;
 import org.sagebionetworks.repo.model.status.StackStatus;
 import org.sagebionetworks.repo.model.status.StatusEnum;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class StackStatusServiceImplTest {
-	
+
 	@Mock
 	SynapseClientFactory mockClientFactory;
 	@Mock
@@ -29,18 +30,18 @@ public class StackStatusServiceImplTest {
 	SynapseAdminClient mockSourceClient;
 
 	StackStatusServiceImpl service;
-	
-	@Before
+
+	@BeforeEach
 	public void before() throws SynapseException {
 		when(mockClientFactory.getDestinationClient()).thenReturn(mockDestinationClient);
 		when(mockClientFactory.getSourceClient()).thenReturn(mockSourceClient);
 		StackStatus startStatus = new StackStatus();
 		startStatus.setCurrentMessage("starting message");
 		startStatus.setStatus(StatusEnum.DOWN);
-		when(mockDestinationClient.getCurrentStackStatus()).thenReturn(startStatus);
+		lenient().when(mockDestinationClient.getCurrentStackStatus()).thenReturn(startStatus);
 		service = new StackStatusServiceImpl(mockClientFactory);
 	}
-	
+
 	@Test
 	public void testSetDestinationReadOnly() throws SynapseException {
 		// call under test
@@ -49,17 +50,17 @@ public class StackStatusServiceImplTest {
 		expectedStatus.setCurrentMessage(StackStatusServiceImpl.READ_ONLY_MESSAGE);
 		expectedStatus.setStatus(StatusEnum.READ_ONLY);
 		verify(mockDestinationClient).updateCurrentStackStatus(expectedStatus);
-		verifyZeroInteractions(mockSourceClient);
+		verifyNoInteractions(mockSourceClient);
 	}
-	
-	@Test (expected=RuntimeException.class)
+
+	@Test
 	public void testSetDestinationReadOnlyException() throws SynapseException {
 		SynapseServerException failure = new SynapseBadRequestException();
 		when(mockDestinationClient.getCurrentStackStatus()).thenThrow(failure);
 		// call under test
-		service.setDestinationReadOnly();
+		assertThrows(RuntimeException.class, () -> service.setDestinationReadOnly());
 	}
-	
+
 	@Test
 	public void testSetDestinationReadWrite() throws SynapseException {
 		// call under test
@@ -68,17 +69,17 @@ public class StackStatusServiceImplTest {
 		expectedStatus.setCurrentMessage(StackStatusServiceImpl.READ_WRITE_MESSAGE);
 		expectedStatus.setStatus(StatusEnum.READ_WRITE);
 		verify(mockDestinationClient).updateCurrentStackStatus(expectedStatus);
-		verifyZeroInteractions(mockSourceClient);
+		verifyNoInteractions(mockSourceClient);
 	}
-	
-	@Test (expected=RuntimeException.class)
+
+	@Test
 	public void testSetDestinationReadWriteException() throws SynapseException {
 		SynapseServerException failure = new SynapseBadRequestException();
 		when(mockDestinationClient.getCurrentStackStatus()).thenThrow(failure);
 		// call under test
-		service.setDestinationReadWrite();
+		assertThrows(RuntimeException.class, () -> service.setDestinationReadWrite());
 	}
-	
+
 	@Test
 	public void testIsSourceReadOnly() throws SynapseException {
 		StackStatus status = new StackStatus();
@@ -88,7 +89,7 @@ public class StackStatusServiceImplTest {
 		boolean isReadOnly = service.isSourceReadOnly();
 		assertTrue(isReadOnly);
 	}
-	
+
 	@Test
 	public void testIsSourceReadOnlyDown() throws SynapseException {
 		StackStatus status = new StackStatus();
@@ -98,7 +99,7 @@ public class StackStatusServiceImplTest {
 		boolean isReadOnly = service.isSourceReadOnly();
 		assertFalse(isReadOnly);
 	}
-	
+
 	@Test
 	public void testIsSourceReadOnlyReadWrite() throws SynapseException {
 		StackStatus status = new StackStatus();

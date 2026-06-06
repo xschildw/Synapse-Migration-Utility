@@ -1,21 +1,21 @@
 package org.sagebionetworks.migration.async.checksum;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.sagebionetworks.migration.async.AsynchronousJobExecutor;
 import org.sagebionetworks.migration.async.BackupJobExecutor;
 import org.sagebionetworks.migration.async.RestoreDestinationJob;
@@ -31,7 +31,7 @@ import org.sagebionetworks.repo.model.migration.RangeChecksum;
 
 import com.google.common.collect.Lists;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class ChecksumRangeExecutorTest {
 
 	@Mock
@@ -54,7 +54,7 @@ public class ChecksumRangeExecutorTest {
 
 	ChecksumRangeExecutor extractor;
 
-	@Before
+	@BeforeEach
 	public void before() {
 		type = MigrationType.ACCESS_APPROVAL;
 		minimumId = 1L;
@@ -72,9 +72,9 @@ public class ChecksumRangeExecutorTest {
 		three.setMigrationType(type);
 		jobsTwo = Lists.newArrayList(three);
 
-		when(mockBackupJobExecutor.executeBackupJob(any(MigrationType.class), any(Long.class), any(Long.class)))
+		lenient().when(mockBackupJobExecutor.executeBackupJob(any(MigrationType.class), any(Long.class), any(Long.class)))
 				.thenReturn(jobsOne.iterator(), jobsTwo.iterator());
-		
+
 		batchSize = 10L;
 
 		srcOne = new RangeChecksum();
@@ -106,8 +106,8 @@ public class ChecksumRangeExecutorTest {
 		ResultPair<AdminResponse> resultPair = new ResultPair<>();
 		resultPair.setSourceResult(sourceResponse);
 		resultPair.setDestinationResult(destinationResponse);
-		when(mockAsynchronousJobExecutor.executeSourceAndDestinationJob(any(), any())).thenReturn(resultPair);
-		
+		lenient().when(mockAsynchronousJobExecutor.executeSourceAndDestinationJob(any(), any())).thenReturn(resultPair);
+
 		TypeToMigrateMetadata metadata = TypeToMigrateMetadata.builder(false)
 				.setSource(new MigrationTypeCount().setMinid(minimumId).setMaxid(maximumId).setType(type))
 				.setDest(new MigrationTypeCount().setType(type)).build();
@@ -232,11 +232,10 @@ public class ChecksumRangeExecutorTest {
 
 	@Test
 	public void testFindAllMismatchedRangesMinIdNull() {
-		when(mockAsynchronousJobExecutor.executeSourceAndDestinationJob(any(), any())).thenThrow(new IllegalArgumentException());
 		TypeToMigrateMetadata metadata = TypeToMigrateMetadata.builder(false)
 				.setSource(new MigrationTypeCount().setMinid(null).setMaxid(null).setType(type))
 				.setDest(new MigrationTypeCount().setType(type)).build();
-		
+
 		extractor = new ChecksumRangeExecutor(mockAsynchronousJobExecutor, mockBackupJobExecutor, batchSize, metadata, salt);
 		// call under test
 		Iterator<RangeChecksum> it = extractor.findAllMismatchedRanges();
@@ -264,7 +263,7 @@ public class ChecksumRangeExecutorTest {
 
 	/**
 	 * Create a copy of the given object
-	 * 
+	 *
 	 * @param toCopy
 	 * @return
 	 */

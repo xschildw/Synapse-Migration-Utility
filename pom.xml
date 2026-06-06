@@ -34,9 +34,9 @@
 		<log4j.version>2.25.3</log4j.version>
 		<commons-logging.version>1.2</commons-logging.version>
 		<synapseclient.version>586.0</synapseclient.version>
-		<junit.version>4.13.1</junit.version>
+		<junit.version>5.10.2</junit.version>
 		<awssdk.version>1.12.15</awssdk.version>
-		<mockito.version>1.10.19</mockito.version>
+		<mockito.version>5.12.0</mockito.version>
 		<xstream.version>1.4.17</xstream.version>
 	</properties>
 
@@ -62,14 +62,20 @@
 			<version>${synapseclient.version}</version>
 		</dependency>
 		<dependency>
-			<groupId>junit</groupId>
-			<artifactId>junit</artifactId>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter</artifactId>
 			<version>${junit.version}</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.mockito</groupId>
-			<artifactId>mockito-all</artifactId>
+			<artifactId>mockito-core</artifactId>
+			<version>${mockito.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-junit-jupiter</artifactId>
 			<version>${mockito.version}</version>
 			<scope>test</scope>
 		</dependency>
@@ -136,6 +142,11 @@
 				<configuration>
 					<release>11</release>
 				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>3.2.5</version>
 			</plugin>
 		</plugins>
 

@@ -1,11 +1,12 @@
 package org.sagebionetworks.migration.config;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -18,11 +19,11 @@ import java.util.Properties;
 import java.util.regex.Pattern;
 
 import org.apache.logging.log4j.Logger;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.sagebionetworks.migration.LoggerFactory;
 import org.sagebionetworks.repo.model.daemon.BackupAliasType;
 
@@ -30,7 +31,7 @@ import com.amazonaws.services.secretsmanager.AWSSecretsManager;
 import com.amazonaws.services.secretsmanager.model.GetSecretValueRequest;
 import com.amazonaws.services.secretsmanager.model.GetSecretValueResult;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class MigrationConfigurationImplTest {
 
 	@Mock
@@ -43,25 +44,25 @@ public class MigrationConfigurationImplTest {
 	Logger mockLogger;
 	@Mock
 	AWSSecretsManager mockSecretManager;
-	
+
 	MigrationConfigurationImpl config;
-	
+
 	String sampleKey;
 	String sampleValue;
 	String serviceKey;
 	String sourceServiceSecret;
 	String destinationServiceSecret;
 	Properties props;
-	
-	@Before
+
+	@BeforeEach
 	public void before() throws IOException {
-		
+
 		sampleKey = "sampleKey";
 		sampleValue = "sampleValue";
 		serviceKey = "migration";
 		sourceServiceSecret = "sourceKeySecret";
 		destinationServiceSecret = "destinationKeySecret";
-		
+
 		props = new Properties();
 		props.put(sampleKey, sampleValue);
 		props.put(MigrationConfigurationImpl.KEY_SERVICE_KEY, serviceKey);
@@ -75,10 +76,10 @@ public class MigrationConfigurationImplTest {
 		when(mockPropertyProvider.getSystemProperties()).thenReturn(props);
 
 		when(mockLoggerFactory.getLogger(any())).thenReturn(mockLogger);
-		
+
 		config = new MigrationConfigurationImpl(mockLoggerFactory, mockPropertyProvider, mockFileProvider, mockSecretManager);
 	}
-	
+
 
 	@Test
 	public void testRepoEndpointFormat() throws MalformedURLException {
@@ -93,12 +94,12 @@ public class MigrationConfigurationImplTest {
 		String value = config.getProperty(sampleKey);
 		assertEquals(sampleValue, value);
 	}
-	
-	
-	@Test (expected=IllegalArgumentException.class)
+
+
+	@Test
 	public void testGetPropertyDoesNotExist() {
 		// call under test
-		config.getProperty("doesNotExist");
+		assertThrows(IllegalArgumentException.class, () -> config.getProperty("doesNotExist"));
 	}
 
 	@Test
@@ -115,13 +116,13 @@ public class MigrationConfigurationImplTest {
 		config.logConfiguration();
 		verify(mockLogger, times(8)).info(anyString());
 	}
-	
+
 	@Test
 	public void testRemainInReadOnlyAfterMigrationDeafult() {
 		// by default should return false.
 		assertFalse(config.remainInReadOnlyAfterMigration());
 	}
-	
+
 	@Test
 	public void testRemainInReadOnlyAfterMigrationSet() {
 		// set the value
@@ -210,13 +211,13 @@ public class MigrationConfigurationImplTest {
 		assertEquals(destinationServiceSecret, connInfo.getServiceSecret());
 	}
 
-	@Test (expected=IllegalArgumentException.class)
+	@Test
 	public void testGetDestinationConnectionInfoUnsupportedDestinationStackType() {
 		props.put(MigrationConfigurationImpl.KEY_STACK, "dev");
 		props.put(MigrationConfigurationImpl.KEY_DESTINATION_STACK_TYPE, "prod");
 
 		// call under test
-		config.getDestinationConnectionInfo();
+		assertThrows(IllegalArgumentException.class, () -> config.getDestinationConnectionInfo());
 	}
 
 }

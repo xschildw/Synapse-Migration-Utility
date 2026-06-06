@@ -1,7 +1,7 @@
 package org.sagebionetworks.migration;
 
-import static org.mockito.Matchers.*;
-import static org.mockito.Matchers.anyListOf;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -10,11 +10,11 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 
 import org.apache.logging.log4j.Logger;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.sagebionetworks.migration.async.MigrationDriver;
 import org.sagebionetworks.migration.async.ResultPair;
 import org.sagebionetworks.migration.config.Configuration;
@@ -26,7 +26,7 @@ import org.sagebionetworks.repo.model.migration.MigrationTypeCount;
 
 import com.google.common.collect.Lists;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class FullMigrationImplTest {
 
 	@Mock
@@ -43,19 +43,19 @@ public class FullMigrationImplTest {
 	MigrationDriver mockAsynchronousMigration;
 	@Mock
 	Configuration mockConfiguration;
-	
+
 	List<MigrationType> allCommonTypes;
 	List<MigrationType> commonPrimaryTypes;
 	ResultPair<List<MigrationTypeCount>> countResultsOne;
 	ResultPair<List<MigrationTypeCount>> countResultsTwo;
-	
+
 	ResultPair<MigrationTypeChecksum> checksumResutls;
-	
+
 	List<TypeToMigrateMetadata> typesToMigrate;
 
 	FullMigrationImpl fullMigration;
 
-	@Before
+	@BeforeEach
 	public void before() {
 		when(mockLoggerFactory.getLogger(any())).thenReturn(mockLogger);
 		allCommonTypes = Lists.newArrayList(MigrationType.NODE, MigrationType.NODE_REVISION);
@@ -68,40 +68,40 @@ public class FullMigrationImplTest {
 		sourceCount.setCount(0L);
 		sourceCount.setMinid(4L);
 		sourceCount.setMaxid(101L);
-		
+
 		MigrationTypeCount destinationCount = new MigrationTypeCount();
 		destinationCount.setType(MigrationType.NODE);
 		destinationCount.setCount(0L);
 		destinationCount.setMaxid(4L);
 		destinationCount.setMaxid(15L);
-		
+
 		countResultsOne = new ResultPair<List<MigrationTypeCount>>();
 		countResultsOne.setSourceResult(Lists.newArrayList(sourceCount));
 		countResultsOne.setDestinationResult(Lists.newArrayList(destinationCount));
-		
+
 		MigrationTypeCount endCount = new MigrationTypeCount();
 		endCount.setType(MigrationType.NODE);
 		endCount.setCount(100L);
-		
+
 		countResultsTwo = new ResultPair<List<MigrationTypeCount>>();
 		countResultsTwo.setDestinationResult(Lists.newArrayList(endCount));
-		
-		when(mockTypeService.getMigrationTypeCounts(anyListOf(MigrationType.class))).thenReturn(countResultsOne, countResultsTwo);
-		
+
+		when(mockTypeService.getMigrationTypeCounts(anyList())).thenReturn(countResultsOne, countResultsTwo);
+
 		boolean isSourceReadOnly = true;
 		typesToMigrate = ToolMigrationUtils.buildTypeToMigrateMetadata(isSourceReadOnly,
 				countResultsOne.getSourceResult(), countResultsOne.getDestinationResult(), commonPrimaryTypes);
-		
+
 		fullMigration = new FullMigrationImpl(mockLoggerFactory, mockStackStatusService, mockTypeService,
 				mockTypeReporter, mockAsynchronousMigration, mockConfiguration);
-		
+
 		when(mockConfiguration.includeFullTableChecksums()).thenReturn(true);
 		when(mockStackStatusService.isSourceReadOnly()).thenReturn(true);
-		
+
 		checksumResutls = new ResultPair<MigrationTypeChecksum>();
-		when(mockTypeService.getFullTableChecksums(any(MigrationType.class))).thenReturn(checksumResutls);
+		lenient().when(mockTypeService.getFullTableChecksums(any(MigrationType.class))).thenReturn(checksumResutls);
 	}
-	
+
 	@Test
 	public void testRunFullMigration() {
 		// call under test
@@ -116,7 +116,7 @@ public class FullMigrationImplTest {
 		verify(mockTypeService, times(allCommonTypes.size())).getFullTableChecksums(any(MigrationType.class));
 		verify(mockTypeReporter, times(allCommonTypes.size())).reportChecksums(any(MigrationType.class), eq(checksumResutls));
 	}
-	
+
 	@Test
 	public void testRunFullMigrationNoCheckSum() {
 		when(mockConfiguration.includeFullTableChecksums()).thenReturn(false);
@@ -127,5 +127,5 @@ public class FullMigrationImplTest {
 		verify(mockTypeService, never()).getFullTableChecksums(any(MigrationType.class));
 		verify(mockTypeReporter, never()).reportChecksums(any(MigrationType.class), eq(checksumResutls));
 	}
-	
+
 }

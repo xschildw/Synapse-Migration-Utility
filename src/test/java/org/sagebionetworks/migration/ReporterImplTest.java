@@ -1,10 +1,12 @@
 package org.sagebionetworks.migration;
 
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.anyString;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -13,11 +15,11 @@ import java.util.Date;
 import java.util.List;
 
 import org.apache.logging.log4j.Logger;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.sagebionetworks.migration.async.JobTarget;
 import org.sagebionetworks.migration.async.ResultPair;
 import org.sagebionetworks.migration.config.Configuration;
@@ -35,9 +37,9 @@ import org.sagebionetworks.util.Clock;
 
 import com.google.common.collect.Lists;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class ReporterImplTest {
-	
+
 	@Mock
 	Configuration mockConfig;
 	@Mock
@@ -46,64 +48,64 @@ public class ReporterImplTest {
 	Logger mockLogger;
 	@Mock
 	Clock mockClock;
-	
+
 	long delayMS;
-	
+
 	List<MigrationTypeCount> sourceCounts;
 	List<MigrationTypeCount> destinationCounts;
 	ResultPair<List<MigrationTypeCount>> typeCounts;
 	ResultPair<MigrationTypeChecksum> checksums;
-	
+
 	AsyncMigrationRequest asyncMigrationRequest;
 	JobTarget jobTarget;
 	AsynchronousJobStatus jobStatus;
-	
+
 	ReporterImpl reporter;
-	
+
 	MigrationType type;
 
-	@Before
+	@BeforeEach
 	public void before() {
 		when(mockLoggerFactory.getLogger(any())).thenReturn(mockLogger);
 		long delayMS = 4000L;
-		when(mockConfig.getDelayBeforeMigrationStartMS()).thenReturn(delayMS);
-		
+		lenient().when(mockConfig.getDelayBeforeMigrationStartMS()).thenReturn(delayMS);
+
 		MigrationTypeCount sourceNodeCount = new MigrationTypeCount();
 		sourceNodeCount.setType(MigrationType.NODE);
 		sourceNodeCount.setCount(null);
 		sourceNodeCount.setMinid(10L);
 		sourceNodeCount.setMaxid(100L);
-		
+
 		MigrationTypeCount sourceAclCount = new MigrationTypeCount();
 		sourceAclCount.setType(MigrationType.ACL);
 		sourceAclCount.setCount(null);
 		sourceAclCount.setMinid(30L);
 		sourceAclCount.setMaxid(120L);
-		
+
 		sourceCounts = Lists.newArrayList(sourceNodeCount, sourceAclCount);
-		
-		
+
+
 		MigrationTypeCount destNodeCount = new MigrationTypeCount();
 		destNodeCount.setType(MigrationType.NODE);
 		destNodeCount.setCount(null);
 		destNodeCount.setMinid(80L);
 		destNodeCount.setMaxid(130L);
-		
+
 		MigrationTypeCount destActivity = new MigrationTypeCount();
 		destActivity.setType(MigrationType.ACTIVITY);
 		destActivity.setCount(null);
 		destActivity.setMinid(90L);
 		destActivity.setMaxid(100L);
-		
+
 		destinationCounts = Lists.newArrayList(destNodeCount, destActivity);
-		
+
 		typeCounts = new ResultPair<>();
 		typeCounts.setSourceResult(sourceCounts);
 		typeCounts.setDestinationResult(destinationCounts);
-		
+
 		AsyncMigrationRangeChecksumRequest request = new AsyncMigrationRangeChecksumRequest();
 		request.setMigrationType(MigrationType.NODE);
-		
+
 		asyncMigrationRequest = new AsyncMigrationRequest();
 		asyncMigrationRequest.setAdminRequest(request);
 		jobTarget = JobTarget.SOURCE;
@@ -113,21 +115,21 @@ public class ReporterImplTest {
 		jobStatus.setRequestBody(asyncMigrationRequest);
 		jobStatus.setJobState(AsynchJobState.PROCESSING);
 		type = MigrationType.NODE;
-		
+
 
 		MigrationTypeChecksum sourceChecksum = new MigrationTypeChecksum();
 		sourceChecksum.setChecksum("checksumvalue");
 
 		MigrationTypeChecksum destinationChecksum = new MigrationTypeChecksum();
 		destinationChecksum.setChecksum("checksumvalue");
-		
+
 		checksums = new ResultPair<>();
 		checksums.setSourceResult(sourceChecksum);
 		checksums.setDestinationResult(destinationChecksum);
-		
+
 		reporter = new ReporterImpl(mockConfig, mockLoggerFactory, mockClock);
 	}
-	
+
 	@Test
 	public void testRunCountDownBeforeStart() throws InterruptedException {
 		// call under test
@@ -143,15 +145,15 @@ public class ReporterImplTest {
 		verify(mockLogger).info(String.format(ReporterImpl.COUNTDOWN_FORMAT, 1L));
 		verify(mockLogger).info(ReporterImpl.STARTING_MIGRATION);
 	}
-	
-	@Test (expected=AsyncMigrationException.class)
+
+	@Test
 	public void testRunCountDownBeforeStartInterupt() throws InterruptedException {
 		InterruptedException interrupted = new InterruptedException("Interrupted");
 		doThrow(interrupted).when(mockClock).sleep(anyLong());
-		// call under test 
-		reporter.runCountDownBeforeStart();
+		// call under test
+		assertThrows(AsyncMigrationException.class, () -> reporter.runCountDownBeforeStart());
 	}
-	
+
 	@Test
 	public void testReportMetaDifferences() {
 		reporter.reportMetaDifferences(typeCounts);
@@ -170,7 +172,7 @@ public class ReporterImplTest {
 		String result = ReporterImpl.formatElapse(total);
 		assertEquals("13:49:59.456", result);
 	}
-	
+
 	@Test
 	public void testFormatElapseMSPadded() {
 		long hoursMS = 1 *60*60*1000;
@@ -182,14 +184,14 @@ public class ReporterImplTest {
 		String result = ReporterImpl.formatElapse(total);
 		assertEquals("01:02:03.004", result);
 	}
-	
+
 	@Test
 	public void testFormatElapseMSLow() {
 		// call under test
 		String result = ReporterImpl.formatElapse(8000L);
 		assertEquals("00:00:08.000", result);
 	}
-	
+
 	@Test
 	public void testJson() throws JSONObjectAdapterException {
 		String json = EntityFactory.createJSONStringForEntity(jobStatus);
@@ -197,7 +199,7 @@ public class ReporterImplTest {
 		AsynchronousJobStatus clone = EntityFactory.createEntityFromJSONString(json, AsynchronousJobStatus.class);
 		assertEquals(clone, jobStatus);
 	}
-	
+
 	@Test
 	public void testReportProgressHasMigrationType() {
 		// request with a type.
@@ -205,7 +207,7 @@ public class ReporterImplTest {
 		request.setMigrationType(MigrationType.NODE);
 		asyncMigrationRequest = new AsyncMigrationRequest();
 		asyncMigrationRequest.setAdminRequest(request);
-		
+
 		jobStatus.setStartedOn(new Date(1517773464652L));
 		long elapseMS = 2545L;
 		when(mockClock.currentTimeMillis()).thenReturn(jobStatus.getStartedOn().getTime()+elapseMS);
@@ -213,7 +215,7 @@ public class ReporterImplTest {
 		reporter.reportProgress(jobTarget, jobStatus);
 		verify(mockLogger).info("NODE job: 123 state: PROCESSING on: SOURCE type: 'AsyncMigrationRangeChecksumRequest' elapse: 00:00:02.545");
 	}
-	
+
 	@Test
 	public void testReportProgress() {
 		// request without a type
@@ -225,14 +227,14 @@ public class ReporterImplTest {
 		reporter.reportProgress(jobTarget, jobStatus);
 		verify(mockLogger).info(" job: 123 state: PROCESSING on: SOURCE type: 'AsyncMigrationTypeCountsRequest' elapse: 00:00:51.234");
 	}
-	
+
 	@Test
 	public void testReportChecksumMatch() {
 		// call under test
 		reporter.reportChecksums(type, checksums);
 		verify(mockLogger).info("Checksums match for: NODE");
 	}
-	
+
 	@Test
 	public void testReportChecksumNoMatch() {
 		checksums.getDestinationResult().setChecksum("no match");
@@ -240,5 +242,5 @@ public class ReporterImplTest {
 		reporter.reportChecksums(type, checksums);
 		verify(mockLogger).warn("CHECKSUMS DO NOT MATCH FOR: NODE");
 	}
-	
+
 }

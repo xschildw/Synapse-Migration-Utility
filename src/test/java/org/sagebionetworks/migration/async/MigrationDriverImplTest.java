@@ -1,18 +1,20 @@
 package org.sagebionetworks.migration.async;
 
-import static org.mockito.Matchers.any;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.sagebionetworks.migration.async.checksum.ChecksumDeltaBuilder;
 import org.sagebionetworks.migration.config.Configuration;
 import org.sagebionetworks.migration.utils.TypeToMigrateMetadata;
@@ -23,7 +25,7 @@ import org.sagebionetworks.util.Clock;
 
 import com.google.common.collect.Lists;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class MigrationDriverImplTest {
 
 	@Mock
@@ -45,10 +47,10 @@ public class MigrationDriverImplTest {
 	List<DestinationJob> deltaJobs;
 
 	MigrationDriverImpl migrationDriver;
-	
+
 	private boolean isSourceReadOnly;
 
-	@Before
+	@BeforeEach
 	public void before() {
 		jobOne = new RestoreDestinationJob(MigrationType.NODE, "someKey1");
 		jobTwo = new RestoreDestinationJob(MigrationType.NODE, "someKey2");
@@ -64,7 +66,7 @@ public class MigrationDriverImplTest {
 		primaryTypes = Lists.newArrayList(toMigrate);
 
 		when(mockMissingFromDestinationBuilder.buildDestinationJobs(primaryTypes)).thenReturn(missingJobs.iterator());
-		when(mockChecksumChangeBuilder.buildAllRestoreJobsForMismatchedChecksums(primaryTypes))
+		lenient().when(mockChecksumChangeBuilder.buildAllRestoreJobsForMismatchedChecksums(primaryTypes))
 				.thenReturn(deltaJobs.iterator());
 		when(mockRestoreJobQueue.isDone()).thenReturn(false, false, true);
 
@@ -88,12 +90,12 @@ public class MigrationDriverImplTest {
 		verify(mockClock, times(2)).sleep(MigrationDriverImpl.SLEEP_TIME_MS);
 	}
 
-	@Test(expected = RuntimeException.class)
+	@Test
 	public void testMigratePrimaryTypesInterupt() throws InterruptedException {
 		// Interrupt should become runtime.
 		doThrow(new InterruptedException()).when(mockClock).sleep(any(Long.class));
 		// call under test
-		migrationDriver.migratePrimaryTypes(primaryTypes);
+		assertThrows(RuntimeException.class, () -> migrationDriver.migratePrimaryTypes(primaryTypes));
 	}
 
 }
