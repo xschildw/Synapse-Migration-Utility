@@ -1,7 +1,6 @@
 package org.sagebionetworks.migration;
 
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -99,11 +98,11 @@ public class FullMigrationImplTest {
 		when(mockStackStatusService.isSourceReadOnly()).thenReturn(true);
 
 		checksumResutls = new ResultPair<MigrationTypeChecksum>();
-		lenient().when(mockTypeService.getFullTableChecksums(any(MigrationType.class))).thenReturn(checksumResutls);
 	}
 
 	@Test
 	public void testRunFullMigration() {
+		when(mockTypeService.getFullTableChecksums(any(MigrationType.class))).thenReturn(checksumResutls);
 		// call under test
 		fullMigration.runFullMigration();
 		verify(mockTypeService).getAllCommonMigrationTypes();

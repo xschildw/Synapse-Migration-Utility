@@ -3,11 +3,13 @@ package org.sagebionetworks.migration;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.when;
 
 import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,12 +41,12 @@ public class MigrationClientImplTest {
 		maxNumberRetries = 3;
 		when(mockConfig.getMaxRetries()).thenReturn(maxNumberRetries);
 		when(loggerFactory.getLogger(any())).thenReturn(mockLogger);
-		lenient().when(mockConfig.remainInReadOnlyAfterMigration()).thenReturn(false);
 		client = new MigrationClientImpl(mockConfig, mockStackStatus, mockFullMigration, loggerFactory);
 	}
 
 	@Test
 	public void testMigrate() {
+		when(mockConfig.remainInReadOnlyAfterMigration()).thenReturn(false);
 		// call under test
 		client.migrate();
 		verify(mockConfig).logConfiguration();
@@ -111,6 +113,7 @@ public class MigrationClientImplTest {
 
 	@Test
 	public void testMigrateAsynchExceptionWithSuccess() {
+		when(mockConfig.remainInReadOnlyAfterMigration()).thenReturn(false);
 		// setup a failure
 		AsyncMigrationException knownException = new AsyncMigrationException("a known exception");
 		// exception the first time then success.

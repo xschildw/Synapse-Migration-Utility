@@ -3,7 +3,6 @@ package org.sagebionetworks.migration.async;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -66,8 +65,6 @@ public class MigrationDriverImplTest {
 		primaryTypes = Lists.newArrayList(toMigrate);
 
 		when(mockMissingFromDestinationBuilder.buildDestinationJobs(primaryTypes)).thenReturn(missingJobs.iterator());
-		lenient().when(mockChecksumChangeBuilder.buildAllRestoreJobsForMismatchedChecksums(primaryTypes))
-				.thenReturn(deltaJobs.iterator());
 		when(mockRestoreJobQueue.isDone()).thenReturn(false, false, true);
 
 		migrationDriver = new MigrationDriverImpl(mockConfig, mockMissingFromDestinationBuilder,
@@ -76,6 +73,8 @@ public class MigrationDriverImplTest {
 
 	@Test
 	public void testMigratePrimaryTypes() throws InterruptedException {
+		when(mockChecksumChangeBuilder.buildAllRestoreJobsForMismatchedChecksums(primaryTypes))
+				.thenReturn(deltaJobs.iterator());
 		// call under test
 		migrationDriver.migratePrimaryTypes(primaryTypes);
 		verify(mockMissingFromDestinationBuilder).buildDestinationJobs(primaryTypes);
@@ -83,8 +82,8 @@ public class MigrationDriverImplTest {
 		// Three jobs should be pushed to the queue
 		verify(mockRestoreJobQueue, times(3)).pushJob(any(DestinationJob.class));
 		verify(mockRestoreJobQueue).pushJob(jobOne);
-		verify(mockRestoreJobQueue).pushJob(jobOne);
-		verify(mockRestoreJobQueue).pushJob(jobOne);
+		verify(mockRestoreJobQueue).pushJob(jobTwo);
+		verify(mockRestoreJobQueue).pushJob(jobThree);
 
 		// Should sleep twice waiting for the restore jobs to finish.
 		verify(mockClock, times(2)).sleep(MigrationDriverImpl.SLEEP_TIME_MS);

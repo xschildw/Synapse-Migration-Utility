@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -57,10 +56,6 @@ public class MissingFromDestinationIteratorTest {
 		List<DestinationJob> batchTwo = Lists.newArrayList(
 				two
 		);
-		lenient().when(mockBackupJobExecutor.executeBackupJob(any(MigrationType.class), anyLong(), anyLong())).thenReturn(
-				batchOne.iterator(),
-				batchTwo.iterator()
-		);
 		this.isSourceReadOnly = false;
 	}
 
@@ -79,6 +74,7 @@ public class MissingFromDestinationIteratorTest {
 
 	@Test
 	public void testDestinationIsNull() {
+		stubBackupBatches();
 		TypeToMigrateMetadata ranges = TypeToMigrateMetadata.builder(isSourceReadOnly)
 				.setSource(new MigrationTypeCount().setType(type).setMinid(1L).setMaxid(99L).setCount(98L))
 				.setDest(new MigrationTypeCount().setType(type).setMinid(null).setMaxid(null).setCount(null)).build();
@@ -94,6 +90,7 @@ public class MissingFromDestinationIteratorTest {
 
 	@Test
 	public void testSourceMinNull() {
+		stubBackupBatches();
 		TypeToMigrateMetadata ranges = TypeToMigrateMetadata.builder(isSourceReadOnly)
 				.setSource(new MigrationTypeCount().setType(type).setMinid(null).setMaxid(null).setCount(98L))
 				.setDest(new MigrationTypeCount().setType(type).setMinid(1L).setMaxid(99L).setCount(98L)).build();
@@ -108,6 +105,7 @@ public class MissingFromDestinationIteratorTest {
 
 	@Test
 	public void testSouceMinLessDestinationMin() {
+		stubBackupBatches();
 		TypeToMigrateMetadata ranges = TypeToMigrateMetadata.builder(isSourceReadOnly)
 				.setSource(new MigrationTypeCount().setType(type).setMinid(1L).setMaxid(99L).setCount(98L))
 				.setDest(new MigrationTypeCount().setType(type).setMinid(11L).setMaxid(99L).setCount(88L)).build();
@@ -124,6 +122,7 @@ public class MissingFromDestinationIteratorTest {
 
 	@Test
 	public void testDestinationMinLessSourceMin() {
+		stubBackupBatches();
 		TypeToMigrateMetadata ranges = TypeToMigrateMetadata.builder(isSourceReadOnly)
 				.setSource(new MigrationTypeCount().setType(type).setMinid(12L).setMaxid(99L).setCount(88L))
 				.setDest(new MigrationTypeCount().setType(type).setMinid(2L).setMaxid(99L).setCount(98L)).build();
@@ -139,6 +138,7 @@ public class MissingFromDestinationIteratorTest {
 
 	@Test
 	public void testSouceMaxMoreDestinationMax() {
+		stubBackupBatches();
 		TypeToMigrateMetadata ranges = TypeToMigrateMetadata.builder(isSourceReadOnly)
 				.setSource(new MigrationTypeCount().setType(type).setMinid(1L).setMaxid(99L).setCount(98L))
 				.setDest(new MigrationTypeCount().setType(type).setMinid(1L).setMaxid(89L).setCount(88L)).build();
@@ -154,6 +154,7 @@ public class MissingFromDestinationIteratorTest {
 
 	@Test
 	public void testDestinationMaxMoreSourceMax() {
+		stubBackupBatches();
 		TypeToMigrateMetadata ranges = TypeToMigrateMetadata.builder(isSourceReadOnly)
 				.setSource(new MigrationTypeCount().setType(type).setMinid(1L).setMaxid(99L).setCount(98L))
 				.setDest(new MigrationTypeCount().setType(type).setMinid(1L).setMaxid(102L).setCount(101L)).build();
@@ -169,6 +170,7 @@ public class MissingFromDestinationIteratorTest {
 
 	@Test
 	public void testSourceMinLessDestinationMinAndSourceMaxGreaterDestinationMax() {
+		stubBackupBatches();
 		TypeToMigrateMetadata ranges = TypeToMigrateMetadata.builder(isSourceReadOnly)
 				.setSource(new MigrationTypeCount().setType(type).setMinid(1L).setMaxid(99L).setCount(98L))
 				.setDest(new MigrationTypeCount().setType(type).setMinid(25L).setMaxid(51L).setCount(26L)).build();
@@ -188,6 +190,7 @@ public class MissingFromDestinationIteratorTest {
 
 	@Test
 	public void testSourceMaxLessThanOrEqualDestinationMin() {
+		stubBackupBatches();
 		TypeToMigrateMetadata ranges = TypeToMigrateMetadata.builder(isSourceReadOnly)
 				.setSource(new MigrationTypeCount().setType(type).setMinid(1L).setMaxid(1L).setCount(1L))
 				.setDest(new MigrationTypeCount().setType(type).setMinid(1L).setMaxid(8L).setCount(5L)).build();
@@ -197,6 +200,15 @@ public class MissingFromDestinationIteratorTest {
 		assertTrue(iterator.hasNext());
 
 		verify(mockBackupJobExecutor).executeBackupJob(type, 1L, 8L);
+	}
+
+	private void stubBackupBatches() {
+		List<DestinationJob> batchOne = Lists.newArrayList(one);
+		List<DestinationJob> batchTwo = Lists.newArrayList(two);
+		when(mockBackupJobExecutor.executeBackupJob(any(MigrationType.class), anyLong(), anyLong())).thenReturn(
+				batchOne.iterator(),
+				batchTwo.iterator()
+		);
 	}
 
 }

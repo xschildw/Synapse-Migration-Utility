@@ -3,7 +3,6 @@ package org.sagebionetworks.migration.async;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -62,11 +61,9 @@ public class AsynchronousJobExecutorImplTest {
 		request.setBackupFileKey("backup file");
 		sourceReponse = new RestoreTypeResponse();
 		sourceReponse.setRestoredRowCount(99L);
-		lenient().when(mockSourceFuture.get()).thenReturn(sourceReponse);
 
 		destinationResponse = new RestoreTypeResponse();
 		destinationResponse.setRestoredRowCount(0L);
-		lenient().when(mockDestinationFuture.get()).thenReturn(destinationResponse);
 
 
 		migrationRequest = new AsyncMigrationRequest();
@@ -79,15 +76,19 @@ public class AsynchronousJobExecutorImplTest {
 		when(mockClientFactory.getSourceClient()).thenReturn(mockSourceClient);
 		when(mockClientFactory.getDestinationClient()).thenReturn(mockDestinationClient);
 
-		lenient().when(mockSourceClient.startAdminAsynchronousJob(migrationRequest)).thenReturn(status);
-		lenient().when(mockDestinationClient.startAdminAsynchronousJob(migrationRequest)).thenReturn(status);
-
-		lenient().when(mockFutureFactory.createFuture(status, JobTarget.SOURCE, mockSourceClient, RestoreTypeResponse.class))
-				.thenReturn(mockSourceFuture);
-		lenient().when(mockFutureFactory.createFuture(status, JobTarget.DESTINATION, mockDestinationClient,
-				RestoreTypeResponse.class)).thenReturn(mockDestinationFuture);
-
 		jobExecutor = new AsynchronousJobExecutorImpl(mockClientFactory, mockConfig, mockFutureFactory);
+	}
+
+	private void stubSuccessfulSourceJob() throws SynapseException {
+		when(mockSourceClient.startAdminAsynchronousJob(migrationRequest)).thenReturn(status);
+		when(mockFutureFactory.createFuture(status, JobTarget.SOURCE, mockSourceClient, RestoreTypeResponse.class))
+				.thenReturn(mockSourceFuture);
+	}
+
+	private void stubSuccessfulDestinationJob() throws SynapseException {
+		when(mockDestinationClient.startAdminAsynchronousJob(migrationRequest)).thenReturn(status);
+		when(mockFutureFactory.createFuture(status, JobTarget.DESTINATION, mockDestinationClient,
+				RestoreTypeResponse.class)).thenReturn(mockDestinationFuture);
 	}
 
 	@Test
@@ -98,6 +99,7 @@ public class AsynchronousJobExecutorImplTest {
 
 	@Test
 	public void testStartJobSource() throws SynapseException {
+		stubSuccessfulSourceJob();
 		JobTarget jobTarget = JobTarget.SOURCE;
 		// call under test
 		Future<RestoreTypeResponse> future = jobExecutor.startJob(jobTarget, request, RestoreTypeResponse.class);
@@ -109,6 +111,7 @@ public class AsynchronousJobExecutorImplTest {
 
 	@Test
 	public void testStartJobDestination() throws SynapseException {
+		stubSuccessfulDestinationJob();
 		JobTarget jobTarget = JobTarget.DESTINATION;
 		// call under test
 		Future<RestoreTypeResponse> future = jobExecutor.startJob(jobTarget, request, RestoreTypeResponse.class);
@@ -129,6 +132,7 @@ public class AsynchronousJobExecutorImplTest {
 
 	@Test
 	public void testStartDestionationJob() throws SynapseException {
+		stubSuccessfulDestinationJob();
 		// call under test
 		Future<RestoreTypeResponse> future = jobExecutor.startDestionationJob(request, RestoreTypeResponse.class);
 		assertEquals(mockDestinationFuture, future);
@@ -139,6 +143,7 @@ public class AsynchronousJobExecutorImplTest {
 
 	@Test
 	public void testStartSourceJob() throws SynapseException {
+		stubSuccessfulSourceJob();
 		// call under test
 		Future<RestoreTypeResponse> future = jobExecutor.startSourceJob(request, RestoreTypeResponse.class);
 		assertEquals(mockSourceFuture, future);
@@ -147,7 +152,15 @@ public class AsynchronousJobExecutorImplTest {
 	}
 
 	@Test
-	public void testExecuteSourceAndDestinationJob() {
+	public void testExecuteSourceAndDestinationJob() throws SynapseException, InterruptedException, ExecutionException {
+		when(mockSourceClient.startAdminAsynchronousJob(migrationRequest)).thenReturn(status);
+		when(mockDestinationClient.startAdminAsynchronousJob(migrationRequest)).thenReturn(status);
+		when(mockFutureFactory.createFuture(status, JobTarget.SOURCE, mockSourceClient, RestoreTypeResponse.class))
+				.thenReturn(mockSourceFuture);
+		when(mockFutureFactory.createFuture(status, JobTarget.DESTINATION, mockDestinationClient,
+				RestoreTypeResponse.class)).thenReturn(mockDestinationFuture);
+		when(mockSourceFuture.get()).thenReturn(sourceReponse);
+		when(mockDestinationFuture.get()).thenReturn(destinationResponse);
 		// call under test
 		ResultPair<RestoreTypeResponse> results = jobExecutor.executeSourceAndDestinationJob(request,
 				RestoreTypeResponse.class);
@@ -157,7 +170,13 @@ public class AsynchronousJobExecutorImplTest {
 	}
 
 	@Test
-	public void testExecuteSourceAndDestinationJobError() throws InterruptedException, ExecutionException {
+	public void testExecuteSourceAndDestinationJobError() throws SynapseException, InterruptedException, ExecutionException {
+		when(mockSourceClient.startAdminAsynchronousJob(migrationRequest)).thenReturn(status);
+		when(mockDestinationClient.startAdminAsynchronousJob(migrationRequest)).thenReturn(status);
+		when(mockFutureFactory.createFuture(status, JobTarget.SOURCE, mockSourceClient, RestoreTypeResponse.class))
+				.thenReturn(mockSourceFuture);
+		when(mockFutureFactory.createFuture(status, JobTarget.DESTINATION, mockDestinationClient,
+				RestoreTypeResponse.class)).thenReturn(mockDestinationFuture);
 		when(mockSourceFuture.get()).thenThrow(new ExecutionException(new RuntimeException("failed")));
 		// call under test
 		assertThrows(AsyncMigrationException.class,
@@ -165,14 +184,19 @@ public class AsynchronousJobExecutorImplTest {
 	}
 
 	@Test
-	public void testExecuteDestinationJob() throws AsyncMigrationException, InterruptedException {
+	public void testExecuteDestinationJob() throws SynapseException, AsyncMigrationException, InterruptedException, ExecutionException {
+		stubSuccessfulDestinationJob();
+		when(mockDestinationFuture.get()).thenReturn(destinationResponse);
 		// call under test
 		RestoreTypeResponse result = jobExecutor.executeDestinationJob(request, RestoreTypeResponse.class);
 		assertEquals(destinationResponse, result);
 	}
 
 	@Test
-	public void testExecuteDestinationJobException() throws Exception {
+	public void testExecuteDestinationJobException() throws SynapseException, Exception {
+		when(mockDestinationClient.startAdminAsynchronousJob(migrationRequest)).thenReturn(status);
+		when(mockFutureFactory.createFuture(status, JobTarget.DESTINATION, mockDestinationClient,
+				RestoreTypeResponse.class)).thenReturn(mockDestinationFuture);
 		when(mockDestinationFuture.get()).thenThrow(new ExecutionException(new RuntimeException("failed")));
 		// call under test
 		assertThrows(AsyncMigrationException.class,
@@ -180,14 +204,19 @@ public class AsynchronousJobExecutorImplTest {
 	}
 
 	@Test
-	public void testExecuteSourceJob() throws AsyncMigrationException, InterruptedException {
+	public void testExecuteSourceJob() throws SynapseException, AsyncMigrationException, InterruptedException, ExecutionException {
+		stubSuccessfulSourceJob();
+		when(mockSourceFuture.get()).thenReturn(sourceReponse);
 		// call under test
 		RestoreTypeResponse result = jobExecutor.executeSourceJob(request, RestoreTypeResponse.class);
 		assertEquals(sourceReponse, result);
 	}
 
 	@Test
-	public void testExecuteSourceJobException() throws Exception {
+	public void testExecuteSourceJobException() throws SynapseException, Exception {
+		when(mockSourceClient.startAdminAsynchronousJob(migrationRequest)).thenReturn(status);
+		when(mockFutureFactory.createFuture(status, JobTarget.SOURCE, mockSourceClient, RestoreTypeResponse.class))
+				.thenReturn(mockSourceFuture);
 		when(mockSourceFuture.get()).thenThrow(new ExecutionException(new RuntimeException("failed")));
 		// call under test
 		assertThrows(AsyncMigrationException.class,

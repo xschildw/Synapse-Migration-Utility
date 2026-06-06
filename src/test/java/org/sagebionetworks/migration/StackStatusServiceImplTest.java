@@ -4,7 +4,8 @@ import static org.mockito.Mockito.verify;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,15 +36,12 @@ public class StackStatusServiceImplTest {
 	public void before() throws SynapseException {
 		when(mockClientFactory.getDestinationClient()).thenReturn(mockDestinationClient);
 		when(mockClientFactory.getSourceClient()).thenReturn(mockSourceClient);
-		StackStatus startStatus = new StackStatus();
-		startStatus.setCurrentMessage("starting message");
-		startStatus.setStatus(StatusEnum.DOWN);
-		lenient().when(mockDestinationClient.getCurrentStackStatus()).thenReturn(startStatus);
 		service = new StackStatusServiceImpl(mockClientFactory);
 	}
 
 	@Test
 	public void testSetDestinationReadOnly() throws SynapseException {
+		when(mockDestinationClient.getCurrentStackStatus()).thenReturn(createStartStatus());
 		// call under test
 		service.setDestinationReadOnly();
 		StackStatus expectedStatus = new StackStatus();
@@ -63,6 +61,7 @@ public class StackStatusServiceImplTest {
 
 	@Test
 	public void testSetDestinationReadWrite() throws SynapseException {
+		when(mockDestinationClient.getCurrentStackStatus()).thenReturn(createStartStatus());
 		// call under test
 		service.setDestinationReadWrite();
 		StackStatus expectedStatus = new StackStatus();
@@ -108,5 +107,12 @@ public class StackStatusServiceImplTest {
 		// call under test
 		boolean isReadOnly = service.isSourceReadOnly();
 		assertFalse(isReadOnly);
+	}
+
+	private StackStatus createStartStatus() {
+		StackStatus startStatus = new StackStatus();
+		startStatus.setCurrentMessage("starting message");
+		startStatus.setStatus(StatusEnum.DOWN);
+		return startStatus;
 	}
 }

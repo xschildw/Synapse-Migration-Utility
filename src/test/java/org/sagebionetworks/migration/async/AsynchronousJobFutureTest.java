@@ -91,7 +91,6 @@ public class AsynchronousJobFutureTest {
 		failedStatus.setErrorMessage(errorMessage);
 
 		defaultTimeoutMS = 11;
-		lenient().when(mockClock.currentTimeMillis()).thenReturn(5000L,5001L,5002L,5003L,5004L,5005L,5006L,5007L,5008L,5009L);
 		// complete after two tries
 		when(mockClient.getAdminAsynchronousJobStatus(jobId)).thenReturn(processingStatus, processingStatus, completeStatus);
 		type = MigrationType.NODE;
@@ -102,8 +101,13 @@ public class AsynchronousJobFutureTest {
 
 	}
 
+	private void stubDefaultClock() {
+		when(mockClock.currentTimeMillis()).thenReturn(5000L,5001L,5002L,5003L,5004L,5005L,5006L,5007L,5008L,5009L);
+	}
+
 	@Test
 	public void testIsDoneComlete() throws SynapseException {
+		stubDefaultClock();
 		// complete after two tries
 		when(mockClient.getAdminAsynchronousJobStatus(jobId)).thenReturn(processingStatus, processingStatus, completeStatus);
 		assertFalse(future.isDone());
@@ -119,6 +123,7 @@ public class AsynchronousJobFutureTest {
 
 	@Test
 	public void testIsDoneFailed() throws SynapseException {
+		stubDefaultClock();
 		// failed after two tries
 		when(mockClient.getAdminAsynchronousJobStatus(jobId)).thenReturn(processingStatus, processingStatus, failedStatus);
 		assertFalse(future.isDone());
@@ -170,6 +175,7 @@ public class AsynchronousJobFutureTest {
 	 */
 	@Test
 	public void testGetTimeoutUnits() throws Exception {
+		stubDefaultClock();
 		long timeout = 1;
 		TimeUnit unit = TimeUnit.HOURS;
 		// call under test
@@ -183,6 +189,7 @@ public class AsynchronousJobFutureTest {
 
 	@Test
 	public void testGetTimeoutUnitsExpired() throws Exception {
+		stubDefaultClock();
 		long timeout = 1;
 		TimeUnit unit = TimeUnit.MILLISECONDS;
 		try {
@@ -226,6 +233,7 @@ public class AsynchronousJobFutureTest {
 
 	@Test
 	public void testGetTimeout() throws InterruptedException, ExecutionException {
+		stubDefaultClock();
 		// timeout from the config.
 		when(mockConfiguration.getWorkerTimeoutMs()).thenReturn(1L);
 		// create a new future that uses this timeout.

@@ -72,9 +72,6 @@ public class ChecksumRangeExecutorTest {
 		three.setMigrationType(type);
 		jobsTwo = Lists.newArrayList(three);
 
-		lenient().when(mockBackupJobExecutor.executeBackupJob(any(MigrationType.class), any(Long.class), any(Long.class)))
-				.thenReturn(jobsOne.iterator(), jobsTwo.iterator());
-
 		batchSize = 10L;
 
 		srcOne = new RangeChecksum();
@@ -106,7 +103,6 @@ public class ChecksumRangeExecutorTest {
 		ResultPair<AdminResponse> resultPair = new ResultPair<>();
 		resultPair.setSourceResult(sourceResponse);
 		resultPair.setDestinationResult(destinationResponse);
-		lenient().when(mockAsynchronousJobExecutor.executeSourceAndDestinationJob(any(), any())).thenReturn(resultPair);
 
 		TypeToMigrateMetadata metadata = TypeToMigrateMetadata.builder(false)
 				.setSource(new MigrationTypeCount().setMinid(minimumId).setMaxid(maximumId).setType(type))
@@ -210,6 +206,7 @@ public class ChecksumRangeExecutorTest {
 
 	@Test
 	public void testFindAllMismatchedRanges() {
+		stubChecksumResults();
 		// call under test
 		Iterator<RangeChecksum> result = extractor.findAllMismatchedRanges();
 		assertNotNull(result);
@@ -247,6 +244,8 @@ public class ChecksumRangeExecutorTest {
 
 	@Test
 	public void testHasNextAndNext() {
+		stubChecksumResults();
+		stubBackupJobs();
 		// calls under test
 		assertTrue(extractor.hasNext());
 		assertEquals(jobsOne.get(0), extractor.next());
@@ -259,6 +258,30 @@ public class ChecksumRangeExecutorTest {
 		verify(mockAsynchronousJobExecutor).executeSourceAndDestinationJob(any(), any());
 		verify(mockBackupJobExecutor).executeBackupJob(type, 0L, 9L);
 		verify(mockBackupJobExecutor).executeBackupJob(type, 10L, 19L);
+	}
+
+	private void stubBackupJobs() {
+		when(mockBackupJobExecutor.executeBackupJob(any(MigrationType.class), any(Long.class), any(Long.class)))
+				.thenReturn(jobsOne.iterator(), jobsTwo.iterator());
+	}
+
+	private void stubChecksumResults() {
+		BatchChecksumResponse sourceResponse = new BatchChecksumResponse();
+		sourceResponse.setCheksums(Lists.newArrayList(srcOne, srcTwo));
+		sourceResponse.setMigrationType(MigrationType.FILE_HANDLE);
+
+		BatchChecksumResponse destinationResponse = new BatchChecksumResponse();
+		RangeChecksum destOne = copy(srcOne);
+		destOne.setChecksum("no match");
+		RangeChecksum destTwo = copy(srcTwo);
+		destTwo.setChecksum("no match two");
+		destinationResponse.setCheksums(Lists.newArrayList(destOne, destTwo));
+		destinationResponse.setMigrationType(MigrationType.FILE_HANDLE);
+
+		ResultPair<AdminResponse> resultPair = new ResultPair<>();
+		resultPair.setSourceResult(sourceResponse);
+		resultPair.setDestinationResult(destinationResponse);
+		when(mockAsynchronousJobExecutor.executeSourceAndDestinationJob(any(), any())).thenReturn(resultPair);
 	}
 
 	/**

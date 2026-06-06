@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -61,23 +60,11 @@ public class RestoreJobQueueImplTest {
 		aclOne = new RestoreDestinationJob(MigrationType.ACL, "keyThree");
 		aclTwo = new RestoreDestinationJob(MigrationType.ACL, "keyFour");
 		changeJob = new RestoreDestinationJob(MigrationType.CHANGE, "keyChange");
-
-		lenient().when(mockJobExecutor.startDestinationJob(nodeOne)).thenReturn(mockNodeOneFuture);
-		lenient().when(mockJobExecutor.startDestinationJob(nodeTwo)).thenReturn(mockNodeTwoFuture);
-		lenient().when(mockJobExecutor.startDestinationJob(aclOne)).thenReturn(mockAclOneFuture);
-		lenient().when(mockJobExecutor.startDestinationJob(aclTwo)).thenReturn(mockAclTwoFuture);
-		lenient().when(mockJobExecutor.startDestinationJob(changeJob)).thenReturn(mockChangeFuture);
-
-		lenient().when(mockNodeOneFuture.isDone()).thenReturn(false, false, false, true);
-		lenient().when(mockNodeTwoFuture.isDone()).thenReturn(false, true);
-		lenient().when(mockAclOneFuture.isDone()).thenReturn(false, false, true);
-		lenient().when(mockAclTwoFuture.isDone()).thenReturn(false, false, false, true);
-
-		lenient().when(mockChangeFuture.isDone()).thenReturn(false, true);
 	}
 
 	@Test
 	public void testAll() {
+		stubAllJobs();
 		// add all of the jobs to the queue
 		queue.pushJob(nodeOne);
 		queue.pushJob(nodeTwo);
@@ -107,6 +94,7 @@ public class RestoreJobQueueImplTest {
 	 */
 	@Test
 	public void testChagneJobs() {
+		stubChangeJobScenario();
 		// add all of the jobs to the queue
 		queue.pushJob(nodeOne);
 		queue.pushJob(aclOne);
@@ -129,6 +117,8 @@ public class RestoreJobQueueImplTest {
 
 	@Test
 	public void testLastException() throws InterruptedException, ExecutionException {
+		when(mockJobExecutor.startDestinationJob(nodeOne)).thenReturn(mockNodeOneFuture);
+		when(mockJobExecutor.startDestinationJob(nodeTwo)).thenReturn(mockNodeTwoFuture);
 		when(mockNodeOneFuture.isDone()).thenReturn(true);
 		AsyncMigrationException firstException = new AsyncMigrationException("One");
 		when(mockNodeOneFuture.get()).thenThrow(firstException);
@@ -222,6 +212,28 @@ public class RestoreJobQueueImplTest {
 		}catch(RuntimeException e) {
 			assertEquals(e.getCause(), nonTermiante);
 		}
+	}
+
+	private void stubAllJobs() {
+		when(mockJobExecutor.startDestinationJob(nodeOne)).thenReturn(mockNodeOneFuture);
+		when(mockJobExecutor.startDestinationJob(nodeTwo)).thenReturn(mockNodeTwoFuture);
+		when(mockJobExecutor.startDestinationJob(aclOne)).thenReturn(mockAclOneFuture);
+		when(mockJobExecutor.startDestinationJob(aclTwo)).thenReturn(mockAclTwoFuture);
+
+		when(mockNodeOneFuture.isDone()).thenReturn(false, false, false, true);
+		when(mockNodeTwoFuture.isDone()).thenReturn(false, true);
+		when(mockAclOneFuture.isDone()).thenReturn(false, false, true);
+		when(mockAclTwoFuture.isDone()).thenReturn(false, false, false, true);
+	}
+
+	private void stubChangeJobScenario() {
+		when(mockJobExecutor.startDestinationJob(nodeOne)).thenReturn(mockNodeOneFuture);
+		when(mockJobExecutor.startDestinationJob(aclOne)).thenReturn(mockAclOneFuture);
+		when(mockJobExecutor.startDestinationJob(changeJob)).thenReturn(mockChangeFuture);
+
+		when(mockNodeOneFuture.isDone()).thenReturn(false, false, false, true);
+		when(mockAclOneFuture.isDone()).thenReturn(false, false, true);
+		when(mockChangeFuture.isDone()).thenReturn(false, true);
 	}
 
 }

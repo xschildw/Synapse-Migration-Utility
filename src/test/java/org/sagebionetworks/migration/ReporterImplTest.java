@@ -6,7 +6,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -67,8 +66,7 @@ public class ReporterImplTest {
 	@BeforeEach
 	public void before() {
 		when(mockLoggerFactory.getLogger(any())).thenReturn(mockLogger);
-		long delayMS = 4000L;
-		lenient().when(mockConfig.getDelayBeforeMigrationStartMS()).thenReturn(delayMS);
+		delayMS = 4000L;
 
 		MigrationTypeCount sourceNodeCount = new MigrationTypeCount();
 		sourceNodeCount.setType(MigrationType.NODE);
@@ -132,6 +130,7 @@ public class ReporterImplTest {
 
 	@Test
 	public void testRunCountDownBeforeStart() throws InterruptedException {
+		when(mockConfig.getDelayBeforeMigrationStartMS()).thenReturn(delayMS);
 		// call under test
 		reporter.runCountDownBeforeStart();
 		// should sleep 4 times
@@ -148,6 +147,7 @@ public class ReporterImplTest {
 
 	@Test
 	public void testRunCountDownBeforeStartInterupt() throws InterruptedException {
+		when(mockConfig.getDelayBeforeMigrationStartMS()).thenReturn(delayMS);
 		InterruptedException interrupted = new InterruptedException("Interrupted");
 		doThrow(interrupted).when(mockClock).sleep(anyLong());
 		// call under test

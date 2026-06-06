@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -53,9 +52,7 @@ public class BackupJobExecutorImplTest {
 	@BeforeEach
 	public void before() {
 		batchSize = 1;
-		lenient().when(mockConfiguration.getMaximumBackupBatchSize()).thenReturn(batchSize);
 		backupAliasType = BackupAliasType.TABLE_NAME;
-		lenient().when(mockConfiguration.getBackupAliasType()).thenReturn(backupAliasType);
 		migrationType = MigrationType.NODE;
 
 		rangeResponse = new CalculateOptimalRangeResponse();
@@ -65,8 +62,6 @@ public class BackupJobExecutorImplTest {
 		backupTypeResponse = new BackupTypeResponse();
 		backupFile = "backupFile";
 		backupTypeResponse.setBackupFileKey(backupFile);
-
-		lenient().when(mockAsynchronousJobExecutor.executeSourceJob(any(AdminRequest.class), any())).thenReturn(rangeResponse, backupTypeResponse);
 
 		executor = new BackupJobExecutorImpl(mockConfiguration, mockAsynchronousJobExecutor);
 	}
@@ -186,6 +181,10 @@ public class BackupJobExecutorImplTest {
 
 	@Test
 	public void testExecuteBackupJob() {
+		when(mockConfiguration.getMaximumBackupBatchSize()).thenReturn(batchSize);
+		when(mockConfiguration.getBackupAliasType()).thenReturn(backupAliasType);
+		when(mockAsynchronousJobExecutor.executeSourceJob(any(AdminRequest.class), any()))
+				.thenReturn(rangeResponse, backupTypeResponse);
 		long minimumId = 1L;
 		long maximumId = 8L;
 		// call under test
