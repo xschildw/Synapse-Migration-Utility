@@ -16,7 +16,6 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Properties;
-import java.util.regex.Pattern;
 
 import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,9 +26,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.sagebionetworks.migration.LoggerFactory;
 import org.sagebionetworks.repo.model.daemon.BackupAliasType;
 
-import com.amazonaws.services.secretsmanager.AWSSecretsManager;
-import com.amazonaws.services.secretsmanager.model.GetSecretValueRequest;
-import com.amazonaws.services.secretsmanager.model.GetSecretValueResult;
+import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
+import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueRequest;
+import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueResponse;
 
 @ExtendWith(MockitoExtension.class)
 public class MigrationConfigurationImplTest {
@@ -43,7 +42,7 @@ public class MigrationConfigurationImplTest {
 	@Mock
 	Logger mockLogger;
 	@Mock
-	AWSSecretsManager mockSecretManager;
+	SecretsManagerClient mockSecretManager;
 
 	MigrationConfigurationImpl config;
 
@@ -105,12 +104,7 @@ public class MigrationConfigurationImplTest {
 	@Test
 	public void testLogConfiguration() {
 		props.put(MigrationConfigurationImpl.KEY_STACK, "dev");
-		when(mockSecretManager
-				.getSecretValue(new GetSecretValueRequest().withSecretId(MigrationConfigurationImpl.KEY_SOURCE_SERVICE_SECRET)))
-				.thenReturn(new GetSecretValueResult().withSecretString(sourceServiceSecret));
-		when(mockSecretManager
-				.getSecretValue(new GetSecretValueRequest().withSecretId(MigrationConfigurationImpl.KEY_DESTINATION_SERVICE_SECRET)))
-				.thenReturn(new GetSecretValueResult().withSecretString(destinationServiceSecret));
+		stubSecrets();
 
 		// call under test
 		config.logConfiguration();
@@ -131,12 +125,7 @@ public class MigrationConfigurationImplTest {
 	}
 	@Test
 	public void testGetConnectionInfoProd() {
-		when(mockSecretManager
-				.getSecretValue(new GetSecretValueRequest().withSecretId(MigrationConfigurationImpl.KEY_SOURCE_SERVICE_SECRET)))
-				.thenReturn(new GetSecretValueResult().withSecretString(sourceServiceSecret));
-		when(mockSecretManager
-				.getSecretValue(new GetSecretValueRequest().withSecretId(MigrationConfigurationImpl.KEY_DESTINATION_SERVICE_SECRET)))
-				.thenReturn(new GetSecretValueResult().withSecretString(destinationServiceSecret));
+		stubSecrets();
 		props.put(MigrationConfigurationImpl.KEY_STACK, "prod");
 		// source
 		SynapseConnectionInfo connInfo = config.getSourceConnectionInfo();
@@ -156,12 +145,7 @@ public class MigrationConfigurationImplTest {
 
 	@Test
 	public void testGetConnectionInfoDev() {
-		when(mockSecretManager
-				.getSecretValue(new GetSecretValueRequest().withSecretId(MigrationConfigurationImpl.KEY_SOURCE_SERVICE_SECRET)))
-				.thenReturn(new GetSecretValueResult().withSecretString(sourceServiceSecret));
-		when(mockSecretManager
-				.getSecretValue(new GetSecretValueRequest().withSecretId(MigrationConfigurationImpl.KEY_DESTINATION_SERVICE_SECRET)))
-				.thenReturn(new GetSecretValueResult().withSecretString(destinationServiceSecret));
+		stubSecrets();
 		props.put(MigrationConfigurationImpl.KEY_STACK, "dev");
 
 		SynapseConnectionInfo connInfo = config.getSourceConnectionInfo();
@@ -181,9 +165,7 @@ public class MigrationConfigurationImplTest {
 
 	@Test
 	public void testGetDestinationConnectionInfoTstProd() {
-		when(mockSecretManager
-				.getSecretValue(new GetSecretValueRequest().withSecretId(MigrationConfigurationImpl.KEY_DESTINATION_SERVICE_SECRET)))
-				.thenReturn(new GetSecretValueResult().withSecretString(destinationServiceSecret));
+		stubSecrets();
 		props.put(MigrationConfigurationImpl.KEY_STACK, "prod");
 		props.put(MigrationConfigurationImpl.KEY_DESTINATION_STACK_TYPE, "tst");
 
@@ -197,9 +179,7 @@ public class MigrationConfigurationImplTest {
 
 	@Test
 	public void testGetDestinationConnectionInfoTstDev() {
-		when(mockSecretManager
-				.getSecretValue(new GetSecretValueRequest().withSecretId(MigrationConfigurationImpl.KEY_DESTINATION_SERVICE_SECRET)))
-				.thenReturn(new GetSecretValueResult().withSecretString(destinationServiceSecret));
+		stubSecrets();
 		props.put(MigrationConfigurationImpl.KEY_STACK, "dev");
 		props.put(MigrationConfigurationImpl.KEY_DESTINATION_STACK_TYPE, "TST");
 
@@ -218,6 +198,19 @@ public class MigrationConfigurationImplTest {
 
 		// call under test
 		assertThrows(IllegalArgumentException.class, () -> config.getDestinationConnectionInfo());
+	}
+
+	private void stubSecrets() {
+		when(mockSecretManager.getSecretValue(any(GetSecretValueRequest.class))).thenAnswer(invocation -> {
+			GetSecretValueRequest request = invocation.getArgument(0);
+			if (MigrationConfigurationImpl.KEY_SOURCE_SERVICE_SECRET.equals(request.secretId())) {
+				return GetSecretValueResponse.builder().secretString(sourceServiceSecret).build();
+			}
+			if (MigrationConfigurationImpl.KEY_DESTINATION_SERVICE_SECRET.equals(request.secretId())) {
+				return GetSecretValueResponse.builder().secretString(destinationServiceSecret).build();
+			}
+			throw new IllegalArgumentException("Unexpected secret id: " + request.secretId());
+		});
 	}
 
 }

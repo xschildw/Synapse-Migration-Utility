@@ -32,12 +32,11 @@ import org.sagebionetworks.migration.factory.SynapseClientFactoryImpl;
 import org.sagebionetworks.util.Clock;
 import org.sagebionetworks.util.DefaultClock;
 
-import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.secretsmanager.AWSSecretsManager;
-import com.amazonaws.services.secretsmanager.AWSSecretsManagerClientBuilder;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 
 public class MigrationModule extends AbstractModule {
 
@@ -65,11 +64,11 @@ public class MigrationModule extends AbstractModule {
 	}
 	
 	@Provides
-	public AWSSecretsManager provideAWSSecretsManager() {
-	    AWSSecretsManagerClientBuilder builder = AWSSecretsManagerClientBuilder.standard();
-		builder.withCredentials(new DefaultAWSCredentialsProviderChain());
-		builder.withRegion(Regions.US_EAST_1);
-	    return builder.build();
+	public SecretsManagerClient provideAWSSecretsManager() {
+		return SecretsManagerClient.builder()
+			.credentialsProvider(DefaultCredentialsProvider.create())
+			.region(Region.US_EAST_1)
+			.build();
 	}
 	
 	/**
