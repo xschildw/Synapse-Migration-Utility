@@ -31,11 +31,18 @@
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<maven.compiler.plugin.version>3.8.0</maven.compiler.plugin.version>
+		<maven.assembly.plugin.version>3.7.1</maven.assembly.plugin.version>
+		<maven.jar.plugin.version>2.4</maven.jar.plugin.version>
+		<maven.surefire.plugin.version>3.2.5</maven.surefire.plugin.version>
+		<maven.compiler.release>21</maven.compiler.release>
 		<log4j.version>2.25.3</log4j.version>
 		<commons-logging.version>1.2</commons-logging.version>
 		<synapseclient.version>586.0</synapseclient.version>
 		<junit.version>5.10.2</junit.version>
-		<awssdk.version>1.12.15</awssdk.version>
+		<awssdk.version>1.12.768</awssdk.version>
+		<guava.version>30.1.1-jre</guava.version>
+		<guice.version>5.1.0</guice.version>
 		<mockito.version>5.12.0</mockito.version>
 		<xstream.version>1.4.17</xstream.version>
 	</properties>
@@ -88,12 +95,12 @@
 		<dependency>
 			<groupId>com.google.guava</groupId>
 			<artifactId>guava</artifactId>
-			<version>23.0</version>
+			<version>${guava.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.google.inject</groupId>
 			<artifactId>guice</artifactId>
-			<version>4.1.0</version>
+			<version>${guice.version}</version>
 		</dependency>
 		<!-- The AWS Java SDK -->
 		<dependency>
@@ -119,7 +126,7 @@
 		<plugins>
 			<plugin>
 				<artifactId>maven-assembly-plugin</artifactId>
-				<version>2.1</version>
+				<version>${maven.assembly.plugin.version}</version>
 				<configuration>
 					<descriptorRefs>
 						<descriptorRef>jar-with-dependencies</descriptorRef>
@@ -138,15 +145,20 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.8.0</version>
+				<version>${maven.compiler.plugin.version}</version>
 				<configuration>
-					<release>11</release>
+					<release>${maven.compiler.release}</release>
 				</configuration>
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
-				<version>3.2.5</version>
+				<version>${maven.surefire.plugin.version}</version>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>${maven.jar.plugin.version}</version>
 			</plugin>
 		</plugins>
 
