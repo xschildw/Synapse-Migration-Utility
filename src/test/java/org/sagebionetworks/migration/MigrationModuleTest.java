@@ -1,26 +1,26 @@
 package org.sagebionetworks.migration;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.*;
 
 import java.util.Timer;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import org.sagebionetworks.migration.config.MigrationConfigurationImpl;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class MigrationModuleTest {
-	
+
 	@Mock
 	Runnable mockRunner;
-	
+
 	@Test
 	public void testInjector() {
 
@@ -28,7 +28,7 @@ public class MigrationModuleTest {
 		Injector injector = Guice.createInjector(new MigrationModule());
 		assertNotNull(injector);
 	}
-	
+
 	@Test
 	public void testStartDaemonTimerPeriod() throws InterruptedException {
 		long delayMS = 10;
@@ -39,7 +39,7 @@ public class MigrationModuleTest {
 		Thread.sleep(1000L);
 		verify(mockRunner, atLeast(8)).run();
 	}
-	
+
 	@Test
 	public void testStartDaemonTimerDelay() throws InterruptedException {
 		// the delay is longer than the test wait.
@@ -51,6 +51,6 @@ public class MigrationModuleTest {
 		Thread.sleep(1000L);
 		verify(mockRunner, never()).run();
 	}
-	
+
 
 }
