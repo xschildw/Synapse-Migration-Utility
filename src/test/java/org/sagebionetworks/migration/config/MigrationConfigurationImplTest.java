@@ -1,12 +1,11 @@
 package org.sagebionetworks.migration.config;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -16,21 +15,22 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Properties;
+import java.util.regex.Pattern;
 
 import org.apache.logging.log4j.Logger;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.runners.MockitoJUnitRunner;
 import org.sagebionetworks.migration.LoggerFactory;
 import org.sagebionetworks.repo.model.daemon.BackupAliasType;
 
-import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
-import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueRequest;
-import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueResponse;
+import com.amazonaws.services.secretsmanager.AWSSecretsManager;
+import com.amazonaws.services.secretsmanager.model.GetSecretValueRequest;
+import com.amazonaws.services.secretsmanager.model.GetSecretValueResult;
 
-@ExtendWith(MockitoExtension.class)
+@RunWith(MockitoJUnitRunner.class)
 public class MigrationConfigurationImplTest {
 
 	@Mock
@@ -42,26 +42,26 @@ public class MigrationConfigurationImplTest {
 	@Mock
 	Logger mockLogger;
 	@Mock
-	SecretsManagerClient mockSecretManager;
-
+	AWSSecretsManager mockSecretManager;
+	
 	MigrationConfigurationImpl config;
-
+	
 	String sampleKey;
 	String sampleValue;
 	String serviceKey;
 	String sourceServiceSecret;
 	String destinationServiceSecret;
 	Properties props;
-
-	@BeforeEach
+	
+	@Before
 	public void before() throws IOException {
-
+		
 		sampleKey = "sampleKey";
 		sampleValue = "sampleValue";
 		serviceKey = "migration";
 		sourceServiceSecret = "sourceKeySecret";
 		destinationServiceSecret = "destinationKeySecret";
-
+		
 		props = new Properties();
 		props.put(sampleKey, sampleValue);
 		props.put(MigrationConfigurationImpl.KEY_SERVICE_KEY, serviceKey);
@@ -75,10 +75,10 @@ public class MigrationConfigurationImplTest {
 		when(mockPropertyProvider.getSystemProperties()).thenReturn(props);
 
 		when(mockLoggerFactory.getLogger(any())).thenReturn(mockLogger);
-
+		
 		config = new MigrationConfigurationImpl(mockLoggerFactory, mockPropertyProvider, mockFileProvider, mockSecretManager);
 	}
-
+	
 
 	@Test
 	public void testRepoEndpointFormat() throws MalformedURLException {
@@ -93,30 +93,35 @@ public class MigrationConfigurationImplTest {
 		String value = config.getProperty(sampleKey);
 		assertEquals(sampleValue, value);
 	}
-
-
-	@Test
+	
+	
+	@Test (expected=IllegalArgumentException.class)
 	public void testGetPropertyDoesNotExist() {
 		// call under test
-		assertThrows(IllegalArgumentException.class, () -> config.getProperty("doesNotExist"));
+		config.getProperty("doesNotExist");
 	}
 
 	@Test
 	public void testLogConfiguration() {
 		props.put(MigrationConfigurationImpl.KEY_STACK, "dev");
-		stubSecrets();
+		when(mockSecretManager
+				.getSecretValue(new GetSecretValueRequest().withSecretId(MigrationConfigurationImpl.KEY_SOURCE_SERVICE_SECRET)))
+				.thenReturn(new GetSecretValueResult().withSecretString(sourceServiceSecret));
+		when(mockSecretManager
+				.getSecretValue(new GetSecretValueRequest().withSecretId(MigrationConfigurationImpl.KEY_DESTINATION_SERVICE_SECRET)))
+				.thenReturn(new GetSecretValueResult().withSecretString(destinationServiceSecret));
 
 		// call under test
 		config.logConfiguration();
 		verify(mockLogger, times(8)).info(anyString());
 	}
-
+	
 	@Test
 	public void testRemainInReadOnlyAfterMigrationDeafult() {
 		// by default should return false.
 		assertFalse(config.remainInReadOnlyAfterMigration());
 	}
-
+	
 	@Test
 	public void testRemainInReadOnlyAfterMigrationSet() {
 		// set the value
@@ -125,7 +130,12 @@ public class MigrationConfigurationImplTest {
 	}
 	@Test
 	public void testGetConnectionInfoProd() {
-		stubSecrets();
+		when(mockSecretManager
+				.getSecretValue(new GetSecretValueRequest().withSecretId(MigrationConfigurationImpl.KEY_SOURCE_SERVICE_SECRET)))
+				.thenReturn(new GetSecretValueResult().withSecretString(sourceServiceSecret));
+		when(mockSecretManager
+				.getSecretValue(new GetSecretValueRequest().withSecretId(MigrationConfigurationImpl.KEY_DESTINATION_SERVICE_SECRET)))
+				.thenReturn(new GetSecretValueResult().withSecretString(destinationServiceSecret));
 		props.put(MigrationConfigurationImpl.KEY_STACK, "prod");
 		// source
 		SynapseConnectionInfo connInfo = config.getSourceConnectionInfo();
@@ -145,7 +155,12 @@ public class MigrationConfigurationImplTest {
 
 	@Test
 	public void testGetConnectionInfoDev() {
-		stubSecrets();
+		when(mockSecretManager
+				.getSecretValue(new GetSecretValueRequest().withSecretId(MigrationConfigurationImpl.KEY_SOURCE_SERVICE_SECRET)))
+				.thenReturn(new GetSecretValueResult().withSecretString(sourceServiceSecret));
+		when(mockSecretManager
+				.getSecretValue(new GetSecretValueRequest().withSecretId(MigrationConfigurationImpl.KEY_DESTINATION_SERVICE_SECRET)))
+				.thenReturn(new GetSecretValueResult().withSecretString(destinationServiceSecret));
 		props.put(MigrationConfigurationImpl.KEY_STACK, "dev");
 
 		SynapseConnectionInfo connInfo = config.getSourceConnectionInfo();
@@ -165,7 +180,9 @@ public class MigrationConfigurationImplTest {
 
 	@Test
 	public void testGetDestinationConnectionInfoTstProd() {
-		stubSecrets();
+		when(mockSecretManager
+				.getSecretValue(new GetSecretValueRequest().withSecretId(MigrationConfigurationImpl.KEY_DESTINATION_SERVICE_SECRET)))
+				.thenReturn(new GetSecretValueResult().withSecretString(destinationServiceSecret));
 		props.put(MigrationConfigurationImpl.KEY_STACK, "prod");
 		props.put(MigrationConfigurationImpl.KEY_DESTINATION_STACK_TYPE, "tst");
 
@@ -179,7 +196,9 @@ public class MigrationConfigurationImplTest {
 
 	@Test
 	public void testGetDestinationConnectionInfoTstDev() {
-		stubSecrets();
+		when(mockSecretManager
+				.getSecretValue(new GetSecretValueRequest().withSecretId(MigrationConfigurationImpl.KEY_DESTINATION_SERVICE_SECRET)))
+				.thenReturn(new GetSecretValueResult().withSecretString(destinationServiceSecret));
 		props.put(MigrationConfigurationImpl.KEY_STACK, "dev");
 		props.put(MigrationConfigurationImpl.KEY_DESTINATION_STACK_TYPE, "TST");
 
@@ -191,26 +210,13 @@ public class MigrationConfigurationImplTest {
 		assertEquals(destinationServiceSecret, connInfo.getServiceSecret());
 	}
 
-	@Test
+	@Test (expected=IllegalArgumentException.class)
 	public void testGetDestinationConnectionInfoUnsupportedDestinationStackType() {
 		props.put(MigrationConfigurationImpl.KEY_STACK, "dev");
 		props.put(MigrationConfigurationImpl.KEY_DESTINATION_STACK_TYPE, "prod");
 
 		// call under test
-		assertThrows(IllegalArgumentException.class, () -> config.getDestinationConnectionInfo());
-	}
-
-	private void stubSecrets() {
-		when(mockSecretManager.getSecretValue(any(GetSecretValueRequest.class))).thenAnswer(invocation -> {
-			GetSecretValueRequest request = invocation.getArgument(0);
-			if (MigrationConfigurationImpl.KEY_SOURCE_SERVICE_SECRET.equals(request.secretId())) {
-				return GetSecretValueResponse.builder().secretString(sourceServiceSecret).build();
-			}
-			if (MigrationConfigurationImpl.KEY_DESTINATION_SERVICE_SECRET.equals(request.secretId())) {
-				return GetSecretValueResponse.builder().secretString(destinationServiceSecret).build();
-			}
-			throw new IllegalArgumentException("Unexpected secret id: " + request.secretId());
-		});
+		config.getDestinationConnectionInfo();
 	}
 
 }

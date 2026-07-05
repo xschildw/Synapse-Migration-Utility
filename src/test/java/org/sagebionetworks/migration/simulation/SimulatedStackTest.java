@@ -1,9 +1,9 @@
 package org.sagebionetworks.migration.simulation;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.sagebionetworks.repo.model.migration.MigrationType.*;
 import static org.sagebionetworks.repo.model.migration.MigrationType.PRINCIPAL;
 
@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 import org.sagebionetworks.repo.model.migration.AsyncMigrationTypeCountsRequest;
 import org.sagebionetworks.repo.model.migration.BackupTypeRangeRequest;
 import org.sagebionetworks.repo.model.migration.BackupTypeResponse;
@@ -69,7 +69,7 @@ public class SimulatedStackTest {
 				));
 		assertEquals(expected, result);
 	}
-
+	
 	@Test
 	public void testExecuteAsyncMigrationTypeCountsRequestWithEmpty() {
 
@@ -202,7 +202,7 @@ public class SimulatedStackTest {
 		// call under test
 		BatchChecksumResponse response = source.executeBatchChecksumRequest(new BatchChecksumRequest().setBatchSize(8L)
 				.setMinimumId(4L).setMaximumId(35L).setMigrationType(PRINCIPAL));
-
+		
 		assertEquals(5, response.getCheksums().size());
 
 		BatchChecksumResponse expected = new BatchChecksumResponse().setMigrationType(PRINCIPAL).setCheksums(List.of(
