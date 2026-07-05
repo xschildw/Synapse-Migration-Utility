@@ -1,28 +1,28 @@
 package org.sagebionetworks.migration.utils;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import org.sagebionetworks.repo.model.migration.MigrationType;
 import org.sagebionetworks.repo.model.migration.MigrationTypeCount;
 import org.sagebionetworks.repo.model.migration.MigrationTypeList;
 
 public class ToolMigrationUtilsTest {
-
+	
 	List<MigrationTypeCount> srcTypeCounts;
 	List<MigrationTypeCount> destTypeCounts;
 	MigrationTypeList typesToMigrate;
 	private boolean isSourceReadOnly;
 
-	@BeforeEach
+	@Before
 	public void setUp() throws Exception {
 		srcTypeCounts = generateMigrationTypeCounts();
 		destTypeCounts = generateMigrationTypeCounts();
@@ -31,7 +31,7 @@ public class ToolMigrationUtilsTest {
 		isSourceReadOnly = true;
 	}
 
-	@AfterEach
+	@After
 	public void tearDown() throws Exception {
 	}
 
@@ -40,38 +40,38 @@ public class ToolMigrationUtilsTest {
 		assertNotNull(srcTypeCounts);
 		assertEquals(MigrationType.values().length, srcTypeCounts.size());
 	}
-
+	
 	@Test
 	public void testGenerateTypesToMigrate() {
 		assertNotNull(typesToMigrate.getList());
 		assertEquals(5, typesToMigrate.getList().size());
 	}
-
+	
 	@Test
 	public void testBuildTypesToMigrateMetadataInvalidArgs() throws Exception {
 		try {
 			ToolMigrationUtils.buildTypeToMigrateMetadata(isSourceReadOnly, null, destTypeCounts, typesToMigrate.getList());
 		} catch (IllegalArgumentException e) {
-
+			
 		} catch (Exception e) {
 			throw(e);
 		}
 		try {
 			ToolMigrationUtils.buildTypeToMigrateMetadata(isSourceReadOnly, srcTypeCounts, null, typesToMigrate.getList());
 		} catch (IllegalArgumentException e) {
-
+			
 		} catch (Exception e) {
 			throw(e);
 		}
 		try {
 			ToolMigrationUtils.buildTypeToMigrateMetadata(isSourceReadOnly, srcTypeCounts, destTypeCounts, null);
 		} catch (IllegalArgumentException e) {
-
+			
 		} catch (Exception e) {
 			throw(e);
 		}
 	}
-
+	
 	@Test
 	public void testBuildTypesToMigrateMetadata() {
 		List<TypeToMigrateMetadata> expectedMetadata = new LinkedList<TypeToMigrateMetadata>();
@@ -89,7 +89,7 @@ public class ToolMigrationUtilsTest {
 		List<TypeToMigrateMetadata> l = ToolMigrationUtils.buildTypeToMigrateMetadata(isSourceReadOnly, srcTypeCounts, destTypeCounts, typesToMigrate.getList());
 		assertEquals(expectedMetadata, l);
 	}
-
+	
 	@Test
 	public void testBuildTypesToMigrateMetadataNullValue() {
 		srcTypeCounts.get(0).setCount(0L);
@@ -196,10 +196,10 @@ public class ToolMigrationUtilsTest {
 			tc.setMaxid(Math.abs(r.nextLong()));
 			l.add(tc);
 		}
-
+		
 		return l;
 	}
-
+	
 	private List<MigrationType> generateTypesToMigrate() {
 		List<MigrationType> l = new LinkedList<MigrationType>();
 		// Only migrate first 5 types

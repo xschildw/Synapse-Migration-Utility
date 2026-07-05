@@ -1,16 +1,16 @@
 package org.sagebionetworks.migration.async;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 
 import java.util.concurrent.Future;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.runners.MockitoJUnitRunner;
 import org.sagebionetworks.migration.config.Configuration;
 import org.sagebionetworks.repo.model.daemon.BackupAliasType;
 import org.sagebionetworks.repo.model.migration.AdminRequest;
@@ -18,7 +18,7 @@ import org.sagebionetworks.repo.model.migration.MigrationType;
 import org.sagebionetworks.repo.model.migration.RestoreTypeRequest;
 import org.sagebionetworks.repo.model.migration.RestoreTypeResponse;
 
-@ExtendWith(MockitoExtension.class)
+@RunWith(MockitoJUnitRunner.class)
 public class DestinationJobExecutorImplTest {
 
 	@Mock
@@ -27,19 +27,19 @@ public class DestinationJobExecutorImplTest {
 	AsynchronousJobExecutor mockAsynchronousJobExecutor;
 	@Mock
 	Future mockFuture;
-
+	
 	DestinationJobExecutorImpl destinationExecutor;
-
+	
 	MigrationType type;
 	String backupFileKey;
 	int batchSize;
 	BackupAliasType aliasType;
-
+	
 	Long minimumId;
 	Long maximumId;
 	RestoreDestinationJob restoreJob;
-
-	@BeforeEach
+	
+	@Before
 	public void before() {
 		batchSize = 3;
 		when(mockConfig.getMaximumBackupBatchSize()).thenReturn(batchSize);
@@ -47,17 +47,17 @@ public class DestinationJobExecutorImplTest {
 		when(mockConfig.getBackupAliasType()).thenReturn(aliasType);
 		type = MigrationType.NODE;
 		backupFileKey = "backup file key";
-
+		
 		minimumId = 1L;
 		maximumId = 2L;
-
+		
 		restoreJob = new RestoreDestinationJob(type, backupFileKey, minimumId, maximumId);
-
+		
 		when(mockAsynchronousJobExecutor.startDestionationJob(any(AdminRequest.class), any())).thenReturn(mockFuture);
-
+		
 		destinationExecutor = new DestinationJobExecutorImpl(mockConfig, mockAsynchronousJobExecutor);
 	}
-
+	
 	@Test
 	public void testStartDestinationJob() {
 		RestoreTypeRequest expectedRequest = new RestoreTypeRequest();

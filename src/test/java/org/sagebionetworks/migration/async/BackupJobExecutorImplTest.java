@@ -1,10 +1,10 @@
 package org.sagebionetworks.migration.async;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -12,11 +12,11 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.runners.MockitoJUnitRunner;
 import org.sagebionetworks.migration.config.Configuration;
 import org.sagebionetworks.repo.model.daemon.BackupAliasType;
 import org.sagebionetworks.repo.model.migration.AdminRequest;
@@ -29,7 +29,7 @@ import org.sagebionetworks.repo.model.migration.MigrationType;
 
 import com.google.common.collect.Lists;
 
-@ExtendWith(MockitoExtension.class)
+@RunWith(MockitoJUnitRunner.class)
 public class BackupJobExecutorImplTest {
 
 	@Mock
@@ -44,24 +44,28 @@ public class BackupJobExecutorImplTest {
 	int batchSize;
 
 	CalculateOptimalRangeResponse rangeResponse;
-
+	
 	BackupTypeResponse backupTypeResponse;
-
+	
 	String backupFile;
 
-	@BeforeEach
+	@Before
 	public void before() {
 		batchSize = 1;
+		when(mockConfiguration.getMaximumBackupBatchSize()).thenReturn(batchSize);
 		backupAliasType = BackupAliasType.TABLE_NAME;
+		when(mockConfiguration.getBackupAliasType()).thenReturn(backupAliasType);
 		migrationType = MigrationType.NODE;
 
 		rangeResponse = new CalculateOptimalRangeResponse();
 		rangeResponse.setMigrationType(migrationType);
 		rangeResponse.setRanges(Lists.newArrayList(createIdRange(3L, 4L)));
-
+		
 		backupTypeResponse = new BackupTypeResponse();
 		backupFile = "backupFile";
 		backupTypeResponse.setBackupFileKey(backupFile);
+		
+		when(mockAsynchronousJobExecutor.executeSourceJob(any(AdminRequest.class), any())).thenReturn(rangeResponse, backupTypeResponse);
 
 		executor = new BackupJobExecutorImpl(mockConfiguration, mockAsynchronousJobExecutor);
 	}
@@ -144,7 +148,7 @@ public class BackupJobExecutorImplTest {
 		assertEquals(new Long(1), request.getMinimumId());
 		assertEquals(new Long(8), request.getMaximumId());
 	}
-
+	
 	@Test
 	public void testCreateContiguousBackupRangeRequestsEmptyRange() {
 		long minimumId = 1L;
@@ -167,7 +171,7 @@ public class BackupJobExecutorImplTest {
 
 	/**
 	 * Helper to create a range.
-	 *
+	 * 
 	 * @param min
 	 * @param max
 	 * @return
@@ -181,10 +185,6 @@ public class BackupJobExecutorImplTest {
 
 	@Test
 	public void testExecuteBackupJob() {
-		when(mockConfiguration.getMaximumBackupBatchSize()).thenReturn(batchSize);
-		when(mockConfiguration.getBackupAliasType()).thenReturn(backupAliasType);
-		when(mockAsynchronousJobExecutor.executeSourceJob(any(AdminRequest.class), any()))
-				.thenReturn(rangeResponse, backupTypeResponse);
 		long minimumId = 1L;
 		long maximumId = 8L;
 		// call under test
