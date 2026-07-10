@@ -1,15 +1,15 @@
 package org.sagebionetworks.migration;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
 import java.util.List;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.sagebionetworks.client.SynapseAdminClient;
 import org.sagebionetworks.client.exceptions.SynapseException;
 import org.sagebionetworks.migration.async.AsynchronousJobExecutor;
@@ -24,7 +24,7 @@ import org.sagebionetworks.repo.model.migration.MigrationTypeCounts;
 import org.sagebionetworks.repo.model.migration.MigrationTypeNames;
 import com.google.common.collect.Lists;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class TypeServiceImplTest {
 
 	@Mock
@@ -40,7 +40,7 @@ public class TypeServiceImplTest {
 	List<String> sourcePrimaryNames;
 	List<String> destinationNames;
 	List<String> destinationPrimaryNames;
-	
+
 	List<MigrationType> primaryTypes;
 	ResultPair<MigrationTypeCounts> countsResults;
 	List<MigrationTypeCount> sourceCounts;
@@ -48,7 +48,7 @@ public class TypeServiceImplTest {
 
 	TypeServiceImpl typeService;
 
-	@Before
+	@BeforeEach
 	public void before() throws SynapseException {
 		when(mockClientFactory.getSourceClient()).thenReturn(mockSourceClient);
 		when(mockClientFactory.getDestinationClient()).thenReturn(mockDestinationClient);
@@ -63,7 +63,7 @@ public class TypeServiceImplTest {
 				MigrationType.NODE.name(),
 				MigrationType.NODE_REVISION.name(),
 				MigrationType.ACTIVITY.name());
-		
+
 		sourcePrimaryNames = Lists.newArrayList(
 				MigrationType.NODE.name(),
 				MigrationType.ACTIVITY.name());
@@ -71,37 +71,21 @@ public class TypeServiceImplTest {
 				MigrationType.ACL.name(),
 				MigrationType.NODE.name(),
 				MigrationType.ACTIVITY.name());
-		// mock source
-		MigrationTypeNames typeNames = new MigrationTypeNames();
-		typeNames.setList(sourceNames);
-		when(mockSourceClient.getMigrationTypeNames()).thenReturn(typeNames);
-		typeNames = new MigrationTypeNames();
-		typeNames.setList(sourcePrimaryNames);
-		when(mockSourceClient.getPrimaryTypeNames()).thenReturn(typeNames);
-		// mock destination
-		typeNames = new MigrationTypeNames();
-		typeNames.setList(destinationNames);
-		when(mockDestinationClient.getMigrationTypeNames()).thenReturn(typeNames);
-		typeNames = new MigrationTypeNames();
-		typeNames.setList(destinationPrimaryNames);
-		when(mockDestinationClient.getPrimaryTypeNames()).thenReturn(typeNames);
-		
+
 		primaryTypes = Lists.newArrayList(MigrationType.NODE);
-		AsyncMigrationTypeCountsRequest countsRequest = new AsyncMigrationTypeCountsRequest();
-		countsRequest.setTypes(primaryTypes);
-		
+
 		MigrationTypeCount sourceCount = new MigrationTypeCount();
 		sourceCount.setType(MigrationType.NODE);
 		sourceCount.setCount(99L);
 		sourceCounts = Lists.newArrayList(sourceCount);
-		
+
 		MigrationTypeCount destinationCount = new MigrationTypeCount();
 		destinationCount.setType(MigrationType.NODE);
 		destinationCount.setCount(0L);
 		destinationCounts = Lists.newArrayList(destinationCount);
 
-		
-	
+
+
 		MigrationTypeCounts mtcs = new MigrationTypeCounts();
 		mtcs.setList(sourceCounts);
 		countsResults = new ResultPair<>();
@@ -109,7 +93,31 @@ public class TypeServiceImplTest {
 		mtcs = new MigrationTypeCounts();
 		mtcs.setList(destinationCounts);
 		countsResults.setDestinationResult(mtcs);
-		
+	}
+
+	private void stubCommonMigrationTypeNames() throws SynapseException {
+		MigrationTypeNames typeNames = new MigrationTypeNames();
+		typeNames.setList(sourceNames);
+		when(mockSourceClient.getMigrationTypeNames()).thenReturn(typeNames);
+
+		typeNames = new MigrationTypeNames();
+		typeNames.setList(destinationNames);
+		when(mockDestinationClient.getMigrationTypeNames()).thenReturn(typeNames);
+	}
+
+	private void stubCommonPrimaryTypeNames() throws SynapseException {
+		MigrationTypeNames typeNames = new MigrationTypeNames();
+		typeNames.setList(sourcePrimaryNames);
+		when(mockSourceClient.getPrimaryTypeNames()).thenReturn(typeNames);
+
+		typeNames = new MigrationTypeNames();
+		typeNames.setList(destinationPrimaryNames);
+		when(mockDestinationClient.getPrimaryTypeNames()).thenReturn(typeNames);
+	}
+
+	private void stubMigrationTypeCounts() {
+		AsyncMigrationTypeCountsRequest countsRequest = new AsyncMigrationTypeCountsRequest();
+		countsRequest.setTypes(primaryTypes);
 		when(mockAsynchronousJobExecutor.executeSourceAndDestinationJob(countsRequest, MigrationTypeCounts.class)).thenReturn(countsResults);
 	}
 
@@ -134,9 +142,10 @@ public class TypeServiceImplTest {
 		List<MigrationType> typeIntersection = typeService.getMigrationTypeIntersection(sourceNames, destinationNames);
 		assertEquals(expectedIntersection, typeIntersection);
 	}
-	
+
 	@Test
-	public void testGetAllCommonMigrationTypes() {
+	public void testGetAllCommonMigrationTypes() throws SynapseException {
+		stubCommonMigrationTypeNames();
 		List<MigrationType> expected = Lists.newArrayList(
 				MigrationType.NODE,
 				MigrationType.NODE_REVISION,
@@ -146,9 +155,10 @@ public class TypeServiceImplTest {
 		List<MigrationType> results = typeService.getAllCommonMigrationTypes();
 		assertEquals(expected, results);
 	}
-	
+
 	@Test
-	public void testGetCommonPrimaryMigrationTypes() {
+	public void testGetCommonPrimaryMigrationTypes() throws SynapseException {
+		stubCommonPrimaryTypeNames();
 		List<MigrationType> expected = Lists.newArrayList(
 				MigrationType.NODE,
 				MigrationType.ACTIVITY
@@ -157,19 +167,20 @@ public class TypeServiceImplTest {
 		List<MigrationType> results = typeService.getCommonPrimaryMigrationTypes();
 		assertEquals(expected, results);
 	}
-	
+
 	@Test
 	public void testGetMigrationTypeCounts() {
+		stubMigrationTypeCounts();
 		ResultPair<List<MigrationTypeCount>> expected = new ResultPair<>();
 		expected.setDestinationResult(destinationCounts);
 		expected.setSourceResult(sourceCounts);
-		
+
 		List<MigrationType> primaryTypes = Lists.newArrayList(MigrationType.NODE);
 		// call under test
 		ResultPair<List<MigrationTypeCount>> results = typeService.getMigrationTypeCounts(primaryTypes);
 		assertEquals(expected, results);
 	}
-	
+
 	@Test
 	public void testGetFullTableChecksums() {
 		MigrationType type = MigrationType.NODE;

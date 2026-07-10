@@ -9,10 +9,10 @@ import org.apache.logging.log4j.Logger;
 import org.sagebionetworks.migration.LoggerFactory;
 import org.sagebionetworks.repo.model.daemon.BackupAliasType;
 
-import com.amazonaws.services.secretsmanager.AWSSecretsManager;
-import com.amazonaws.services.secretsmanager.model.GetSecretValueRequest;
-import com.amazonaws.services.secretsmanager.model.GetSecretValueResult;
 import com.google.inject.Inject;
+import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
+import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueRequest;
+import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueResponse;
 
 /**
  * Provides configuration information 
@@ -73,7 +73,7 @@ public class MigrationConfigurationImpl implements Configuration {
 	Logger logger;
 	SystemPropertiesProvider propProvider;
 	FileProvider fileProvider;
-	AWSSecretsManager secretManager;
+	SecretsManagerClient secretManager;
 	
 	Properties systemProperties;
 
@@ -95,7 +95,7 @@ public class MigrationConfigurationImpl implements Configuration {
 	}
 	
 	@Inject
-	public MigrationConfigurationImpl(LoggerFactory loggerFactory, SystemPropertiesProvider propProvider, FileProvider fileProvider, AWSSecretsManager secretManager) throws IOException {
+	public MigrationConfigurationImpl(LoggerFactory loggerFactory, SystemPropertiesProvider propProvider, FileProvider fileProvider, SecretsManagerClient secretManager) throws IOException {
 		this.logger = loggerFactory.getLogger(MigrationConfigurationImpl.class);
 		this.propProvider = propProvider;
 		this.fileProvider = fileProvider;
@@ -214,8 +214,8 @@ public class MigrationConfigurationImpl implements Configuration {
 	 * @return
 	 */
 	String getSecret(String secretId) {
-		GetSecretValueResult result = secretManager.getSecretValue(new GetSecretValueRequest().withSecretId(secretId));
-		return result.getSecretString();
+		GetSecretValueResponse result = secretManager.getSecretValue(GetSecretValueRequest.builder().secretId(secretId).build());
+		return result.secretString();
 	}
 
 	@Override

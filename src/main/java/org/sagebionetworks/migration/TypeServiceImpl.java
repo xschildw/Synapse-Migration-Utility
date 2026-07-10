@@ -18,7 +18,6 @@ import org.sagebionetworks.repo.model.migration.MigrationTypeCount;
 import org.sagebionetworks.repo.model.migration.MigrationTypeCounts;
 import org.sagebionetworks.repo.model.migration.MigrationTypeNames;
 
-import com.amazonaws.services.sqs.model.UnsupportedOperationException;
 import com.google.inject.Inject;
 
 public class TypeServiceImpl implements TypeService {

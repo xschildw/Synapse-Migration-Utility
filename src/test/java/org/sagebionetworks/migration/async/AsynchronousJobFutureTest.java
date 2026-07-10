@@ -1,9 +1,10 @@
 package org.sagebionetworks.migration.async;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.*;
@@ -14,11 +15,11 @@ import java.util.concurrent.TimeoutException;
 
 import static org.sagebionetworks.migration.async.AsynchronousJobFuture.*;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.sagebionetworks.client.SynapseAdminClient;
 import org.sagebionetworks.client.exceptions.SynapseBadRequestException;
 import org.sagebionetworks.client.exceptions.SynapseException;
@@ -33,7 +34,7 @@ import org.sagebionetworks.repo.model.migration.MigrationType;
 import org.sagebionetworks.repo.model.migration.RestoreTypeResponse;
 import org.sagebionetworks.util.Clock;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class AsynchronousJobFutureTest {
 
 	@Mock
@@ -44,65 +45,69 @@ public class AsynchronousJobFutureTest {
 	Clock mockClock;
 	@Mock
 	Configuration mockConfiguration;
-	
+
 	String jobId;
 	AsynchronousJobStatus processingStatus;
 	AsynchronousJobStatus completeStatus;
 	AsynchronousJobStatus failedStatus;
-	
+
 	AsyncMigrationResponse jobResponse;
 	RestoreTypeResponse wrappedReponse;
 	String errorMessage;
-	
+
 	JobTarget jobTarget;
-	
+
 	long defaultTimeoutMS;
-	
+
 	FutureFactoryImpl futureFactory;
 	AsynchronousJobFuture<RestoreTypeResponse> future;
-	
+
 	MigrationType type;
-	
-	@Before
+
+	@BeforeEach
 	public void before() throws SynapseException {
 		jobId = "123";
 		jobTarget = JobTarget.DESTINATION;
-		
+
 		wrappedReponse = new RestoreTypeResponse();
 		wrappedReponse.setRestoredRowCount(99L);
-		
+
 		jobResponse = new AsyncMigrationResponse();
 		jobResponse.setAdminResponse(wrappedReponse);
-		
+
 		processingStatus = new AsynchronousJobStatus();
 		processingStatus.setJobId(jobId);
 		processingStatus.setJobState(AsynchJobState.PROCESSING);
-		
+
 		completeStatus = new AsynchronousJobStatus();
 		completeStatus.setJobId(jobId);
 		completeStatus.setJobState(AsynchJobState.COMPLETE);
 		completeStatus.setResponseBody(jobResponse);
-		
+
 		errorMessage = "some kind of error";
 		failedStatus = new AsynchronousJobStatus();
 		failedStatus.setJobId(jobId);
 		failedStatus.setJobState(AsynchJobState.FAILED);
 		failedStatus.setErrorMessage(errorMessage);
-		
+
 		defaultTimeoutMS = 11;
-		when(mockClock.currentTimeMillis()).thenReturn(5000L,5001L,5002L,5003L,5004L,5005L,5006L,5007L,5008L,5009L);
 		// complete after two tries
 		when(mockClient.getAdminAsynchronousJobStatus(jobId)).thenReturn(processingStatus, processingStatus, completeStatus);
 		type = MigrationType.NODE;
 		// Using the factory to create the future also tests the factory.
 		futureFactory = new FutureFactoryImpl(mockReporter, mockClock, mockConfiguration);
 		future = (AsynchronousJobFuture<RestoreTypeResponse>) futureFactory.createFuture(processingStatus, jobTarget,  mockClient, RestoreTypeResponse.class);
-		
+
 
 	}
-	
+
+	private void stubDefaultClock() {
+		when(mockClock.currentTimeMillis()).thenReturn(5000L,5001L,5002L,5003L,5004L,5005L,5006L,5007L,5008L,5009L);
+	}
+
 	@Test
 	public void testIsDoneComlete() throws SynapseException {
+		stubDefaultClock();
 		// complete after two tries
 		when(mockClient.getAdminAsynchronousJobStatus(jobId)).thenReturn(processingStatus, processingStatus, completeStatus);
 		assertFalse(future.isDone());
@@ -114,10 +119,11 @@ public class AsynchronousJobFutureTest {
 		verify(mockClient, times(3)).getAdminAsynchronousJobStatus(jobId);
 		verify(mockReporter, times(1)).reportProgress(jobTarget, processingStatus);
 	}
-	
-	
+
+
 	@Test
 	public void testIsDoneFailed() throws SynapseException {
+		stubDefaultClock();
 		// failed after two tries
 		when(mockClient.getAdminAsynchronousJobStatus(jobId)).thenReturn(processingStatus, processingStatus, failedStatus);
 		assertFalse(future.isDone());
@@ -129,7 +135,7 @@ public class AsynchronousJobFutureTest {
 		verify(mockClient, times(3)).getAdminAsynchronousJobStatus(jobId);
 		verify(mockReporter, times(1)).reportProgress(jobTarget, processingStatus);
 	}
-	
+
 	@Test
 	public void testIsDoneReportThrottled() throws SynapseException {
 		// setup the clock such that every other call should trigger report.
@@ -153,22 +159,23 @@ public class AsynchronousJobFutureTest {
 		// progress should occur the first time, then every other time.
 		verify(mockReporter, times(2)).reportProgress(jobTarget, processingStatus);
 	}
-	
-	@Test (expected=AsyncMigrationException.class)
+
+	@Test
 	public void testIsDoneException() throws SynapseException {
 		SynapseServerException error = new SynapseBadRequestException();
 		// failed after two tries
 		when(mockClient.getAdminAsynchronousJobStatus(jobId)).thenThrow(error);
 		// call under test;
-		future.isDone();
+		assertThrows(AsyncMigrationException.class, () -> future.isDone());
 	}
-	
+
 	/**
 	 * Get with timeout and units.
 	 * @throws Exception
 	 */
 	@Test
 	public void testGetTimeoutUnits() throws Exception {
+		stubDefaultClock();
 		long timeout = 1;
 		TimeUnit unit = TimeUnit.HOURS;
 		// call under test
@@ -179,9 +186,10 @@ public class AsynchronousJobFutureTest {
 		verify(mockClock, atLeast(3)).currentTimeMillis();
 		verify(mockReporter, times(1)).reportProgress(jobTarget, processingStatus);
 	}
-	
+
 	@Test
 	public void testGetTimeoutUnitsExpired() throws Exception {
+		stubDefaultClock();
 		long timeout = 1;
 		TimeUnit unit = TimeUnit.MILLISECONDS;
 		try {
@@ -195,7 +203,7 @@ public class AsynchronousJobFutureTest {
 		verify(mockClock, times(3)).currentTimeMillis();
 		verify(mockReporter, times(1)).reportProgress(jobTarget, processingStatus);
 	}
-	
+
 	@Test
 	public void testGetTimeoutUnitsJobFailed() throws Exception {
 		// job failed
@@ -211,7 +219,7 @@ public class AsynchronousJobFutureTest {
 			assertTrue(e.getMessage().contains(errorMessage));
 		}
 	}
-	
+
 	@Test
 	public void testGet() throws InterruptedException, ExecutionException {
 		// timeout from the config.
@@ -222,9 +230,10 @@ public class AsynchronousJobFutureTest {
 		RestoreTypeResponse result = future.get();
 		assertEquals(wrappedReponse, result);
 	}
-	
+
 	@Test
 	public void testGetTimeout() throws InterruptedException, ExecutionException {
+		stubDefaultClock();
 		// timeout from the config.
 		when(mockConfiguration.getWorkerTimeoutMs()).thenReturn(1L);
 		// create a new future that uses this timeout.
